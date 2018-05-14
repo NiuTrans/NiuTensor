@@ -1,2 +1,1 @@
-# NiuTrans.Tensor
-# Coming soon..
+# NiuTrans.Tensor is coming soon..
