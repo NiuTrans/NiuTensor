@@ -30,14 +30,14 @@ NiuTrans.Tensor是小牛开源项目所开发的一个工具包，提供了完�
     * 通过function里的FHeader.h可以调用一些激活函数
 * 在所创建项目中使用命名空间nts
 
-此外，一些必须的环境配置方法请参考 [NiuTrans.Tensor环境配置](http://47.105.50.196/NiuTrans/NiuTrans.Tensor/blob/master/doc/Configuration.md)。
+此外，一些必须的环境配置方法请参考 [NiuTrans.Tensor环境配置](https://github.com/NiuTrans/NiuTrans.Tensor/blob/master/Configuration.md)。
 
 ### Linux
 
 若在Linux上使用NiuTrans.Tensor工具包，直接执行make.sh即可在同级目录下生成tensorCPU和tensorGPU，分别对应于NiuTrans.Tensor的CPU以及GPU的可执行文件。以前馈神经网络语言模型为例，输入以下命令即可在GPU上执行提供的测试用例：
 >./tensorGPU -test
 
-更多详细使用方法请见[NiuTrans.Tensor开发文档](http://47.104.97.237/niutrans/site/niutensor/index.html)
+更多详细使用方法请见[NiuTrans.Tensor开发文档](http://niutrans.com/openSource/niutensor/index.html)
 
 
 ## 开发团队
