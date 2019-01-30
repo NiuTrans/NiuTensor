@@ -6,13 +6,16 @@
 
 * 我们仅仅测试了较新版本的VS以及CUDA，对于之前的版本并不清楚是否存在问题。
 * 建议使用VS版本为VS2015，或使用VS2017时**安装v140工具集**，之前的VS版本暂不清楚。
-* 建议先安装VS再安装CUDA，CUDA安装时，不要勾选Visual Studio Integration，否则安装会出错。CUDA安装完成后，解压CUDA安装文件，在CUDAVisualStudioIntegration\extras\visual_studio_integration\MSBuildExtensions路径下有四个文件，拷贝到VS对应的目录，C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\IDE\VC\VCTargets\BuildCustomizations或者C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\v140\BuildCustomizations。
-* CUDA最新版本9.2尚且不支持VS2017最新版本，因此建议使用CUDA版本为9.0或9.1。
+* 建议先安装VS再安装CUDA。
+* VS2017安装CUDA时，不要勾选Visual Studio Integration，否则安装会出错。CUDA安装完成后，解压CUDA安装文件，在CUDAVisualStudioIntegration\extras\visual_studio_integration\MSBuildExtensions路径下有四个文件，拷贝到VS对应的目录，C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\v140\BuildCustomizations
+* （忽略此条）C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\IDE\VC\VCTargets\BuildCustomizations。
+* CUDA9.2及以上尚且不支持VS2017最新版本，因此建议使用CUDA版本为9.0或9.1。
 
 ## CUDA配置
 
 * 新建一个VC++空项目。
-* 进行VS项目配置之前，需要将**解决方案平台**设置为×64，注意有两处解决方案平台需要设置，一个是在属性页中，一个在菜单栏下方的编译选项中。
+* 在菜单栏下方的编译选项中将**解决方案平台**设置为×64（默认是X86）。
+* 将源代码(source文件夹)拷贝到项目中。
 
 在已安装好VS、CUDA并配置好环境变量后，一些关键的CUDA配置选项如下所示，以下配置选项在 **菜单栏-项目 -> 属性** 中可以找到。
 
