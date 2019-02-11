@@ -35,7 +35,7 @@ NiuTrans.Tensor是小牛开源项目所开发的一个工具包，提供了完�
 ### Linux
 
 若在Linux上使用NiuTrans.Tensor工具包，直接执行make即可在bin目录下生成NiuTrans.Tensor.CPU或NiuTrans.Tensor.GPU，分别对应于NiuTrans.Tensor的CPU以及GPU的可执行文件，同时在lib目录下生成相应的动态链接库。以测试为例，输入以下命令即可在GPU上执行提供的测试用例：
->./tensorGPU -test 
+>./bin/NiuTrans.Tensor.GPU -test
 
 注意：若先生成CPU的可执行文件，之后如需生成GPU可执行文件，需要先执行make clean命令，删除生成CPU时产生的中间结果
 
