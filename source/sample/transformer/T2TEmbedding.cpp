@@ -48,12 +48,18 @@ initialize the model
 >> myDevID - device id
 >> myMem - the memory pool
 */
-void T2TEmbedder::InitModel(int argc, char ** argv, int myDevID, XMem * myMem)
+void T2TEmbedder::InitModel(int argc, char ** argv, int myDevID, XMem * myMem, bool isEnc)
 {
     devID = myDevID;
     mem = myMem;
     
-    LoadParamInt(argc, argv, "vsize", &vSize, -1);
+    if(isEnc){
+        LoadParamInt(argc, argv, "vsize", &vSize, -1);
+    }
+    else{
+        LoadParamInt(argc, argv, "vsizetgt", &vSize, -1);
+    }
+    //LoadParamInt(argc, argv, "vsize", &vSize, -1);
     LoadParamInt(argc, argv, "maxlen", &maxLength, 512);
     LoadParamInt(argc, argv, "d", &eSize, DEFAULT_EMBEDDING_SIZE);
     LoadParamInt(argc, argv, "d", &d, DEFAULT_EMBEDDING_SIZE);

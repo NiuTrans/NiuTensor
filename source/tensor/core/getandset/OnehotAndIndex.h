@@ -34,11 +34,11 @@ make a new tensor to keep the result and return it */
 XTensor OnehotToIndex(XTensor & onehot, int num);
 
 /* convert index tensor to onehot tensor */
-void _IndexToOnehot(XTensor * index, XTensor * onehot, int size);
+void _IndexToOnehot(XTensor * index, XTensor * onehot, int size, float labelSmoothingP);
 
 /* convert index tensor to onehot tensor (return an XTensor structure)
 make a new tensor to keep the result and return it */
-XTensor IndexToOnehot(XTensor & index, int num);
+XTensor IndexToOnehot(XTensor & index, int num, float labelSmoothingP);
 
 } // namespace nts(NiuTrans.Tensor)
 

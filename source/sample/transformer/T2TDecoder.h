@@ -27,9 +27,56 @@
 namespace transformer
 {
 
-class AttDecoder : public AttEncoder
+class AttDecoder
 {
 public:
+
+    /* device id */
+    int devID;
+
+    /* memory pool */
+    XMem * mem;
+
+    /* layer number */
+    int nlayer;
+
+    /* hidden layer size of the FNN layer */
+    int hSize;
+
+    /* embedding size */
+    int eSize;
+
+    /* vocabulary size */
+    int vSize;
+
+    /* dropout probability */
+    DTYPE dropoutP;
+
+    /* some positions can be ignored in attention. this is useful in lm where the first position needs
+ *     special design for the attention model. */
+    int ignored;
+
+    /* embedding of word at each position */
+    T2TEmbedder embedder;
+
+    /* FNN model of each layer */
+    T2TFNN * fnns;
+
+    /* attention model of each layer */
+    T2TAttention * attentions;
+
+    /* layer normalization for fnn */
+    T2TLN * fnnLayerNorms;
+
+    /* layer normalization for attention */
+    T2TLN * attLayerNorms;
+
+    /* input tensor of the encoder */
+    XTensor * input;
+
+    /* output tensor of the encoder */
+    XTensor * output;
+
     /* encoder-decoder attention model of each layer */
     T2TAttention * attentionsEnde;
 

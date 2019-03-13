@@ -57,6 +57,8 @@ int TransformerMain(int argc, const char ** argv)
     LoadParamString(argc, args, "test", testFN, "");
     LoadParamString(argc, args, "output", outputFN, "");
 
+    srand((unsigned int)time(NULL));
+
     T2TTrainer trainer;
     trainer.Init(argc, args);
 
@@ -68,12 +70,12 @@ int TransformerMain(int argc, const char ** argv)
         trainer.Train(trainFN, testFN, strcmp(modelFN, "") ? modelFN : "checkpoint.model", &model);
     
     /* save the final model */
-    if(strcmp(modelFN, "") && strcmp(trainFN, ""))
-        model.Dump(modelFN);
+    //if(strcmp(modelFN, "") && strcmp(trainFN, ""))
+        //model.Dump(modelFN);
     
     /* load the model if neccessary */
-    if(strcmp(modelFN, ""))
-        model.Read(modelFN);
+    //if(strcmp(modelFN, ""))
+        //model.Read(modelFN);
 
     T2TTrainer tester;
     tester.Init(argc, args);

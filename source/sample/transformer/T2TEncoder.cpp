@@ -114,7 +114,7 @@ XTensor AttEncoder::Make(XTensor &input, XTensor &mask, XTensor &maskEncDec, boo
         XTensor res;
 
         /* self attention */
-        att = attentions[i].Make(x, x, x, mask, isTraining);
+        att = attentions[i].Make(x, x, x, mask, isTraining, true);
         
         /* dropout */
         if(isTraining && dropoutP > 0)

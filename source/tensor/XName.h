@@ -57,7 +57,8 @@ namespace nts { // namespace nts(NiuTrans.Tensor)
 #define MATH_NORMALIZE          MATH_NEGATE + 1
 #define MATH_POWER              MATH_NORMALIZE + 1
 #define MATH_SCALEANDSHIFT      MATH_POWER + 1
-#define MATH_SIGN               MATH_SCALEANDSHIFT + 1
+#define MATH_MULANDSHIFT        MATH_SCALEANDSHIFT + 1
+#define MATH_SIGN               MATH_MULANDSHIFT + 1
 #define MATH_SUB                MATH_SIGN + 1
 #define MATH_SUBDIM             MATH_SUB + 1
 #define MATH_SUM                MATH_SUBDIM + 1

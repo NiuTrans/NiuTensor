@@ -219,7 +219,7 @@ void T2TModel::MakeMT(XTensor &inputEnc, XTensor &inputDec, XTensor &output, XTe
         dims[i + 1] = inputDec.GetDim(i);
     dims[0] = nhead;
     dims[inputDec.order + 1] = len;
-    InitTensor(&maskDec, inputDec.order + 2, dims, X_FLOAT, 1.0F, paddingEnc.devID, paddingEnc.mem);
+    InitTensor(&maskDec, inputDec.order + 2, dims, X_FLOAT, 1.0F, paddingDec.devID, paddingDec.mem);
         
     /* a upper triangular matrix where the cells of the upper triangular are set to -1e-9.
        this matrix can be used to prevent the attention to current or following words in
@@ -236,10 +236,10 @@ void T2TModel::MakeMT(XTensor &inputEnc, XTensor &inputDec, XTensor &output, XTe
     XTensor * maskEncDecTMPDec = NewTensorBuf(maskEncDecTMPEnc, paddingEnc.devID, paddingEnc.mem);
 
     _Unsqueeze(&paddingEnc, maskEncDecTMPEnc, paddingEnc.order - 1, paddingDec.GetDim(-1));
-    _Unsqueeze(&paddingDec, maskEncDecTMPDec, paddingEnc.order, paddingEnc.GetDim(-1));
-    _Multiply(maskEncDecTMPDec, maskEncDecTMPEnc, maskEncDecTMPDec);
-    _ScaleAndShiftMe(maskEncDecTMPDec, 1e9F, -1e9F);
-    _Unsqueeze(maskEncDecTMPDec, &maskEncDec, 0, dims[0]);
+    //_Unsqueeze(&paddingDec, maskEncDecTMPDec, paddingEnc.order, paddingEnc.GetDim(-1));
+    //_Multiply(maskEncDecTMPDec, maskEncDecTMPEnc, maskEncDecTMPDec);
+    _ScaleAndShiftMe(maskEncDecTMPEnc, 1e9F, -1e9F);
+    _Unsqueeze(maskEncDecTMPEnc, &maskEncDec, 0, dims[0]);
 
     DelTensorBuf(maskEncDecTMPDec);
     DelTensorBuf(maskEncDecTMPEnc);
@@ -300,9 +300,10 @@ void T2TModel::GetParams(XList &list)
         list.Add(&encoder->fnns[i].b1);
         list.Add(&encoder->fnns[i].w2);
         list.Add(&encoder->fnns[i].b2);
-        list.Add(&encoder->attentions[i].wk);
-        list.Add(&encoder->attentions[i].wq);
-        list.Add(&encoder->attentions[i].wv);
+        //list.Add(&encoder->attentions[i].wk);
+        //list.Add(&encoder->attentions[i].wq);
+        //list.Add(&encoder->attentions[i].wv);
+        list.Add(&encoder->attentions[i].wbig);
         list.Add(&encoder->attentions[i].wa);
         list.Add(&encoder->fnnLayerNorms[i].w);
         list.Add(&encoder->fnnLayerNorms[i].b);
@@ -324,9 +325,10 @@ void T2TModel::GetParams(XList &list)
             list.Add(&decoder->attentionsEnde[i].wa);
             list.Add(&decoder->attEndeLayerNorms[i].w);
             list.Add(&decoder->attEndeLayerNorms[i].b);
-            list.Add(&decoder->attentions[i].wk);
-            list.Add(&decoder->attentions[i].wq);
-            list.Add(&decoder->attentions[i].wv);
+            //list.Add(&decoder->attentions[i].wk);
+            //list.Add(&decoder->attentions[i].wq);
+            //list.Add(&decoder->attentions[i].wv);
+            list.Add(&decoder->attentions[i].wbig);
             list.Add(&decoder->attentions[i].wa);
             list.Add(&decoder->fnnLayerNorms[i].w);
             list.Add(&decoder->fnnLayerNorms[i].b);

@@ -148,8 +148,11 @@ void T2TTrainer::Train(const char * fn, const char * validFN, const char * model
 {
     int step = 0;
     int wc = 0;
+    int ws =0;
     int wordCount = 0;
+    int totalW;
     int wordCountTotal = 0;
+    int wordCountBatch = 0;
     bool isEnd = false;
     float loss = 0;
     float lr = 0;
@@ -195,6 +198,9 @@ void T2TTrainer::Train(const char * fn, const char * validFN, const char * model
         XTensor batchEnc;
         XTensor batchDec;
 
+        /* labels */
+        XTensor label;
+
         /* padding */
         XTensor paddingEnc;
         XTensor paddingDec;
@@ -205,9 +211,9 @@ void T2TTrainer::Train(const char * fn, const char * validFN, const char * model
         /* label smoothed gold standard (if needed) */
         XTensor goldSmoothed;
         
-        while (LoadBatch(file, model->isLM, &batchEnc, &paddingEnc, &batchDec, &paddingDec, &gold, 
+        while (LoadBatch(file, model->isLM, &batchEnc, &paddingEnc, &batchDec, &paddingDec, &gold, &label,
                          NULL, vSize, vSizeTgt,
-                         sBatchSize, wBatchSize, isLenSorted, wc, devID, mem, true)) 
+                         sBatchSize, wBatchSize, isLenSorted, ws, wc, devID, mem, true)) 
         {
 
             CheckNTErrors(batchEnc.order == 2, "wrong tensor order of the sequence batch");
@@ -225,34 +231,41 @@ void T2TTrainer::Train(const char * fn, const char * validFN, const char * model
             }
 
             /* back-propagation for obtaining gradients */
-            if (labelSmoothingP > 0)
-                LabelSmooth(&gold, &goldSmoothed, labelSmoothingP);
+            //if (labelSmoothingP > 0)
+            //    LabelSmooth(&gold, &goldSmoothed, labelSmoothingP);
 
+            XTensor labelOnehot;
+
+            labelOnehot = IndexToOnehot(label, vSizeTgt, labelSmoothingP);
+            
             /* make paddings for the output */
-            if (output.GetDim(0) > 1)
-                PadOutput(&output, &gold, &paddingDec);
+            if (output.GetDim(0) > 0)
+                PadOutput(&output, &labelOnehot, &paddingDec);
 
             /* get probabilities */
-            float prob = GetProb(&output, &gold, NULL);
-            
+            float prob = GetProb(&output, &labelOnehot, NULL);
+
             DTYPE lossLocal = -prob / wc;
             bool doUpdate = (!IsNAN(lossLocal) && !IsINF(lossLocal) && lossLocal < 1e3F);
-
-            XTensor &g = labelSmoothingP > 0 ? goldSmoothed : gold;   
+          
+            //XTensor &g = labelSmoothingP > 0 ? goldSmoothed : gold;  
 
             if (doUpdate) {
                 
                 /* recale the output for normalized loss */
-                RescaleOutput(&output, &g, &paddingDec);
+                RescaleOutput(&output, &labelOnehot, &paddingDec);
                 
                 /* back-propagation */
-                net.Backward(output, g, paddingDec, CROSSENTROPY);
+                net.Backward(output, labelOnehot, paddingDec, CROSSENTROPY);
+                //net.Backward(output, label, labelSmoothingP, CROSSENTROPY);
                 
                 gradStep += 1;
                 loss += -prob;
                 wordCount += wc;
                 wordCountTotal += wc;
                 
+                //totalW = wc + ws;
+                wordCountBatch += ws;
                 /* update the parameters */
                 if(gradStep == updateStep){
                     
@@ -276,8 +289,8 @@ void T2TTrainer::Train(const char * fn, const char * validFN, const char * model
             
             if (step % 100 == 0) {
                 double elapsed = GetClockSec() - startT;
-                XPRINT8(0, stderr, "[INFO] lr=%.2e, elapsed=%.1fs, step=%d, epoch=%d, word=%d, loss=%.3f, ppl=%.3f, sppl=%.3f",
-                        lr, elapsed, step, epoch, wordCountTotal, loss/wordCount, exp(loss/wordCount), exp(-prob/wc));
+                XPRINT8(0, stderr, "[INFO] elapsed=%.1fs, step=%d, epoch=%d, tword=%d, sword=%d, loss=%.3f, ppl=%.3f, sppl=%.3f",
+                        elapsed, step, epoch, wordCountTotal, wordCountBatch, loss/wordCount, exp(loss/wordCount), exp(-prob/wc));
                 if (!doUpdate)
                     XPRINT(0, stderr, " (no update)");
                 XPRINT(0, stderr, "\n");
@@ -320,6 +333,7 @@ test the model
 void T2TTrainer::Test(const char * fn, const char * ofn, T2TModel * model)
 {
     int wc = 0;
+    int ws = 0;
     int wordCount = 0;
     int wordCountTotal = 0;
     int sentCount = 0;
@@ -344,6 +358,9 @@ void T2TTrainer::Test(const char * fn, const char * ofn, T2TModel * model)
     XTensor batchEnc;
     XTensor batchDec;
 
+    /* label */
+    XTensor label;
+
     /* padding */
     XTensor paddingEnc;
     XTensor paddingDec;
@@ -356,9 +373,9 @@ void T2TTrainer::Test(const char * fn, const char * ofn, T2TModel * model)
     
     ClearBuf();
 
-    while(LoadBatch(file, model->isLM, &batchEnc, &paddingEnc, &paddingDec, &paddingDec, &gold, 
+    while(LoadBatch(file, model->isLM, &batchEnc, &paddingEnc, &paddingDec, &paddingDec, &gold, &label,
                     seqs, vSize, vSizeTgt,
-                    1, 1, false, wc, devID, mem, false))
+                    1, 1, false, ws, wc, devID, mem, false))
     {
         CheckNTErrors(batchEnc.order == 2, "wrong tensor order of the sequence batch");
             
@@ -441,11 +458,11 @@ void T2TTrainer::MakeCheckpoint(T2TModel * model, const char * validFN, const ch
     sprintf(fn2, "%s.%s.%03d.output", modelFN, label, id);
 
     model->Dump(fn);
-    if(validFN != NULL){
-        T2TTrainer trainer;
-        trainer.Init(argNum, argArray);
-        trainer.Test(validFN, fn2, model);
-    }
+    //if(validFN != NULL){
+        //T2TTrainer trainer;
+        //trainer.Init(argNum, argArray);
+        //trainer.Test(validFN, fn2, model);
+    //}
 
     delete[] fn;
     delete[] fn2;
@@ -460,7 +477,7 @@ struct SampleNode
     int * p;
     int size;
     int value;
-    int key;
+	int key;
 };
 
 int CompareSampleNode(const void * a, const void * b)
@@ -650,22 +667,22 @@ load a batch of sequences
 int T2TTrainer::LoadBatch(FILE * file, bool isLM, 
                           XTensor * batchEnc, XTensor * paddingEnc, 
                           XTensor * batchDec, XTensor * paddingDec,
-                          XTensor * gold,
+                          XTensor * gold, XTensor * label,
                           int * seqs,
                           int vsEnc, int vsDec, int sBatch, int wBatch, 
-                          bool isSorted, int &wCount,
+                          bool isSorted, int &ws, int &wCount,
                           int devID, XMem * mem, 
 						  bool isTraining)
 {
     if(isLM){
-        return LoadBatchLM(file, batchEnc, paddingEnc, batchDec, paddingDec, gold, 
+        return LoadBatchLM(file, batchEnc, paddingEnc, batchDec, paddingDec, gold, label,
                            seqs, vsEnc, sBatch, wBatch, 
                            isSorted, wCount, devID, mem, isTraining);
     }
     else{
-        return LoadBatchMT(file, batchEnc, paddingEnc, batchDec, paddingDec, gold, 
+        return LoadBatchMT(file, batchEnc, paddingEnc, batchDec, paddingDec, gold, label,
                            seqs, vsEnc, vsDec, sBatch, wBatch, 
-                           isSorted, wCount, devID, mem, isTraining);
+                           isSorted, ws, wCount, devID, mem, isTraining);
     }
 }
 
@@ -691,7 +708,7 @@ load a batch of sequences (for LM)
 int T2TTrainer::LoadBatchLM(FILE * file, 
                             XTensor * batchEnc, XTensor * paddingEnc,
                             XTensor * batchDec, XTensor * paddingDec,
-                            XTensor * gold,
+                            XTensor * gold, XTensor * label,
                             int * seqs,
                             int vs, int sBatch, int wBatch, 
                             bool isSorted, int &wCount,
@@ -733,22 +750,29 @@ int T2TTrainer::LoadBatchLM(FILE * file,
     dims[2] = vs;
 
     InitTensor2D(batchEnc, sc, max, X_INT, devID, mem);
+    InitTensor2D(label, sc, max, X_INT, devID, mem);
     InitTensor(gold, 3, dims, X_FLOAT, 1.0F, devID, mem);
     InitTensor2D(paddingEnc, sc, max, X_FLOAT, devID, mem);
     InitTensor2D(paddingDec, sc, max, X_FLOAT, devID, mem);
 
     batchEnc->SetZeroAll();
+    label->SetZeroAll();
     gold->SetZeroAll();
     paddingEnc->SetZeroAll();
     paddingDec->SetZeroAll();
 
     int seqSize = 0;
-    int wGold = 0;
     
     int * batchEncValues = new int[batchEnc->unitNum];
+    int * labelValues = new int[label->unitNum];
     MTYPE * goldOffsets = new MTYPE[gold->unitNum];
+    MTYPE * paddingEncOffsets = new MTYPE[paddingEnc->unitNum];
+    MTYPE * paddingDecOffsets = new MTYPE[paddingDec->unitNum];
+
+    int wGold = 0;
 
     memset(batchEncValues, 0, sizeof(int) * batchEnc->unitNum);
+    memset(labelValues, 0, sizeof(int) * label->unitNum);
 
     for(int s = seq; s < seq + sc; s++){
         int len = isDoubledEnd ? seqLen[s] : seqLen[s] - 1;
@@ -756,15 +780,23 @@ int T2TTrainer::LoadBatchLM(FILE * file,
         for(int w = 0; w < len; w++){
             int num = buf[seqOffset[s] + w];
             batchEncValues[(int)batchEnc->GetOffset2D(s - seq, w)] = num;
-
-            if (w > 0)
+            paddingEncOffsets[wCount] = paddingEnc->GetOffset2D(s - seq, w);
+            paddingDecOffsets[wCount] = paddingDec->GetOffset2D(s - seq, w);
+            if (w > 0) {
                 goldOffsets[wGold++] = gold->GetOffset3D(s - seq, w - 1, num);
+                labelValues[(int)label->GetOffset2D(s - seq, w - 1)] = buf[seqOffset[s] + w];
+            }
             
             if (w == len - 1) {
-                if (isDoubledEnd)
+                if (isDoubledEnd) {
                     goldOffsets[wGold++] = gold->GetOffset3D(s - seq, w, num);
-                else
+                    labelValues[(int)label->GetOffset2D(s - seq, w)] = buf[seqOffset[s] + w];
+                }   
+                else {
                     goldOffsets[wGold++] = gold->GetOffset3D(s - seq, w, buf[seqOffset[s] + w + 1]);
+                    labelValues[(int)label->GetOffset2D(s - seq, w)] = buf[seqOffset[s] + w + 1];
+                }
+                    
             }
 
             wCount++;
@@ -780,9 +812,12 @@ int T2TTrainer::LoadBatchLM(FILE * file,
     }
 
     batchEnc->SetData(batchEncValues, batchEnc->unitNum);
+    label->SetData(labelValues, label->unitNum);
     gold->SetDataBatched(goldOffsets, 1.0F, wGold);
+    paddingEnc->SetDataBatched(paddingEncOffsets, 1.0F, wCount);
+    paddingDec->SetDataBatched(paddingDecOffsets, 1.0F, wCount);
 
-    XTensor * tmp = NewTensorBuf(paddingEnc, devID, mem);
+    /*XTensor * tmp = NewTensorBuf(paddingEnc, devID, mem);
     _ConvertDataType(batchEnc, tmp);
     _NotEqual(tmp, paddingEnc, 0);
     DelTensorBuf(tmp);
@@ -790,10 +825,13 @@ int T2TTrainer::LoadBatchLM(FILE * file,
     XTensor * tmp2 = NewTensorBuf(paddingDec, devID, mem);
     _ConvertDataType(batchEnc, tmp2);
     _NotEqual(tmp2, paddingDec, 0);
-    DelTensorBuf(tmp2);
+    DelTensorBuf(tmp2);*/
 
     delete[] batchEncValues;
+    delete[] labelValues;
     delete[] goldOffsets;
+    delete[] paddingEncOffsets;
+    delete[] paddingDecOffsets;
 
     fflush(tf);
 
@@ -828,10 +866,10 @@ load a batch of sequences (for MT)
 int T2TTrainer::LoadBatchMT(FILE * file, 
                             XTensor * batchEnc, XTensor * paddingEnc, 
                             XTensor * batchDec, XTensor * paddingDec,
-                            XTensor * gold,
+                            XTensor * gold, XTensor * label,
                             int * seqs,
                             int vsEnc, int vsDec, int sBatch, int wBatch, 
-                            bool isSorted, int &wCount,
+                            bool isSorted, int &ws, int &wCount,
                             int devID, XMem * mem, 
 							bool isTraining)
 {
@@ -915,25 +953,32 @@ int T2TTrainer::LoadBatchMT(FILE * file,
     InitTensor2D(paddingEnc, sCount, maxEnc, X_FLOAT, devID, mem);
     InitTensor2D(batchDec, sCount, maxDec, X_INT, devID, mem);
     InitTensor2D(paddingDec, sCount, maxDec, X_FLOAT, devID, mem);
-    InitTensor(gold, 3, dimsDec, X_FLOAT, 1.0F, devID, mem);
+    InitTensor2D(label, sCount, maxDec, X_INT, devID, mem);
+    //InitTensor(gold, 3, dimsDec, X_FLOAT, 1.0F, devID, mem);
 
     batchEnc->SetZeroAll();
     paddingEnc->SetZeroAll();
     batchDec->SetZeroAll();
     paddingDec->SetZeroAll();
-    gold->SetZeroAll();
+    label->SetZeroAll();
+    //gold->SetZeroAll();
 
     int wCountEnc = 0;
     int wCountDec = 0;
+    int wCountPad = 0;
     int wGold = 0;
     wCount = 0;
 
     int * batchEncValues = new int[batchEnc->unitNum];
     int * batchDecValues = new int[batchDec->unitNum];
-    MTYPE * goldOffsets = new MTYPE[sc * maxDec / 2];
+    int * labelValues = new int[label->unitNum];
+    //MTYPE * paddingEncOffsets = new MTYPE[sc * maxEnc / 2];
+    MTYPE * paddingDecOffsets = new MTYPE[sc * maxDec / 2];
+    //MTYPE * goldOffsets = new MTYPE[sc * maxDec / 2];
 
     memset(batchEncValues, 0, sizeof(int) * batchEnc->unitNum);
     memset(batchDecValues, 0, sizeof(int) * batchDec->unitNum);
+    memset(labelValues, 0, sizeof(int) * batchDec->unitNum);
 
     /* batch of the source-side sequences */
     for(int s = seq; s < seq + sc; s += 2){
@@ -942,11 +987,13 @@ int T2TTrainer::LoadBatchMT(FILE * file,
         for(int w = 0; w < len; w++){
             int num = buf[seqOffset[s] + w];
             batchEncValues[batchEnc->GetOffset2D(sent, w)] = num;
+            //paddingEncOffsets[wCountEnc] = paddingEnc->GetOffset2D(sent, w);
             wCountEnc++;
         }
     }
-
+    ws = wCountEnc;
     batchEnc->SetData(batchEncValues, batchEnc->unitNum);
+    //paddingEnc->SetDataBatched(paddingEncOffsets, 1.0F, wCountEnc);
     XTensor * tmp = NewTensorBuf(paddingEnc, devID, mem);
     _ConvertDataType(batchEnc, tmp);
     _NotEqual(tmp, paddingEnc, 0);
@@ -960,17 +1007,26 @@ int T2TTrainer::LoadBatchMT(FILE * file,
         for(int w = 0; w < len; w++){
             int num = buf[seqOffset[s] + w];
             batchDecValues[batchDec->GetOffset2D(sent, w)] = num;
-            
-            if (w > 0)
-                goldOffsets[wGold++] = gold->GetOffset3D(sent, w - 1, buf[seqOffset[s] + w]);
-            
-            if (w == len - 1) {
-                if (isDoubledEnd)
-                    goldOffsets[wGold++] = gold->GetOffset3D(sent,  w, buf[seqOffset[s] + w]);
-                else
-                    goldOffsets[wGold++] = gold->GetOffset3D(sent, w, buf[seqOffset[s] + w + 1]);
+            //paddingDecOffsets[wCountDec] = paddingDec->GetOffset2D(sent, w);
+            if (w < len-1){
+                paddingDecOffsets[wCountPad++] = paddingDec->GetOffset2D(sent, w);
+                wCount++;
             }
-            wCount++;
+            if (w > 0) {
+                //goldOffsets[wGold++] = gold->GetOffset3D(sent, w - 1, buf[seqOffset[s] + w]);
+                labelValues[label->GetOffset2D(sent, w - 1)] = buf[seqOffset[s] + w];
+            }
+            if (w == len - 1) {
+                if (isDoubledEnd) {
+                    //goldOffsets[wGold++] = gold->GetOffset3D(sent, w, buf[seqOffset[s] + w]);
+                    labelValues[label->GetOffset2D(sent, w)] = buf[seqOffset[s] + w];
+                }
+                else {
+                    //goldOffsets[wGold++] = gold->GetOffset3D(sent, w, buf[seqOffset[s] + w + 1]);
+                    labelValues[label->GetOffset2D(sent, w)] = buf[seqOffset[s] + w + 1];
+                }
+            }
+            //wCount++;
             wCountDec++;
             if(seqs != NULL)
                 seqs[seqSize++] = buf[seqOffset[s] + w];
@@ -983,17 +1039,22 @@ int T2TTrainer::LoadBatchMT(FILE * file,
     }
 
     batchDec->SetData(batchDecValues, batchDec->unitNum);
+    label->SetData(labelValues, label->unitNum);
+    paddingDec->SetDataBatched(paddingDecOffsets, 1.0F, wCountPad);
 
-    XTensor * tmp2 = NewTensorBuf(paddingDec, devID, mem);
-    _ConvertDataType(batchDec, tmp2);
-    _NotEqual(tmp2, paddingDec, 0);
-    DelTensorBuf(tmp2);
+    //XTensor * tmp2 = NewTensorBuf(paddingDec, devID, mem);
+    //_ConvertDataType(batchDec, tmp2);
+    //_NotEqual(tmp2, paddingDec, 0);
+    //DelTensorBuf(tmp2);
 
-    gold->SetDataBatched(goldOffsets, 1.0F, wGold);
+    //gold->SetDataBatched(goldOffsets, 1.0F, wGold);
 
     delete[] batchEncValues;
     delete[] batchDecValues;
-    delete[] goldOffsets;
+    delete[] labelValues;
+    //delete[] paddingEncOffsets;
+    delete[] paddingDecOffsets;
+    //delete[] goldOffsets;
 
     return sc;
 }

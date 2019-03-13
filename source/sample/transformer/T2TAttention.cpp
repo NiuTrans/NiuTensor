@@ -75,16 +75,19 @@ void T2TAttention::InitModel(int argc, char ** argv,
     InitTensor2D(&wq, d, dk, X_FLOAT, devID, mem);
     InitTensor2D(&wv, d, dv, X_FLOAT, devID, mem);
     InitTensor2D(&wa, d, d, X_FLOAT, devID, mem);
-    
+    InitTensor2D(&wbig, d, 3 * d, X_FLOAT, devID, mem);
+
     float scale = 1.0F;
     float finfoutk = (float)sqrt(6.0F * scale/(d + dk));
     float finfoutv = (float)sqrt(6.0F * scale/(d + dv));
     float finfouta = (float)sqrt(6.0F * scale / (d + d));
+    float finfoutbig = (float)sqrt(6.0F * scale / (d + 3*d));
 
     wk.SetDataRand(-finfoutk, finfoutk);
     wq.SetDataRand(-finfoutk, finfoutk);
     wv.SetDataRand(-finfoutv, finfoutv);
     wa.SetDataRand(-finfouta, finfouta);
+    wbig.SetDataRand(-finfoutbig, finfoutbig);
 }
 
 /* 
@@ -98,16 +101,40 @@ make the network
 >> isTraining - indicates whether the model is used for training
 << return - multi-attention result
 */
-XTensor T2TAttention::Make(XTensor &k, XTensor &q, XTensor &v, XTensor &mask, bool isTraining)
+XTensor T2TAttention::Make(XTensor &k, XTensor &q, XTensor &v, XTensor &mask, bool isTraining, bool selfatt)
 {
     XTensor k2;
     XTensor q2;
     XTensor v2;
 
-    /* linear transofmration before self-attention */
-    k2 = MMul(k, wk);
-    q2 = MMul(q, wq);
-    v2 = MMul(v, wv);
+    if (selfatt){
+        
+        XTensor con;
+        XList split;
+
+        con = MMul(k, wbig);
+
+        int d1 = con.GetDim(0);
+        int d2 = con.GetDim(1);
+        int d3 = con.GetDim(2) / 3;
+
+        InitTensor3D(&k2, d1, d2, d3, X_FLOAT, devID, mem);
+        InitTensor3D(&q2, d1, d2, d3, X_FLOAT, devID, mem);
+        InitTensor3D(&v2, d1, d2, d3, X_FLOAT, devID, mem);
+
+        split.Add(&q2);
+        split.Add(&k2);
+        split.Add(&v2);
+
+        Split(con, split, 2, 3);
+    }
+
+    else{
+        /* linear transofmration before self-attention */
+        k2 = MMul(k, wk);
+        q2 = MMul(q, wq);
+        v2 = MMul(v, wv);
+    }
 
     XTensor kheads;
     XTensor qheads;

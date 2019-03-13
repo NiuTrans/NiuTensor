@@ -30,7 +30,7 @@ namespace nts{ // namespace nts(NiuTrans.Tensor)
 void _CudaOnehotToIndex(XTensor * onehot, XTensor * index, int size);
 
 /* convert index tensor to onehot tensor (cuda version) */
-void _CudaIndexToOnehot(XTensor * index, XTensor * onehot, int size);
+void _CudaIndexToOnehot(XTensor * index, XTensor * onehot, int size, float confidence, float lowconfidence);
 
 } // namespace nts(NiuTrans.Tensor)
 

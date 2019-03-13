@@ -168,6 +168,10 @@ private:
     /* gradient for reduceVariance */
     static
     void GradReduceVariance(XTensor * node, bool isEfficient);
+
+    /* gradient for operation */
+    static
+    void GradMulAndShift(XTensor * node, bool isEfficient);
 };
 
 }

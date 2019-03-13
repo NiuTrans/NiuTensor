@@ -71,7 +71,7 @@ public:
     ~T2TEmbedder();
 
     /* initialize the model */
-    void InitModel(int argc, char ** argv, int myDevID = -1, XMem * myMem = NULL);
+    void InitModel(int argc, char ** argv, int myDevID = -1, XMem * myMem = NULL, bool isEnc = true);
 
     /* make positional embeddings */
     void MakePosEmbedding(int eSize, int d, int length);

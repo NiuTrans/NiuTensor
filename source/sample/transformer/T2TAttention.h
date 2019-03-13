@@ -59,7 +59,9 @@ public:
 
     /* transformation after dot-product attention */
     XTensor wa;
-
+    
+    XTensor wbig;
+	
     /* size of transformed Q and K */
     int dk;
 
@@ -95,7 +97,7 @@ public:
                    int myDevID = -1, XMem * myMem = NULL);
 
     /* make the network */
-    XTensor Make(XTensor &k, XTensor &q, XTensor &v, XTensor &mask, bool isTraining);
+    XTensor Make(XTensor &k, XTensor &q, XTensor &v, XTensor &mask, bool isTraining, bool selfatt);
 };
 
 }

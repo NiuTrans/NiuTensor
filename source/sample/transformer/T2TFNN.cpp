@@ -89,13 +89,15 @@ XTensor T2TFNN::Make(XTensor &input, bool isTraining)
     XTensor t1;
 
     /* t1 = max(0, x * w1 + b1) */
-    t1 = Rectify(MMul(input, w1) + b1);
+    //t1 = Rectify(MMul(input, w1) + b1);
+    t1 = Rectify(MulAndShift(input, w1, b1));
     
     if(isTraining && dropoutP > 0)
         t1 = Dropout(t1, dropoutP);
 
     /* result = t1 * w2 + b2 */
-    return MMul(t1, w2) + b2;
+    //return MMul(t1, w2) + b2;
+    return MulAndShift(t1, w2, b2);
 }
 
 

@@ -77,6 +77,8 @@ const char * GetOPName(int type)
             return "M_POWER";
         else if (type == MATH_SCALEANDSHIFT)
             return "M_SCALEANDSHIFT";
+        else if (type == MATH_MULANDSHIFT)
+            return "M_OPERATION";
         else if (type == MATH_SIGN)
             return "M_SIGN";
         else if (type == MATH_SUB)

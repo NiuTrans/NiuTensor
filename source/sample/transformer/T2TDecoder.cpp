@@ -21,6 +21,8 @@
 
 #include <math.h>
 #include "T2TDecoder.h"
+#include "T2TUtility.h"
+#include "T2TLayerNormal.h"
 #include "../../tensor/core/CHeader.h"
 
 namespace transformer
@@ -53,14 +55,38 @@ void AttDecoder::InitModel(int argc, char ** argv,
                            bool myIsMasked, int myIgnored, 
                            int myDevID, XMem * myMem)
 {
-    AttEncoder::InitModel(argc, argv, myIsMasked, myIgnored, myDevID, myMem);
+    //AttEncoder::InitModel(argc, argv, myIsMasked, myIgnored, myDevID, myMem);
 
+    devID = myDevID;
+    mem = myMem;
+    ignored = myIgnored;
+
+    LoadParamInt(argc, argv, "nlayer", &nlayer, 6);
+    LoadParamInt(argc, argv, "hsize", &hSize, DEFAULT_EMBEDDING_SIZE);
+    LoadParamInt(argc, argv, "esize", &eSize, DEFAULT_EMBEDDING_SIZE);
+    LoadParamInt(argc, argv, "vsizetgt", &vSize, -1);
+    LoadParamFloat(argc, argv, "dropout", &dropoutP, 0);
+
+    CheckNTErrors(nlayer >= 1, "We have one encoding layer at least!");
+    CheckNTErrors(vSize > 1, "set vocabulary size by \"-vsize\"");
+
+    /* embedding model */
+    embedder.InitModel(argc, argv, devID, mem, false);
+
+    attentions = new T2TAttention[nlayer];
+    fnns = new T2TFNN[nlayer];
+    attLayerNorms = new T2TLN[nlayer];
+    fnnLayerNorms = new T2TLN[nlayer];
     attentionsEnde = new T2TAttention[nlayer];
     attEndeLayerNorms = new T2TLN[nlayer];
 
     /* initialize the stacked layers */
-    for(int i = 0; i < nlayer; i++){
-        attentionsEnde[i].InitModel(argc, argv, myIsMasked, myIgnored, myDevID, myMem);
+    for (int i = 0; i < nlayer; i++) {
+        attentions[i].InitModel(argc, argv, myIsMasked, myIgnored, myDevID, myMem);
+        fnns[i].InitModel(argc, argv, myDevID, myMem);
+        attLayerNorms[i].InitModel(argc, argv, myDevID, myMem);
+        fnnLayerNorms[i].InitModel(argc, argv, myDevID, myMem);
+        attentionsEnde[i].InitModel(argc, argv, true, myIgnored, myDevID, myMem);
         attEndeLayerNorms[i].InitModel(argc, argv, myDevID, myMem);
     }
 }
@@ -93,7 +119,7 @@ XTensor AttDecoder::Make(XTensor &inputDec, XTensor &outputEnc, XTensor &mask, X
 
         /******************/
         /* self attention */
-        att = attentions[i].Make(x, x, x, mask, isTraining);
+        att = attentions[i].Make(x, x, x, mask, isTraining, true);
 
         /* dropout */
         if(isTraining && dropoutP > 0)
@@ -107,7 +133,7 @@ XTensor AttDecoder::Make(XTensor &inputDec, XTensor &outputEnc, XTensor &mask, X
 
         /*****************************/
         /* encoder-decoder attention */
-        ende = attentionsEnde[i].Make(outputEnc, x, outputEnc, maskEncDec, isTraining);
+        ende = attentionsEnde[i].Make(outputEnc, x, outputEnc, maskEncDec, isTraining, false);
 
         /* dropout */
         if(isTraining && dropoutP > 0)

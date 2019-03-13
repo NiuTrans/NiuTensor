@@ -208,10 +208,10 @@ public:
     int LoadBatch(FILE * file, bool isLM,
                   XTensor * batchEnc, XTensor * paddingEnc, 
                   XTensor * batchDec, XTensor * paddingDec,
-                  XTensor * gold,
+                  XTensor * gold, XTensor * label,
                   int * seqs,
                   int vsEnc, int vsDec, int sBatch, int wBatch, 
-                  bool isSorted, int &wCount,
+                  bool isSorted, int &ws, int &wCount,
                   int devID, XMem * mem, 
 				  bool isTraining);
 
@@ -219,7 +219,7 @@ public:
     int LoadBatchLM(FILE * file, 
                     XTensor * batchEnc, XTensor * paddingEnc,
                     XTensor * batchDec, XTensor * paddingDec,
-                    XTensor * gold,
+                    XTensor * gold, XTensor * label,
                     int * seqs, int vs, int sBatch, int wBatch, 
                     bool isSorted, int &wCount,
                     int devID, XMem * mem, 
@@ -229,9 +229,9 @@ public:
     int LoadBatchMT(FILE * file, 
                     XTensor * batchEnc, XTensor * paddingEnc, 
                     XTensor * batchDec, XTensor * paddingDec,
-                    XTensor * gold,
+                    XTensor * gold, XTensor * label,
                     int * seqs, int vsEnc, int vsDec, int sBatch, int wBatch, 
-                    bool isSorted, int &wCount,
+                    bool isSorted, int &ws, int &wCount,
                     int devID, XMem * mem, 
 					bool isTraining);
 

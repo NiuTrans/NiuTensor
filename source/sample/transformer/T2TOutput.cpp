@@ -56,7 +56,7 @@ void T2TOutput::InitModel(int argc, char ** argv, int myDevID, XMem * myMem)
 
     float minmax = 0;
 
-    LoadParamInt(argc, argv, "vsize", &vSize, -1);
+    LoadParamInt(argc, argv, "vsizetgt", &vSize, -1);
     LoadParamInt(argc, argv, "d", &inSize, DEFAULT_EMBEDDING_SIZE);
     LoadParamInt(argc, argv, "d", &hSize, DEFAULT_EMBEDDING_SIZE);
     LoadParamFloat(argc, argv, "outputminmax", &minmax, 0.08F);

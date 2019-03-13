@@ -44,6 +44,7 @@
 #include "arithmetic/SumByColumnVT.h"
 #include "arithmetic/SumDim.h"
 #include "arithmetic/XTensorBLAS.h"
+#include "arithmetic/MulAndShift.h"
 
 #include "getandset/ConvertDataType.h"
 #include "getandset/OnehotAndIndex.h"

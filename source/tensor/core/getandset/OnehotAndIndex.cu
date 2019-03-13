@@ -96,7 +96,7 @@ convert index tensor to onehot tensor (kernel version)
 >> stride - stride of a data block
 */
 __global__
-void KernelIndexToOnehot(int * onehotData, int * indexData, int blockNum, int stride)
+void KernelIndexToOnehot(DTYPE * onehotData, int * indexData, int blockNum, int stride, float confidence, float lowconfidence)
 {
     /* block id */
     int i = blockDim.x * blockIdx.x + threadIdx.x;
@@ -107,10 +107,17 @@ void KernelIndexToOnehot(int * onehotData, int * indexData, int blockNum, int st
     if (i >= blockNum || offset >= stride)
         return;
 
-    int * od = onehotData + i * stride;
+    DTYPE * od = onehotData + i * stride;
 
     int id = indexData[i];
-    od[id] = 1;
+
+    //od[id] = 2.0;
+    //onehotData[i * stride + id] = 0.1;
+    if (offset == id)
+        od[offset] = confidence;
+    else{
+        od[offset] = lowconfidence;
+    }
 }
 
 /* 
@@ -120,7 +127,7 @@ convert index tensor to onehot tensor (cuda version)
 >> onehot - onehot tensor, which value is 0 or 1
 >> size - the last dimension size of the onehot tensor
 */
-void _CudaIndexToOnehot(XTensor * index, XTensor * onehot, int size)
+void _CudaIndexToOnehot(XTensor * index, XTensor * onehot, int size, float confidence, float lowconfidence)
 {
     int devID = onehot->devID;
 
@@ -138,10 +145,10 @@ void _CudaIndexToOnehot(XTensor * index, XTensor * onehot, int size)
     dim3 blocks(cudaGrids[0], cudaGrids[1]);
     dim3 threads(cudaBlocks[0], cudaBlocks[1]);
 
-    int * onehotData = (int *)onehot->data;
+    DTYPE * onehotData = (DTYPE *)onehot->data;
     int * indexData = (int *)index->data;
 
-    KernelIndexToOnehot<<<blocks, threads >>>(onehotData, indexData, blockNum, stride);
+    KernelIndexToOnehot<<<blocks, threads >>>(onehotData, indexData, blockNum, stride, confidence, lowconfidence);
 
     BacktoCudaDev(devID, devIDBackup);
 }

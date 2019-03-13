@@ -307,6 +307,27 @@ void XLink::MakeLink(const XTensor * t1, const XTensor * t2, XTensor * h, int id
     MakeLink(&list, h, id);
 }
 
+/*
+create a hyperedge with two input tensors and a output tensor
+>> t1 - a tail tensor
+>> t2 - the second tail tensor
+>> t3 - the third tail tensor
+>> h - head tensor
+>> id - id of the edge type
+*/
+void XLink::MakeLink(const XTensor * t1, const XTensor * t2, const XTensor * t3,XTensor * h, int id)
+{
+    if (h == NULL)
+        return;
+
+    XList list(3);
+    list.Add(t1);
+    list.Add(t2);
+    list.Add(t3);
+
+    MakeLink(&list, h, id);
+}
+
 /* 
 create a hyper edge with a list of tensors and a output tensor 
 >> list - a list of input tensors

@@ -138,6 +138,10 @@ struct XLink
     static
     void MakeLink(const XTensor * t1, const XTensor * t2, XTensor * h, int id);
 
+    /* create a hyper edge with three input tensors and a output tensor */
+    static
+    void MakeLink(const XTensor * t1, const XTensor * t2, const XTensor * t3, XTensor * h, int id);
+
     /* create a hyper edge with a list of input tensors and a output tensor */
     static
     void MakeLink(const XList * list, XTensor * h, int id);
