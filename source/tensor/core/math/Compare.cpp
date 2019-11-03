@@ -199,11 +199,11 @@ void funcName(const XTensor &a, const XTensor &b, XTensor c)                    
 }
 
 #ifdef USE_CUDA
-_SIMPLE_MAX_MIN_FUNCTION(_Max, _CudaMax, max)
-_SIMPLE_MAX_MIN_FUNCTION(_Min, _CudaMin, min)
+_SIMPLE_MAX_MIN_FUNCTION(_Max, _CudaMax, MAX)
+_SIMPLE_MAX_MIN_FUNCTION(_Min, _CudaMin, MIN)
 #else
-_SIMPLE_MAX_MIN_FUNCTION(_Max, max)
-_SIMPLE_MAX_MIN_FUNCTION(_Min, min)
+_SIMPLE_MAX_MIN_FUNCTION(_Max, MAX)
+_SIMPLE_MAX_MIN_FUNCTION(_Min, MIN)
 #endif
 
 _SIMPLE_MAX_MIN_FUNCTION_ME(_MaxMe, _Max)
