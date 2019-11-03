@@ -23,7 +23,7 @@ NiuTensor是小牛开源项目所开发的一个轻量级工具包，提供了�
 
 若在Windows上使用NiuTensor工具包：
 
-* 首先需要将NiuTrans.Tensor代码包含在所创建的项目中
+* 首先需要将NiuTensor代码包含在所创建的项目中
 * 在所创建项目中需要引用XTensor.h、core里的CHeader.h和function里的FHeader.h这三个头文件：
     * 通过XTensor.h可以获取我们需要操作的XTensor类
     * 通过core里的CHeader.h可以对Tensor进行一些张量运算
