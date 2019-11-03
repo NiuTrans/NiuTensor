@@ -1,6 +1,5 @@
 # the prefix of the generated executable file
-PREFIX = NiuTrans
-NIUTRANS_EXE := $(PREFIX).Tensor
+NIUTRANS_EXE := NiuTensor
 
 # code path and generated file path
 ROOT = .
