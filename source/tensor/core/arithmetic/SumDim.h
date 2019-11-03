@@ -42,12 +42,19 @@ void _SumDim(XTensor * a, const XTensor * b, int n, DTYPE beta = (DTYPE)1.0);
    i.e., a is summed with b by broadcasting. We make a new tensor c to keep the result and return it */
 XTensor SumDim(const XTensor &a, const XTensor &b, int n, DTYPE beta = (DTYPE)1.0);
 
+/* tensor summation c = a + b * \beta where the size of b is equal to the n-th dimension of a, 
+   i.e., a is summed with b by broadcasting */
+void SumDim(const XTensor &a, const XTensor &b, XTensor &c, int n, DTYPE beta = (DTYPE)1.0);
+
 /* tensor broadcast summation c = a + b * \beta where some of dimensions of b can be of size 1 */
 void _SumBroadcast(const XTensor * a, const XTensor * b, XTensor * c, DTYPE beta = (DTYPE)1.0);
 
 /* tensor broadcast summation c = a + b * \beta where some of dimensions of b can be of size 1.
    we return the resulting tensor here */
 XTensor SumBroadcast(const XTensor &a, const XTensor &b, DTYPE beta = (DTYPE)1.0);
+
+/* tensor broadcast summation c = a + b * \beta where some of dimensions of b can be of size 1 */
+void SumBroadcast(const XTensor &a, const XTensor &b, XTensor &c, DTYPE beta = (DTYPE)1.0);
     
 } // namespace nts(NiuTrans.Tensor)
 

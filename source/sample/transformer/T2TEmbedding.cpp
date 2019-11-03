@@ -31,7 +31,6 @@ namespace transformer
 T2TEmbedder::T2TEmbedder()
 {
     devID = -1;
-    mem = NULL;
     vSize = -1;
     maxLength = -1;
 }
@@ -46,12 +45,10 @@ initialize the model
 >> argc - number of arguments
 >> argv - list of pointers to the arguments
 >> myDevID - device id
->> myMem - the memory pool
 */
-void T2TEmbedder::InitModel(int argc, char ** argv, int myDevID, XMem * myMem, bool isEnc)
+void T2TEmbedder::InitModel(int argc, char ** argv, int myDevID, bool isEnc)
 {
     devID = myDevID;
-    mem = myMem;
     
     if(isEnc){
         LoadParamInt(argc, argv, "vsize", &vSize, -1);
@@ -64,7 +61,7 @@ void T2TEmbedder::InitModel(int argc, char ** argv, int myDevID, XMem * myMem, b
     LoadParamInt(argc, argv, "d", &eSize, DEFAULT_EMBEDDING_SIZE);
     LoadParamInt(argc, argv, "d", &d, DEFAULT_EMBEDDING_SIZE);
 
-    InitTensor2D(&w, vSize, eSize, X_FLOAT, devID, mem);
+    InitTensor2D(&w, vSize, eSize, X_FLOAT, devID);
 
     DTYPE v = 1.0F/(float)sqrt((float)eSize);
     w.SetDataRandn(0, v);
@@ -81,7 +78,7 @@ make positional embeddings (of size eSize * length)
 */
 void T2TEmbedder::MakePosEmbedding(int eSize, int d, int length)
 {
-    InitTensor2D(&posEmbeddingBase, length, eSize, X_FLOAT, devID, mem);
+    InitTensor2D(&posEmbeddingBase, length, eSize, X_FLOAT, devID);
 
     float * data = new float[posEmbeddingBase.unitNum];
 
@@ -145,9 +142,9 @@ XTensor T2TEmbedder::Make(XTensor &input)
     /* we make positional embeddings first */
     //if(!match){
     if(true){
-        InitTensor(&posEmbedding, input.order + 1, dims, X_FLOAT, 1.0F, devID, mem);
+        InitTensor(&posEmbedding, input.order + 1, dims, X_FLOAT, devID);
 
-        XTensor * posTMP = NewTensorBuf(2, dims + 1, X_FLOAT, 1.0F, devID, mem);
+        XTensor * posTMP = NewTensorBuf(2, dims + 1, X_FLOAT, devID);
 
         _CopyValues(&posEmbeddingBase, 0, posTMP->unitNum, posTMP, 0);
         _Unsqueeze(posTMP, &posEmbedding, 0, dims[0]);

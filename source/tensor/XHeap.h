@@ -39,7 +39,7 @@ template <typename T>
 struct HeapNode
 {
     /* node index */
-    int index;
+    long long index;
 
     /* value of the node */
     T value;
@@ -52,9 +52,16 @@ struct HeapNode
 
     HeapNode(int i, T v)
     {
-        index = i;
+        index = (long long)i;
         value = v;
     };
+
+    HeapNode(void * i, T v)
+    {
+        index = (long long)i;
+        value = v;
+
+    }
 };
 
 /* a heap that keeps a data array of T */
@@ -76,10 +83,16 @@ public:
 
 public:
     /* constructor */
+    XHeap();
+
+    /* constructor */
     XHeap(int mySize, XMem * myMem = NULL);
 
     /* deconstructor */
     ~XHeap();
+
+    /* initialization */
+    void Init(int mySize, XMem * myMem = NULL);
 
     /* clear the data */
     void Clear(T initValue);
@@ -107,6 +120,9 @@ public:
 
     /* move item k up the tree */
     void Up(int k);
+
+    /* how many items are kept in the heap */
+    inline int Count() { return count; };
 };
 
 } /* end of the nts (NiuTrans.Tensor) namespace */

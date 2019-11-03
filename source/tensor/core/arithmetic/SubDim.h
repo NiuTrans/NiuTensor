@@ -38,6 +38,10 @@ void _SubDim(XTensor * a, const XTensor * b, int n, DTYPE beta = (DTYPE)1.0);
    i.e., a is subtracted with b by broadcasting. We make a new tensor c to keep the result and return it */
 XTensor SubDim(const XTensor &a, const XTensor &b, int n, DTYPE beta = (DTYPE)1.0);
 
+/* tensor subtraction c = a - b * \beta where the size of b is equal to the n-th dimension of a, 
+   i.e., a is subtracted with b by broadcasting*/
+void SubDim(const XTensor &a, const XTensor &b, XTensor &c, int n, DTYPE beta = (DTYPE)1.0);
+
 } // namespace nts(NiuTrans.Tensor)
 
 #endif // __SUBDIM_H__

@@ -25,6 +25,8 @@
 #include "T2TModel.h"
 #include "T2TUtility.h"
 #include "T2TTrainer.h"
+#include "T2TPredictor.h"
+#include "T2TTester.h"
 #include "../../tensor/XDevice.h"
 #include "../../tensor/XUtility.h"
 #include "../../tensor/XGlobal.h"
@@ -47,6 +49,7 @@ int TransformerMain(int argc, const char ** argv)
 
     ShowParams(argc, args);
 
+    bool isBeamSearch = false;
     char * trainFN = new char[MAX_LINE_LENGTH];
     char * modelFN = new char[MAX_LINE_LENGTH];
     char * testFN = new char[MAX_LINE_LENGTH];
@@ -56,6 +59,7 @@ int TransformerMain(int argc, const char ** argv)
     LoadParamString(argc, args, "model", modelFN, "");
     LoadParamString(argc, args, "test", testFN, "");
     LoadParamString(argc, args, "output", outputFN, "");
+    LoadParamBool(argc, args, "beamsearch", &isBeamSearch, false);
 
     srand((unsigned int)time(NULL));
 
@@ -70,19 +74,29 @@ int TransformerMain(int argc, const char ** argv)
         trainer.Train(trainFN, testFN, strcmp(modelFN, "") ? modelFN : "checkpoint.model", &model);
     
     /* save the final model */
-    //if(strcmp(modelFN, "") && strcmp(trainFN, ""))
-        //model.Dump(modelFN);
+    if(strcmp(modelFN, "") && strcmp(trainFN, ""))
+        model.Dump(modelFN);
     
     /* load the model if neccessary */
-    //if(strcmp(modelFN, ""))
-        //model.Read(modelFN);
-
-    T2TTrainer tester;
-    tester.Init(argc, args);
+    if(strcmp(modelFN, ""))
+        model.Read(modelFN);
 
     /* test the model on the new data */
-    if(strcmp(testFN, "") && strcmp(outputFN, ""))
-        tester.Test(testFN, outputFN, &model);
+    if(strcmp(testFN, "") && strcmp(outputFN, "")){
+        /* beam search */
+        if(isBeamSearch){
+            T2TTester searcher;
+            searcher.Init(argc, args);
+            searcher.Test(testFN, outputFN, &model);
+        }
+
+        /* forced decoding */
+        else{
+            T2TTrainer tester;
+            tester.Init(argc, args);
+            tester.Test(testFN, outputFN, &model);
+        }
+    }
 
     delete[] trainFN;
     delete[] modelFN;

@@ -16,8 +16,8 @@
 */
 
 /*
-* $Created by: XIAO Tong (email: xiaotong@mail.neu.edu.cn) 2018-04-27
-*/
+ * $Created by: XIAO Tong (email: xiaotong@mail.neu.edu.cn) 2018-04-27
+ */
 
 #include <math.h>
 #include "Softmax.h"
@@ -26,6 +26,7 @@
 #include "../XUtility.h"
 #include "../core/reduce/ReduceSum.h"
 #include "../core/reduce/ReduceMax.h"
+#include "../core/shape/IsSameShaped.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
@@ -40,7 +41,6 @@ void _Softmax(const XTensor * x, XTensor * y, int leadDim)
     if(leadDim < 0)
         leadDim = x->order - 1;
 
-    int leadDimRDI = x->order - leadDim - 1;
     if(!x->isSparse && !y->isSparse && x->dataType == y->dataType){
         int * dimSize = new int[x->order - 1];
         for(int i = 0; i < x->order; i++){
@@ -54,8 +54,8 @@ void _Softmax(const XTensor * x, XTensor * y, int leadDim)
         XTensor * max = NULL;
         XTensor * sum = NULL;
 
-        max = NewTensorBuf(x->order - 1, dimSize, x->dataType, x->denseRatio, x->devID, mem);
-        sum = NewTensorBuf(x->order - 1, dimSize, x->dataType, x->denseRatio, x->devID, mem);
+        max = NewTensorBufV2(x->order - 1, dimSize, x->dataType, x->denseRatio, x->devID, mem);
+        sum = NewTensorBufV2(x->order - 1, dimSize, x->dataType, x->denseRatio, x->devID, mem);
 
         _ReduceMax(x, max, leadDim);
         _ReduceSum(x, sum, leadDim, max, 1.0F, true);
@@ -70,13 +70,13 @@ void _Softmax(const XTensor * x, XTensor * y, int leadDim)
         else{
             CheckNTErrors((x->dataType == DEFAULT_DTYPE), "TODO!");
 
-            int dimensionSize = y->dimSizeRDI[leadDimRDI];
+            int dimensionSize = y->dimSize[leadDim];
             int stride = 1;
             int blockSize = 1;
             int blockNum = 1;
 
-            for(int i = 0; i < leadDimRDI; i++)
-                stride *= y->dimSizeRDI[i];
+            for(int i = leadDim + 1; i < y->order; i++)
+                stride *= y->dimSize[i];
             blockSize = stride * dimensionSize;
             blockNum = y->unitNum / blockSize;
 
@@ -142,10 +142,32 @@ XTensor Softmax(const XTensor &x, int leadDim)
     _Softmax(&x, &y, ld);
 
     /* tensor connection */
-    XLink::MakeLink(&x, NULL, &y, FUNC_SOFTMAX);
-    XLink::AddParamToHeadInt(&y, ld);
+    if (x.enableGrad) {
+        XLink::MakeLink(&x, NULL, &y, FUNC_SOFTMAX);
+        XLink::AddParamToHeadInt(&y, ld);
+    }
 
     return y;
+}
+
+void Softmax(const XTensor &x, XTensor &y, int leadDim)
+{
+    int ld = leadDim;
+    if (ld < 0)
+        ld = x.order - 1;
+
+    if (!y.isInit || !IsSameShaped(y, x)) {
+        InitTensorV2(&y, &x);
+    }
+
+    /* call _Softmax function */
+    _Softmax(&x, &y, ld);
+
+    if (x.enableGrad) {
+        /* tensor connection */
+        XLink::MakeLink(&x, NULL, &y, FUNC_SOFTMAX);
+        XLink::AddParamToHeadInt(&y, ld);
+    }
 }
 
 /*
@@ -184,8 +206,6 @@ void _SoftmaxBackward(XTensor * gold, XTensor * y, XTensor * x,
     if(leadDim < 0)
         leadDim = y->order - 1;
 
-    int leadDimRDI = y->order - leadDim - 1;
-
 #ifdef USE_CUDA
     if(y->devID >= 0){
         _CudaSoftmaxBackward(gold, y, x, dedy, dedx, padding, leadDim, lossName);
@@ -193,12 +213,12 @@ void _SoftmaxBackward(XTensor * gold, XTensor * y, XTensor * x,
     }
 #endif
 
-    int dimensionSize = y->dimSizeRDI[leadDimRDI];
+    int dimensionSize = y->dimSize[leadDim];
     int stride = 1;
     int blockSize = 1;
     int blockNum = 1;
-    for(int i = 0; i < leadDimRDI; i++)
-        stride *= y->dimSizeRDI[i];
+    for(int i = leadDim + 1; i < y->order; i++)
+        stride *= y->dimSize[i];
     blockSize = stride * dimensionSize;
     blockNum = y->unitNum / blockSize;
 
@@ -230,7 +250,7 @@ void _SoftmaxBackward(XTensor * gold, XTensor * y, XTensor * x,
                 }
             }
             else{
-                CheckNTErrors((XTensor::IsSameShaped(gold, y)), "The tensors must be of the same size!");
+                CheckNTErrors((_IsSameShaped(gold, y)), "The tensors must be of the same size!");
                 for(int k = 0; k < blockNum; k++){
                     gp = (DTYPE*)gold->data + k * blockSize;
                     op = (DTYPE*)y->data + k * blockSize;
@@ -269,7 +289,7 @@ void _SoftmaxBackward(XTensor * gold, XTensor * y, XTensor * x,
                 }
             }
             else{
-                CheckNTErrors((XTensor::IsSameShaped(gold, y)), "The tensors must be of the same size!");
+                CheckNTErrors((_IsSameShaped(gold, y)), "The tensors must be of the same size!");
                 for(int k = 0; k < blockNum; k++){
                     gp = (DTYPE*)gold->data + k * blockSize;
                     op = (DTYPE*)y->data + k * blockSize;

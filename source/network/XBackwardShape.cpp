@@ -43,6 +43,8 @@ void XShapeGrad::MakeGrad(XTensor * node, bool isEfficent)
         GradCopyIndexed(node, isEfficent);
     else if(operID == MOVEMENT_GATHER)
         GradGather(node, isEfficent);
+    else if (operID == MOVEMENT_DROPOUTWITHINDEX)
+        GradDropoutWithIndex(node, isEfficent);
     else if(operID == SHAPE_MERGE)
         GradMerge(node, isEfficent);
     else if(operID == SHAPE_MERGE_LIST)
@@ -115,13 +117,50 @@ dE/da = spreadforgather(b)
 void XShapeGrad::GradGather(XTensor * node, bool isEfficent)
 {
     XLink &income = node->income;
-    CheckNTErrors(income.tailNum > 0, "Wrong input tensor number for CopyIndexed!");
+    CheckNTErrors(income.tailNum > 0, "Wrong input tensor number for Gather!");
 
     XTensor * input = income.tails[0];
     XTensor * index = income.tails[1];
     XNoder::MakeGrad(input);
 
     _SpreadForGather(input->grad, node->grad, index);
+
+    node->visitMark = NODE_FINISHED;
+}
+
+/*
+gradient computation for DropoutWithIndex function
+*/
+void XShapeGrad::GradDropoutWithIndex(XTensor * node, bool isEfficent)
+{
+    XLink &income = node->income;
+    CheckNTErrors(income.tailNum > 0, "Wrong input tensor number for DropoutWithIndex!");
+
+    XTensor * input = income.tails[0];
+    XTensor * index = income.tails[1];
+    DTYPE scale = income.GetParam(0);
+    XNoder::MakeGrad(input);
+
+    //_Identity(node->grad, input->grad);
+    _CopyValues(node->grad, input->grad);
+
+    int order = node->grad->order;
+    int * dimSize = new int[order];
+
+    for (int i = 0; i < order; i++) {
+        dimSize[i] = node->grad->dimSize[i];
+    }
+
+    int order1 = 1;
+    int * dimSize1 = new int[order1];
+    dimSize1[0] = input->grad->unitNum;
+    
+    input->grad->Reshape(order1, dimSize1);
+
+    _DropoutWithIndex(node->grad, index, input->grad);
+    _ScaleAndShiftMe(input->grad, scale);
+
+    input->grad->Reshape(order, dimSize);
 
     node->visitMark = NODE_FINISHED;
 }
@@ -232,8 +271,8 @@ void XShapeGrad::GradMergeList(XTensor * node, bool isEfficient)
     CheckNTErrors(income.tailNum > 0, "Wrong input tensor number for MERGE!");
 
     XTensor * last = NULL;
-    XList smalls(income.tailNum);
-    XList smallsGrad(income.tailNum);
+    TensorList smalls(income.tailNum);
+    TensorList smallsGrad(income.tailNum);
     bool mergeOnly = true;
     for(int i = 0; i < income.tailNum; i++){
         XTensor * tail = income.tails[i];
@@ -242,7 +281,7 @@ void XShapeGrad::GradMergeList(XTensor * node, bool isEfficient)
         smallsGrad.Add(tail->grad);
         
         if(i > 1){
-            CheckNTErrors(XTensor::IsSameShaped(last, tail), 
+            CheckNTErrors(_IsSameShaped(last, tail), 
                          "Input tensors must be of the same size!");
         }
 
@@ -352,7 +391,7 @@ void XShapeGrad::GradSplit(XTensor * node, bool isEfficient)
     /* if the tensor is used somewhere else, we need another SUM
        for gradient accumulation */
     else{
-        XTensor * inputGradTMP = NewTensorBuf(input, input->devID, input->mem);
+        XTensor * inputGradTMP = NewTensorBufV2(input, input->devID, input->mem);
 
         _Merge(node->grad, inputGradTMP, whereToSplit + 1, 0);
         _Sum(input->grad, inputGradTMP, input->grad);
@@ -401,7 +440,7 @@ void XShapeGrad::GradSplitListPost(XTensor * node, bool isEfficient)
     /* we compute the gradient for current node, rather than for
        child node, i.e., we use the outgoing edge here */
     XLink &outgo = node->outgo;
-    XList splits(outgo.tailNum);
+    TensorList splits(outgo.tailNum);
     int whereToSplit = -1;
     int splitNum = 0;
 
@@ -411,7 +450,7 @@ void XShapeGrad::GradSplitListPost(XTensor * node, bool isEfficient)
         if(income.typeID == SHAPE_SPLIT_LIST){
             int w = income.GetParamInt(0);
             int splitID = income.GetParamInt(1);
-			
+            
             if(whereToSplit < 0)
                 whereToSplit = w;
             splitNum++;
@@ -436,7 +475,7 @@ void XShapeGrad::GradSplitListPost(XTensor * node, bool isEfficient)
        somewhere else, we need another SUM for gradient 
        accumulation */
     else{
-        XTensor * nodeGradTMP = NewTensorBuf(node, node->devID, node->mem);
+        XTensor * nodeGradTMP = NewTensorBufV2(node, node->devID, node->mem);
 
         _Merge(&splits, nodeGradTMP, whereToSplit + 1);
         _Sum(node->grad, nodeGradTMP, node->grad);
@@ -462,7 +501,7 @@ void XShapeGrad::GradTranspose(XTensor * node, bool isEfficient)
 
     XTensor * output = node;
     XTensor * input = income.tails[0];
-    XTensor * b = NewTensorBuf(input, input->devID, input->mem);
+    XTensor * b = NewTensorBufV2(input, input->devID, input->mem);
     XNoder::MakeGrad(input);
 
     int i = income.GetParamInt(0);
@@ -504,7 +543,7 @@ void XShapeGrad::GradUnsqueeze(XTensor * node, bool isEfficient)
     CheckNTErrors(dSize == output->GetDim(dim), "Wrong dim size for UNSQUEEZE!");
     CheckNTErrors(output->unitNum = input->unitNum * dSize, "Wrong tensor size!");
     
-    XTensor * g = NewTensorBuf(input->grad, input->devID, input->mem);
+    XTensor * g = NewTensorBufV2(input->grad, input->devID, input->mem);
     
     _ReduceSum(output->grad, g, dim);
     _Sum(input->grad, g, input->grad);

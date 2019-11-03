@@ -27,18 +27,21 @@
 namespace nts{ // namespace nts(NiuTrans.Tensor)
 
 /* convert onehot tensor to index tensor */
-void _OnehotToIndex(XTensor * onehot, XTensor * index, int size);
+void _OnehotToIndex(const XTensor * onehot, XTensor * index, int size);
 
 /* convert onehot tensor to index tensor (return an XTensor structure)
 make a new tensor to keep the result and return it */
-XTensor OnehotToIndex(XTensor & onehot, int num);
+XTensor OnehotToIndex(const XTensor & onehot, int num);
 
 /* convert index tensor to onehot tensor */
-void _IndexToOnehot(XTensor * index, XTensor * onehot, int size, float labelSmoothingP);
+void _IndexToOnehot(const XTensor * index, XTensor * onehot, int size, float labelSmoothingP);
+
+/* convert index tensor to onehot tensor */
+void _IndexToOnehot(int * index, int n, XTensor * onehot, int size, float labelSmoothingP);
 
 /* convert index tensor to onehot tensor (return an XTensor structure)
 make a new tensor to keep the result and return it */
-XTensor IndexToOnehot(XTensor & index, int num, float labelSmoothingP);
+XTensor IndexToOnehot(const XTensor & index, int num, float labelSmoothingP);
 
 } // namespace nts(NiuTrans.Tensor)
 

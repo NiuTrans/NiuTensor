@@ -25,6 +25,114 @@
 
 namespace nts{ // namespace nts(NiuTrans.Tensor)
 
+/*
+generate a tensor with selected data in index along the given dimension
+
+c = select(a)
+
+>> a - input tensor
+>> c - result tensor
+>> index - the selected index
+>> dim - the dimension along with which we do the job
+*/
+
+void _Select(const XTensor * a, XTensor * c, int* index, int dim)
+{
+    CheckNTErrors(a != NULL && c != NULL, "empty tensors!");
+    CheckNTErrors(a->order == c->order, "The input and output tensors must in the same order!");
+    CheckNTErrors(dim >= 0 && dim < a->order, "The input dimension is out of bounds!");
+    CheckNTErrors(a->dataType == c->dataType, "The tensor must be of the same data type!");
+    int stride = 1;
+    for (int i = dim + 1; i < a->order; i++)
+        stride *= a->dimSize[i];
+    int copyTimes = 1;
+    for (int i = 0; i < dim; i++)
+    {
+        copyTimes *= a->dimSize[i];
+    }
+    int cot = c->dimSize[dim];
+    int blockSize = stride * a->unitSize;
+    int stepSizeS = stride * a->dimSize[dim] * a->unitSize;
+    int stepSizeT = stride * c->dimSize[dim] * a->unitSize;
+    char * s = (char*)a->data;
+    char * t = (char*)c->data;
+    for (int i = 0; i < copyTimes; i++) {
+        for (int j = 0; j < cot; ++j) {
+            XMemCopy(t + j * blockSize, c->devID, s + index[j] * blockSize, a->devID, blockSize);
+        }
+        s += stepSizeS;
+        t += stepSizeT;
+    }
+}
+
+/*
+generate a tensor with selected data in index along the given dimension
+
+c = select(a)
+
+>> a - input tensor
+>> c - result tensor
+>> index - the selected index
+>> dim - the dimension along with which we do the job
+*/
+void _Select(const XTensor * a, XTensor * c, XTensor* index, int dim)
+{
+    if (index->devID >= 0)
+    {
+        int* indexCPU = new int[index->unitNum];
+        XMemCopy(indexCPU, -1, index->data,index->devID, index->unitNum * sizeof(int));
+
+        _Select(a, c, indexCPU, dim);
+        delete[] indexCPU;
+    }
+    else
+    {
+        _Select(a, c, (int *)index->data, dim);
+    }
+}
+
+/*
+c = select(a)
+
+>> a - input tensor
+>> index - the selected index
+>> dim - the dimension along with which we do the job 
+<< return - the result of the generated tensor with selected data
+*/
+XTensor Select(const XTensor &a, XTensor &index, int dim)
+{
+    int order = a.order;
+    int * dimSize = new int[order];
+
+    CheckNTErrors(dim >= 0 && dim < a.order, "The input dimension is out of bounds!");
+
+    for (int i = 0; i < a.order; i++) {
+        if (i == dim) {
+            dimSize[i] = index.dimSize[0];
+        }
+        else
+            dimSize[i] = a.dimSize[i];
+    }
+
+    float dr = (!a.isSparse) ? 1.0F : a.denseRatio;
+    XTensor c(order, dimSize, a.dataType, dr, a.devID, a.mem);
+    c.SetTMPFlag();
+
+    /* call _SelectRange function */
+    _Select(&a, &c, &index, dim);
+
+    /* tensor connection */
+    if (a.enableGrad) {
+        XLink::MakeLink(&a, &index, &c, GETANDSET_SELECT);
+        XLink::AddParamToHeadInt(&c, dim);
+    }
+
+    /* destroy variables */
+    delete[] dimSize;
+
+    return c;
+}
+
 /* 
 generate a tensor with selected data in range[low,high] along the given dimension 
 
@@ -58,13 +166,12 @@ void _SelectRange(const XTensor * a, XTensor * c, int dim, int low, int high)
     }
 
     int stride = 1;
-    int dimRDI = a->order - dim - 1;
-    for(int i = 0; i < dimRDI; i++)
-        stride *= a->dimSizeRDI[i];
+    for(int i = dim + 1; i < a->order; i++)
+        stride *= a->dimSize[i];
 
     int copyTimes = 1;
-    for (int i = dimRDI + 1; i < a->order; i++) 
-        copyTimes *= a->dimSizeRDI[i];
+    for (int i = 0; i < dim; i++) 
+        copyTimes *= a->dimSize[i];
 
     int blockSize = stride * (high - low) * a->unitSize;
     int stepSizeS = stride * a->dimSize[dim] * a->unitSize;
@@ -117,10 +224,12 @@ XTensor SelectRange(const XTensor &a, int dim, int low, int high)
     _SelectRange(&a, &c, dim, low, high);
 
     /* tensor connection */
-    XLink::MakeLink(&a, NULL, &c, GETANDSET_SELECT);
-    XLink::AddParamToHeadInt(&c, dim);
-    XLink::AddParamToHeadInt(&c, low);
-    XLink::AddParamToHeadInt(&c, high);
+    if (a.enableGrad) {
+        XLink::MakeLink(&a, NULL, &c, GETANDSET_SELECT);
+        XLink::AddParamToHeadInt(&c, dim);
+        XLink::AddParamToHeadInt(&c, low);
+        XLink::AddParamToHeadInt(&c, high);
+    }
 
     /* destroy variables */
     delete[] dimSize;

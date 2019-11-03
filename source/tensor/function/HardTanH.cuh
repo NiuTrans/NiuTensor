@@ -23,7 +23,6 @@
 #define __HARDTANH_CUH__
 
 #include "../XTensor.h"
-#include "Loss.h"
 
 namespace nts{ // namespace nts(NiuTrans.Tensor)
 
@@ -38,9 +37,8 @@ y =  1    if x > 1
 void _CudaHardTanH(const XTensor * input, XTensor * output);
 
 /* de/dx (Cuda version) */
-void _CudaHardTanHBackward(XTensor * gold, XTensor * y, XTensor * x, 
-                           XTensor * dedy, XTensor * dedx,
-                           LOSS_FUNCTION_NAME lossName);
+void _CudaHardTanHBackward(XTensor * y, XTensor * x, 
+                           XTensor * dedy, XTensor * dedx);
 
 #endif // USE_CUDA
 

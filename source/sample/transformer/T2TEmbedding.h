@@ -41,9 +41,6 @@ public:
     /* device id */
     int devID;
     
-    /* memory pool */
-    XMem * mem;
-    
     /* vocabulary size */
     int vSize;
 
@@ -71,7 +68,7 @@ public:
     ~T2TEmbedder();
 
     /* initialize the model */
-    void InitModel(int argc, char ** argv, int myDevID = -1, XMem * myMem = NULL, bool isEnc = true);
+    void InitModel(int argc, char ** argv, int myDevID = -1, bool isEnc = true);
 
     /* make positional embeddings */
     void MakePosEmbedding(int eSize, int d, int length);

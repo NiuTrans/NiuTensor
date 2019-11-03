@@ -19,6 +19,8 @@
 * $Created by: Lin Ye (email: linye2015@outlook.com) 2018-06-15
 */
 
+#include "../core/math/Binary.h"
+#include "../core/utilities/CheckData.h"
 #include "../XUtility.h"
 #include "TPower.h"
 
@@ -30,88 +32,88 @@ In this case, p=2.
 */
 bool TestPower1()
 {
-	/* a tensor of size (3, 2) */
-	int aOrder = 2;
-	int * aDimSize = new int[aOrder];
-	aDimSize[0] = 3;
-	aDimSize[1] = 2;
+    /* a tensor of size (3, 2) */
+    int aOrder = 2;
+    int * aDimSize = new int[aOrder];
+    aDimSize[0] = 3;
+    aDimSize[1] = 2;
 
-	int aUnitNum = 1;
-	for (int i = 0; i < aOrder; i++)
-		aUnitNum *= aDimSize[i];
+    int aUnitNum = 1;
+    for (int i = 0; i < aOrder; i++)
+        aUnitNum *= aDimSize[i];
 
-	DTYPE aData[3][2] = { {1.0F, 2.0F},
-	                      {3.0F, 4.0F},
-	                      {5.0F, 6.0F} };
-	DTYPE answer[3][2] = { {1.0F, 4.0F},
-	                       {9.0F, 16.0F},
-	                       {25.0F, 36.0F} };
+    DTYPE aData[3][2] = { {1.0F, 2.0F},
+                          {3.0F, 4.0F},
+                          {5.0F, 6.0F} };
+    DTYPE answer[3][2] = { {1.0F, 4.0F},
+                           {9.0F, 16.0F},
+                           {25.0F, 36.0F} };
 
-	/* CPU test */
-	bool cpuTest = true;
+    /* CPU test */
+    bool cpuTest = true;
 
-	/* create tensors */
-	XTensor * a = NewTensor(aOrder, aDimSize);
-	XTensor * b = NewTensor(aOrder, aDimSize);
-	XTensor * aMe = NewTensor(aOrder, aDimSize);
+    /* create tensors */
+    XTensor * a = NewTensorV2(aOrder, aDimSize);
+    XTensor * b = NewTensorV2(aOrder, aDimSize);
+    XTensor * aMe = NewTensorV2(aOrder, aDimSize);
     XTensor bUser;
 
-	/* initialize variables */
-	a->SetData(aData, aUnitNum);
+    /* initialize variables */
+    a->SetData(aData, aUnitNum);
     aMe->SetData(aData, aUnitNum);
 
-	/* call Power function */
+    /* call Power function */
     _Power(a, b, 2.0F);
-	_PowerMe(aMe, 2.0F);
+    _PowerMe(aMe, 2.0F);
     bUser = Power(*a, 2.0F);
 
-	/* check results */
-	cpuTest = b->CheckData(answer, aUnitNum, 1e-4F) && 
-              aMe->CheckData(answer, aUnitNum, 1e-4F) && 
-              bUser.CheckData(answer, aUnitNum, 1e-4F);
+    /* check results */
+    cpuTest = _CheckData(b, answer, aUnitNum, 1e-4F) &&
+              _CheckData(aMe, answer, aUnitNum, 1e-4F) &&
+              _CheckData(&bUser, answer, aUnitNum, 1e-4F);
     
 #ifdef USE_CUDA
-	/* GPU test */
-	bool gpuTest = true;
+    /* GPU test */
+    bool gpuTest = true;
 
-	/* create tensor */
-	XTensor * aGPU = NewTensor(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
-	XTensor * bGPU = NewTensor(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
-	XTensor * aMeGPU = NewTensor(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
+    /* create tensor */
+    XTensor * aGPU = NewTensorV2(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * bGPU = NewTensorV2(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * aMeGPU = NewTensorV2(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
     XTensor bUserGPU;
 
-	/* Initialize variables */
-	aGPU->SetData(aData, aUnitNum);
+    /* Initialize variables */
+    aGPU->SetData(aData, aUnitNum);
     aMeGPU->SetData(aData, aUnitNum);
 
-	/* call power function */
+    /* call power function */
     _Power(aGPU, bGPU, 2.0F);
-	_PowerMe(aMeGPU, 2.0F);
+    _PowerMe(aMeGPU, 2.0F);
     bUserGPU = Power(*aGPU, 2.0F);
 
-	/* check results */
-	gpuTest = bGPU->CheckData(answer, aUnitNum, 1e-4F) && 
-              aMeGPU->CheckData(answer, aUnitNum, 1e-4F) && 
-              bUserGPU.CheckData(answer, aUnitNum, 1e-4F);
+    /* check results */
+    gpuTest = _CheckData(bGPU, answer, aUnitNum, 1e-4F) &&
+              _CheckData(aMeGPU, answer, aUnitNum, 1e-4F) &&
+              _CheckData(&bUserGPU, answer, aUnitNum, 1e-4F);
     
-	/* destroy variables */
-	delete a;
-	delete b;
-	delete aMe;
+    /* destroy variables */
+    delete a;
+    delete b;
+    delete aMe;
     delete aGPU;
     delete bGPU;
     delete aMeGPU;
-	delete[] aDimSize;
+    delete[] aDimSize;
 
-	return cpuTest && gpuTest;
+    return cpuTest && gpuTest;
 #else
-	/* destroy variables */
-	delete a;
-	delete b;
-	delete aMe;
-	delete[] aDimSize;
+    /* destroy variables */
+    delete a;
+    delete b;
+    delete aMe;
+    delete[] aDimSize;
 
-	return cpuTest;
+    return cpuTest;
 #endif // USE_CUDA
 }
 
@@ -121,88 +123,88 @@ In this case, p=1.
 */
 bool TestPower2()
 {
-	/* a tensor of size (3, 2) */
-	int aOrder = 2;
-	int * aDimSize = new int[aOrder];
-	aDimSize[0] = 3;
-	aDimSize[1] = 2;
+    /* a tensor of size (3, 2) */
+    int aOrder = 2;
+    int * aDimSize = new int[aOrder];
+    aDimSize[0] = 3;
+    aDimSize[1] = 2;
 
-	int aUnitNum = 1;
-	for (int i = 0; i < aOrder; i++)
-		aUnitNum *= aDimSize[i];
+    int aUnitNum = 1;
+    for (int i = 0; i < aOrder; i++)
+        aUnitNum *= aDimSize[i];
 
-	DTYPE aData[3][2] = { {0.0F, 1.0F},
-	                      {2.0F, 3.0F},
-	                      {4.0F, 5.0F} };
-	DTYPE answer[3][2] = { {0.0F, 1.0F},
-	                       {2.0F, 3.0F},
-	                       {4.0F, 5.0F} };
+    DTYPE aData[3][2] = { {0.0F, 1.0F},
+                          {2.0F, 3.0F},
+                          {4.0F, 5.0F} };
+    DTYPE answer[3][2] = { {0.0F, 1.0F},
+                           {2.0F, 3.0F},
+                           {4.0F, 5.0F} };
 
-	/* CPU test */
-	bool cpuTest = true;
+    /* CPU test */
+    bool cpuTest = true;
 
-	/* create tensors */
-	XTensor * a = NewTensor(aOrder, aDimSize);
-	XTensor * b = NewTensor(aOrder, aDimSize);
-	XTensor * aMe = NewTensor(aOrder, aDimSize);
+    /* create tensors */
+    XTensor * a = NewTensorV2(aOrder, aDimSize);
+    XTensor * b = NewTensorV2(aOrder, aDimSize);
+    XTensor * aMe = NewTensorV2(aOrder, aDimSize);
     XTensor bUser;
 
-	/* initialize variables */
-	a->SetData(aData, aUnitNum);
-	aMe->SetData(aData, aUnitNum);
+    /* initialize variables */
+    a->SetData(aData, aUnitNum);
+    aMe->SetData(aData, aUnitNum);
 
-	/* call Power function */
+    /* call Power function */
     _Power(a, b, 1.0F);
-	_PowerMe(aMe, 1.0F);
+    _PowerMe(aMe, 1.0F);
     bUser = Power(*a, 1.0F);
 
-	/* check results */
-	cpuTest = b->CheckData(answer, aUnitNum, 1e-4F) && 
-              aMe->CheckData(answer, aUnitNum, 1e-4F) && 
-              bUser.CheckData(answer, aUnitNum, 1e-4F);
+    /* check results */
+    cpuTest = _CheckData(b, answer, aUnitNum, 1e-4F) &&
+              _CheckData(aMe, answer, aUnitNum, 1e-4F) &&
+              _CheckData(&bUser, answer, aUnitNum, 1e-4F);
     
 #ifdef USE_CUDA
-	/* GPU test */
-	bool gpuTest = true;
+    /* GPU test */
+    bool gpuTest = true;
 
-	/* create tensor */
-	XTensor * aGPU = NewTensor(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * bGPU = NewTensor(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
-	XTensor * aMeGPU = NewTensor(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
+    /* create tensor */
+    XTensor * aGPU = NewTensorV2(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * bGPU = NewTensorV2(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * aMeGPU = NewTensorV2(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
     XTensor bUserGPU;
 
-	/* Initialize variables */
-	aGPU->SetData(aData, aUnitNum);
+    /* Initialize variables */
+    aGPU->SetData(aData, aUnitNum);
     aMeGPU->SetData(aData, aUnitNum);
 
-	/* call Power function */
+    /* call Power function */
     _Power(aGPU, bGPU, 1.0F);
-	_PowerMe(aMeGPU, 1.0F);
+    _PowerMe(aMeGPU, 1.0F);
     bUserGPU = Power(*aGPU, 1.0F);
 
-	/* check results */
-	gpuTest = bGPU->CheckData(answer, aUnitNum, 1e-4F) && 
-              aMeGPU->CheckData(answer, aUnitNum, 1e-4F) && 
-              bUserGPU.CheckData(answer, aUnitNum, 1e-4F);
+    /* check results */
+    gpuTest = _CheckData(bGPU, answer, aUnitNum, 1e-4F) &&
+              _CheckData(aMeGPU, answer, aUnitNum, 1e-4F) &&
+              _CheckData(&bUserGPU, answer, aUnitNum, 1e-4F);
 
-	/* destroy variables */
-	delete a;
-	delete b;
-	delete aMe;
+    /* destroy variables */
+    delete a;
+    delete b;
+    delete aMe;
     delete aGPU;
     delete bGPU;
     delete aMeGPU;
-	delete[] aDimSize;
+    delete[] aDimSize;
 
-	return cpuTest && gpuTest;
+    return cpuTest && gpuTest;
 #else
-	/* destroy variables */
-	delete a;
-	delete b;
-	delete aMe;
-	delete[] aDimSize;
+    /* destroy variables */
+    delete a;
+    delete b;
+    delete aMe;
+    delete[] aDimSize;
 
-	return cpuTest;
+    return cpuTest;
 #endif // USE_CUDA
 }
 
@@ -212,88 +214,88 @@ In this case, p=0.
 */
 bool TestPower3()
 {
-	/* a tensor of size (3, 2) */
-	int aOrder = 2;
-	int * aDimSize = new int[aOrder];
-	aDimSize[0] = 3;
-	aDimSize[1] = 2;
+    /* a tensor of size (3, 2) */
+    int aOrder = 2;
+    int * aDimSize = new int[aOrder];
+    aDimSize[0] = 3;
+    aDimSize[1] = 2;
 
-	int aUnitNum = 1;
-	for (int i = 0; i < aOrder; i++)
-		aUnitNum *= aDimSize[i];
+    int aUnitNum = 1;
+    for (int i = 0; i < aOrder; i++)
+        aUnitNum *= aDimSize[i];
 
-	DTYPE aData[3][2] = { {1.0F, 1.0F},
-	                      {2.0F, 3.0F},
-	                      {4.0F, 5.0F} };
-	DTYPE answer[3][2] = { {1.0F, 1.0F},
-	                       {1.0F, 1.0F},
-	                       {1.0F, 1.0F} };
+    DTYPE aData[3][2] = { {1.0F, 1.0F},
+                          {2.0F, 3.0F},
+                          {4.0F, 5.0F} };
+    DTYPE answer[3][2] = { {1.0F, 1.0F},
+                           {1.0F, 1.0F},
+                           {1.0F, 1.0F} };
 
-	/* CPU test */
-	bool cpuTest = true;
+    /* CPU test */
+    bool cpuTest = true;
 
-	/* create tensors */
-	XTensor * a = NewTensor(aOrder, aDimSize);
-	XTensor * b = NewTensor(aOrder, aDimSize);
-	XTensor * aMe = NewTensor(aOrder, aDimSize);
+    /* create tensors */
+    XTensor * a = NewTensorV2(aOrder, aDimSize);
+    XTensor * b = NewTensorV2(aOrder, aDimSize);
+    XTensor * aMe = NewTensorV2(aOrder, aDimSize);
     XTensor bUser;
 
-	/* initialize variables */
-	a->SetData(aData, aUnitNum);
+    /* initialize variables */
+    a->SetData(aData, aUnitNum);
     aMe->SetData(aData, aUnitNum);
 
-	/* call Power function */
+    /* call Power function */
     _Power(a, b, 0.0F);
-	_PowerMe(aMe, 0.0F);
+    _PowerMe(aMe, 0.0F);
     bUser = Power(*a, 0.0F);
 
-	/* check results */
-	cpuTest = b->CheckData(answer, aUnitNum, 1e-4F) && 
-              aMe->CheckData(answer, aUnitNum, 1e-4F) && 
-              bUser.CheckData(answer, aUnitNum, 1e-4F);
+    /* check results */
+    cpuTest = _CheckData(b, answer, aUnitNum, 1e-4F) &&
+              _CheckData(aMe, answer, aUnitNum, 1e-4F) &&
+              _CheckData(&bUser, answer, aUnitNum, 1e-4F);
     
 #ifdef USE_CUDA
-	/* GPU test */
-	bool gpuTest = true;
+    /* GPU test */
+    bool gpuTest = true;
 
-	/* create tensor */
-	XTensor * aGPU = NewTensor(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
-	XTensor * bGPU = NewTensor(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
-	XTensor * aMeGPU = NewTensor(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
+    /* create tensor */
+    XTensor * aGPU = NewTensorV2(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * bGPU = NewTensorV2(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * aMeGPU = NewTensorV2(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
     XTensor bUserGPU;
 
-	/* Initialize variables */
-	aGPU->SetData(aData, aUnitNum);
+    /* Initialize variables */
+    aGPU->SetData(aData, aUnitNum);
     aMeGPU->SetData(aData, aUnitNum);
 
-	/* call Power function */
+    /* call Power function */
     _Power(aGPU, bGPU, 0.0F);
-	_PowerMe(aMeGPU, 0.0F);
+    _PowerMe(aMeGPU, 0.0F);
     bUserGPU = Power(*aGPU, 0.0F);
 
-	/* check results */
-	gpuTest = bGPU->CheckData(answer, aUnitNum, 1e-4F) && 
-              aMeGPU->CheckData(answer, aUnitNum, 1e-4F) && 
-              bUserGPU.CheckData(answer, aUnitNum, 1e-4F);
+    /* check results */
+    gpuTest = _CheckData(bGPU, answer, aUnitNum, 1e-4F) &&
+              _CheckData(aMeGPU, answer, aUnitNum, 1e-4F) &&
+              _CheckData(&bUserGPU, answer, aUnitNum, 1e-4F);
 
-	/* destroy variables */
-	delete a;
-	delete b;
-	delete aMe;
+    /* destroy variables */
+    delete a;
+    delete b;
+    delete aMe;
     delete aGPU;
     delete bGPU;
     delete aMeGPU;
-	delete[] aDimSize;
+    delete[] aDimSize;
 
-	return cpuTest && gpuTest;
+    return cpuTest && gpuTest;
 #else
-	/* destroy variables */
-	delete a;
-	delete b;
-	delete aMe;
-	delete[] aDimSize;
+    /* destroy variables */
+    delete a;
+    delete b;
+    delete aMe;
+    delete[] aDimSize;
 
-	return cpuTest;
+    return cpuTest;
 #endif // USE_CUDA
 }
 
@@ -305,53 +307,53 @@ TODO!!
 /* test for Power Function */
 bool TestPower()
 {
-	XPRINT(0, stdout, "[TEST POWER] get the power(a, p) \n");
-	bool returnFlag = true, caseFlag = true;
+    XPRINT(0, stdout, "[TEST POWER] get the power(a, p) \n");
+    bool returnFlag = true, caseFlag = true;
 
-	/* case 1 test */
-	caseFlag = TestPower1();
+    /* case 1 test */
+    caseFlag = TestPower1();
 
-	if (!caseFlag) {
-		returnFlag = false;
-		XPRINT(0, stdout, ">> case 1 failed!\n");
-	}
-	else
-		XPRINT(0, stdout, ">> case 1 passed!\n");
+    if (!caseFlag) {
+        returnFlag = false;
+        XPRINT(0, stdout, ">> case 1 failed!\n");
+    }
+    else
+        XPRINT(0, stdout, ">> case 1 passed!\n");
 
-	/* case 2 test */
-	caseFlag = TestPower2();
+    /* case 2 test */
+    caseFlag = TestPower2();
 
-	if (!caseFlag) {
-		returnFlag = false;
-		XPRINT(0, stdout, ">> case 2 failed!\n");
-	}
-	else
-		XPRINT(0, stdout, ">> case 2 passed!\n");
+    if (!caseFlag) {
+        returnFlag = false;
+        XPRINT(0, stdout, ">> case 2 failed!\n");
+    }
+    else
+        XPRINT(0, stdout, ">> case 2 passed!\n");
 
-	/* case 3 test */
-	caseFlag = TestPower3();
+    /* case 3 test */
+    caseFlag = TestPower3();
 
-	if (!caseFlag) {
-		returnFlag = false;
-		XPRINT(0, stdout, ">> case 3 failed!\n");
-	}
-	else
-		XPRINT(0, stdout, ">> case 3 passed!\n");
+    if (!caseFlag) {
+        returnFlag = false;
+        XPRINT(0, stdout, ">> case 3 failed!\n");
+    }
+    else
+        XPRINT(0, stdout, ">> case 3 passed!\n");
 
-	/* other cases test */
-	/*
-	TODO!!
-	*/
+    /* other cases test */
+    /*
+    TODO!!
+    */
 
-	if (returnFlag) {
-		XPRINT(0, stdout, ">> All Passed!\n");
-	}
-	else
-		XPRINT(0, stdout, ">> Failed!\n");
+    if (returnFlag) {
+        XPRINT(0, stdout, ">> All Passed!\n");
+    }
+    else
+        XPRINT(0, stdout, ">> Failed!\n");
 
-	XPRINT(0, stdout, "\n");
+    XPRINT(0, stdout, "\n");
 
-	return returnFlag;
+    return returnFlag;
 }
 
 } // namespace nts(NiuTrans.Tensor)

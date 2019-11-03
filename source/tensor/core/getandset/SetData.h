@@ -35,6 +35,9 @@ void _SetDataFixed(XTensor * tensor, void * valuePointer);
 
 /* generate data items with a fixed value p (in default type) */
 void SetDataFixed(XTensor &tensor, DTYPE p);
+    
+/* generate data items with a fixed value p (in integer) */
+void SetDataFixedInt(XTensor &tensor, int p);
 
 /* generate data items with a fixed value p (in int) */
 void _SetDataFixedInt(XTensor * tensor, int p);
@@ -45,6 +48,12 @@ void _SetDataFixedFloat(XTensor * tensor, float p);
 /* generate data items with a fixed value p (in double) */
 void _SetDataFixedDouble(XTensor * tensor, double p);
 
+/* generate data items with a fixed value p only if the condition entry is non-zero */
+void _SetDataFixedCond(XTensor * tensor, XTensor * condition, DTYPE p);
+
+/* generate data items with a fixed value p only if the condition entry is non-zero */
+void _SetDataFixedCondInt(XTensor * tensor, XTensor * condition, int p);
+
 /* set data items along with a given dimension (and keep the remaining items unchanged) */
 void _SetDataDim(XTensor * tensor, int beg, int len, int dim, DTYPE p);
 
@@ -54,12 +63,18 @@ void _SetDataIndexed(XTensor * source, XTensor * modify, int dim, int index);
 /* generate data as lower triangular matrics for last two dimensions */
 void _SetDataLowTri(XTensor * tensor, DTYPE p, int shift);
 
+/* generate data items with a uniform distribution in [0, 1] */
+void _SetDataRand(XTensor * tensor, int rNum, int cNum);
+
 /* generate data items with a uniform distribution in [lower, upper] */
-void _SetDataRand(const XTensor * tensor, DTYPE lower, DTYPE upper);
+void _SetDataRand(XTensor * tensor, DTYPE lower, DTYPE upper);
+
+/* generate data items with a range by start, end and the step */
+void _SetDataRange(XTensor * tensor, DTYPE lower, DTYPE upper, DTYPE step);
 
 /* generate data items with a uniform distribution in [lower, upper] and set 
    the item to a pre-defined value if the item >= p, set the item to 0 otherwise */
-void _SetDataRandP(const XTensor * tensor, DTYPE lower, DTYPE upper, DTYPE p, DTYPE value);
+void _SetDataRandP(XTensor * tensor, DTYPE lower, DTYPE upper, DTYPE p, DTYPE value);
 
 /* generate data items with a normal distribution with specified mean and standard deviation */
 void _SetDataRandN(XTensor * tensor, DTYPE mean = 0.0F, DTYPE standardDeviation = 1.0F);

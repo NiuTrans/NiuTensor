@@ -24,6 +24,7 @@
 #include "CopyBlocks.h"
 #include "Gather.h"
 #include "../../XName.h"
+#include "../utilities/SetAscendingOrder.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
@@ -33,45 +34,47 @@ copy indexed sub-tensors
 >> s - the source tensor
 >> t - the target tensor
 >> dim - the leading dimension to define "sub-tensors"
-         e.g., for a tensor of size (3, 2, 4) and dim = 2, 
-         we have 4 sub-tensors of size (3, 2)
+         e.g., for a tensor of size (4, 2, 3) and dim = 0, 
+         we have 4 sub-tensors of size (2, 3)
 >> srcIndex - index of the source sub-tensors
 >> indexSize - length of srcIndex (and tgtIndex)
 >> tgtIndex - index of the target sub-tensors
 >> copyNum - number of the sub-tensors we copy for each source index, 
-             e.g., for srcIndex = [1,4] and copyNum = 2,
-             we actually copy the source sub-tensors 1, 2, 4, 5
+             e.g., for srcIndex = [0,1] and copyNum = 2,
+             we actually copy the source sub-tensors 0, 1, 1 and 2
 */
 void _CopyIndexed(const XTensor * s, XTensor * t, int dim, 
                   int * srcIndex, int indexSize, int * tgtIndex, 
                   int copyNum)
 {
-    CheckNTErrors((s && t), "Invalid tensors!");
-    CheckNTErrors((s->devID == t->devID || (s->devID < 0 && t->devID < 0)),
+    CheckNTErrors(s && t, "Invalid tensors!");
+    CheckNTErrors(s->devID == t->devID || (s->devID < 0 && t->devID < 0),
                   "the data must be kept on the same device!");
-    CheckNTErrors((dim < s->order && dim < t->order), "A too larget dimension specified!");
-    CheckNTErrors((s->unitSize == t->unitSize), "Unmatched tensors!");
+    CheckNTErrors(dim < s->order && dim < t->order, "A too larget dimension specified!");
+    CheckNTErrors(s->unitSize == t->unitSize, "Unmatched tensors!");
 
-    int dimRDI = s->order - dim - 1;
     int blockSizeSrc = 1;
     int blockSizeTgt = 1;
     int blockNumSrc = 1;
     int blockNumTgt = 1;
-    int leadDimSizeSrc = s->dimSizeRDI[dimRDI];
-    int leadDimSizeTgt = t->dimSizeRDI[dimRDI];
+    int leadDimSizeSrc = s->dimSize[dim];
+    int leadDimSizeTgt = t->dimSize[dim];
     int indexOffsetNum = 1;
 
-    for (int i = 0; i < dimRDI; i++) {
-        blockSizeSrc *= s->dimSizeRDI[i];
-        blockSizeTgt *= t->dimSizeRDI[i];
+    for (int i = dim + 1; i < s->order; i++) {
+        blockSizeSrc *= s->dimSize[i];
     }
-    for (int i = dimRDI; i < s->order; i++)
-        blockNumSrc *= s->dimSizeRDI[i];
-    for (int i = dimRDI; i < t->order; i++)
-        blockNumTgt *= t->dimSizeRDI[i];
+    for (int i = dim + 1; i < t->order; i++) {
+        blockSizeTgt *= t->dimSize[i];
+    }
+    for (int i = 0; i <= dim; i++)
+    {
+        blockNumSrc *= s->dimSize[i];
+        blockNumTgt *= t->dimSize[i];
+    }
 
-    CheckNTErrors((blockSizeSrc == blockSizeTgt), "Unmatched tensors!");
-    indexOffsetNum = blockNumSrc / s->dimSizeRDI[dimRDI];
+    CheckNTErrors(blockSizeSrc == blockSizeTgt, "Unmatched tensors!");
+    indexOffsetNum = blockNumSrc / s->dimSize[dim];
 
     int realIndexSize = indexOffsetNum * indexSize * copyNum;
     int * realSrcIndex = new int[realIndexSize];
@@ -87,13 +90,15 @@ void _CopyIndexed(const XTensor * s, XTensor * t, int dim,
             for (int k = 0; k < copyNum; k++) {
                 rsi[k] = baseSrc + srcIndex[j] + k;
                 rti[k] = baseTgt + tgtIndex[j] + k;
+                CheckNTErrors(rsi[k] < s->unitNum, "Wrong index!");
+                CheckNTErrors(rti[k] < t->unitNum, "Wrong index!");
             }
         }
     }
 
     for (int i = 0; i < indexSize; i++) {
-        CheckNTErrors((srcIndex[i] < blockNumSrc), "Index is out of scope!");
-        CheckNTErrors((tgtIndex[i] < blockNumTgt), "Index is out of scope!");
+        CheckNTErrors(srcIndex[i] < blockNumSrc, "Index is out of scope!");
+        CheckNTErrors(tgtIndex[i] < blockNumTgt, "Index is out of scope!");
     }
 
     _CopyBlocks(s->data, blockSizeSrc * s->unitSize, realSrcIndex, realIndexSize, t->data, realTgtIndex, s->mem, s->devID);
@@ -108,13 +113,13 @@ copy selected sub-tensors where indeces are kept in tensors
 >> s - the source tensor
 >> t - the target tensor
 >> dim - the leading dimension to define "sub-tensors"
-         e.g., for a tensor of size (3, 2, 4) and dim = 2, 
-         we have 4 sub-tensors of size (3, 2)
+         e.g., for a tensor of size (4, 2, 3) and dim = 0, 
+         we have 4 sub-tensors of size (2, 3)
 >> srcIndex - the tensor to save the index of the source sub-tensors
 >> tgtIndex - the tensor to save the index of the target sub-tensors
 >> copyNum - number of the sub-tensors we copy for each source index, 
-             e.g., for srcIndex = [1,4] and copyNum = 2,
-             we actually copy the source sub-tensors 1, 2, 4, 5
+             e.g., for srcIndex = [0,1] and copyNum = 2,
+             we actually copy the source sub-tensors 0, 1, 1 and 2
 */
 void _CopyIndexed(const XTensor * s, XTensor * t, int dim, 
                   const XTensor * srcIndex, const XTensor * tgtIndex, 
@@ -124,17 +129,17 @@ void _CopyIndexed(const XTensor * s, XTensor * t, int dim,
     int indexSize = srcIndex->unitNum;
 
     CheckNTErrors(indexSize != 0, "NULL index!")
-    CheckNTErrors((s && t), "Invalid tensors!");
-    CheckNTErrors((srcIndex && tgtIndex), "Invalid index tensors!");
-    CheckNTErrors((s->devID == t->devID || (s->devID < 0 && t->devID < 0)),
+    CheckNTErrors(s && t, "Invalid tensors!");
+    CheckNTErrors(srcIndex && tgtIndex, "Invalid index tensors!");
+    CheckNTErrors(s->devID == t->devID || (s->devID < 0 && t->devID < 0),
                   "the data must be kept on the same device!");
-    CheckNTErrors((srcIndex->devID == srcIndex->devID || (s->devID < 0 && t->devID < 0)),
+    CheckNTErrors(srcIndex->devID == srcIndex->devID || (s->devID < 0 && t->devID < 0),
                   "the index must be kept on the same device!");
-    CheckNTErrors((s->devID == srcIndex->devID || (s->devID < 0 && t->devID < 0)),
+    CheckNTErrors(s->devID == srcIndex->devID || (s->devID < 0 && t->devID < 0),
                   "the data and index must be kept on the same device!");
-    CheckNTErrors((dim >= 0 && dim < order), "A too larget dimension specified!");
-    CheckNTErrors((s->unitSize == t->unitSize), "Unmatched tensors!");
-    CheckNTErrors((srcIndex->unitNum == tgtIndex->unitNum), "Unmatched index tensors!");
+    CheckNTErrors(dim >= 0 && dim < order, "A too larget dimension specified!");
+    CheckNTErrors(s->unitSize == t->unitSize, "Unmatched tensors!");
+    CheckNTErrors(srcIndex->unitNum == tgtIndex->unitNum, "Unmatched index tensors!");
 
     for (int i = 0; i < order; i++) {
         if (i != dim) {
@@ -187,6 +192,29 @@ void _CopyIndexed(const XTensor * s, XTensor * t, int dim,
     }
 }
 
+/* 
+copy selected sub-tensors
+
+>> s - the source tensor
+>> t - the target tensor
+>> dim - the leading dimension to define "sub-tensors"
+         e.g., for a tensor of size (3, 2, 4) and dim = 2, 
+         we have 4 sub-tensors of size (3, 2)
+>> srcIndex - the tensor to save the index of the source sub-tensors
+>> copyNum - number of the sub-tensors we copy for each source index, 
+             e.g., for srcIndex = [1,4] and copyNum = 2,
+             we actually copy the source sub-tensors 1, 2, 4, 5
+*/
+void _CopyIndexed(const XTensor * s, XTensor * t, int dim,                   
+                  const XTensor * srcIndex, int copyNum)
+{
+    XTensor * tgtIndex = NewTensor(srcIndex);
+    SetAscendingOrder(*tgtIndex, 0);
+
+    _CopyIndexed(s, t, dim, srcIndex, tgtIndex, copyNum);
+    delete tgtIndex;
+}
+
 /*
 copy selected sub-tensors where indeces are kept in tensors (return an XTensor structure)
 make a new tensor to keep the result and return it
@@ -199,8 +227,8 @@ make a new tensor to keep the result and return it
 >> indexSize - length of srcIndex (and tgtIndex)
 >> tgtIndex - index of the target sub-tensors
 >> copyNum - number of the sub-tensors we copy for each source index, 
-   e.g., for srcIndex = [1,4] and copyNum = 2,
-   we actually copy the source sub-tensors 1, 2, 4, 5
+             e.g., for srcIndex = [1,4] and copyNum = 2,
+             we actually copy the source sub-tensors 1, 2, 4, 5
 << return - the result of copying indexed sub-tensors
 */
 XTensor CopyIndexed(const XTensor & s, int dim, 
@@ -227,16 +255,18 @@ XTensor CopyIndexed(const XTensor & s, int dim,
     /* call _CopyIndexed function */
     _CopyIndexed(&s, &t, dim, &srcIndex, &tgtIndex, copyNum);
 
-    XList list(3);
-    list.Add(&s);
-    list.Add(&srcIndex);
-    list.Add(&tgtIndex);
+    TensorList list(3);
+    list.Add((XTensor*)&s);
+    list.Add((XTensor*)&srcIndex);
+    list.Add((XTensor*)&tgtIndex);
 
     /* tensor connection */
-    XLink::MakeLink(&list, &t, MOVEMENT_COPYINDEXED);
-    XLink::AddParamToHeadInt(&t, dim);
-    XLink::AddParamToHeadInt(&t, copyNum);
-    
+    if (s.enableGrad) {
+        XLink::MakeLink(&list, &t, MOVEMENT_COPYINDEXED);
+        XLink::AddParamToHeadInt(&t, dim);
+        XLink::AddParamToHeadInt(&t, copyNum);
+    }
+
     /* destroy variables */
     delete[] dimSize;
 
@@ -255,8 +285,8 @@ make a new tensor to keep the result and return it
 >> indexSize - length of srcIndex (and tgtIndex)
 >> tgtIndex - index of the target sub-tensors
 >> copyNum - number of the sub-tensors we copy for each source index, 
-   e.g., for srcIndex = [1,4] and copyNum = 2,
-   we actually copy the source sub-tensors 1, 2, 4, 5
+             e.g., for srcIndex = [1,4] and copyNum = 2,
+             we actually copy the source sub-tensors 1, 2, 4, 5
 << return - the result of copying indexed sub-tensors
 */
 XTensor CopyIndexed(const XTensor &s, int dim, int * srcIndex, int indexSize, int * tgtIndex, int copyNum)
@@ -289,13 +319,15 @@ XTensor CopyIndexed(const XTensor &s, int dim, int * srcIndex, int indexSize, in
     memcpy(saveTgtIndex, tgtIndex, indexSize * sizeof(int));
 
     /* tensor connection */
-    XLink::MakeLink(&s, NULL, &t, MOVEMENT_COPYINDEXED);
-    XLink::AddParamToHeadInt(&t, dim);
-    XLink::AddParamToHeadPointer(&t, saveSrcIndex);
-    XLink::AddParamToHeadInt(&t, indexSize);
-    XLink::AddParamToHeadPointer(&t, saveTgtIndex);
-    XLink::AddParamToHeadInt(&t, copyNum);
-    
+    if (s.enableGrad) {
+        XLink::MakeLink(&s, NULL, &t, MOVEMENT_COPYINDEXED);
+        XLink::AddParamToHeadInt(&t, dim);
+        XLink::AddParamToHeadPointer(&t, saveSrcIndex);
+        XLink::AddParamToHeadInt(&t, indexSize);
+        XLink::AddParamToHeadPointer(&t, saveTgtIndex);
+        XLink::AddParamToHeadInt(&t, copyNum);
+    }
+
     /* destroy variables */
     delete[] dimSize;
 

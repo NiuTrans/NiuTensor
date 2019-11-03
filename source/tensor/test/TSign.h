@@ -22,7 +22,7 @@
 #ifndef __TEST_SIGN_H__
 #define __TEST_SIGN_H__
 
-#include "../core/arithmetic/Sign.h"
+#include "../core/math/Unary.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
 

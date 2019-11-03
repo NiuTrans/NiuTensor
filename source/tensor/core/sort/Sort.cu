@@ -217,20 +217,19 @@ void _CudaSortBig(const XTensor * a, XTensor * b, XTensor * indexA, XTensor * in
     CheckNTErrors((a->order > dim && dim >= 0), "Incorrect dimension specified!");
     CheckNTErrors((a->dataType == DEFAULT_DTYPE), "TODO!");
 
-	int dimRDI = a->order - dim - 1;
-    if (k < 0 || k > b->dimSizeRDI[dimRDI])
-        k = b->dimSizeRDI[dimRDI];
+    if (k < 0 || k > b->dimSize[dim])
+        k = b->dimSize[dim];
 
     XMem * mem = a->mem;
 
     int stride = 1;
-    int strideNum = a->dimSizeRDI[dimRDI];
-    for (int i = 0; i < dimRDI; i++)
-        stride *= a->dimSizeRDI[i];
-
     int blockNum = 1;
-    for (int i = dimRDI + 1; i < a->order; i++)
-        blockNum *= a->dimSizeRDI[i];
+    int strideNum = a->dimSize[dim];
+    for (int i = 0; i < dim; i++)
+        blockNum *= a->dimSize[i];
+
+    for (int i = dim + 1; i < a->order; i++)
+        stride *= a->dimSize[i];
 
     int m = GetNextPower2(strideNum);
     int n = stride * blockNum;

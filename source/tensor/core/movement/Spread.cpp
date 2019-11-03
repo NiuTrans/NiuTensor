@@ -219,7 +219,6 @@ void _SpreadForCopyIndexed(XTensor * s, XTensor * c, int dim,
         
         }
     }
-
 }
 
 /*
@@ -236,15 +235,18 @@ void _SpreadForGather(XTensor * source, XTensor * collection, XTensor * index)
     int order = source->order;
 
     CheckNTErrors(source->dataType == DEFAULT_DTYPE, "TODO!");
+    CheckNTErrors(collection->GetDim(-1) == source->GetDim(-1), "Illegal dimension!");
+    CheckNTErrors(collection->unitNum/collection->GetDim(-1) == index->unitNum, 
+                 "Illegal dimension!");
     
-    for(int i = 0; i < order; i++){
-        if(i == dim){
-            CheckNTErrors(collection->GetDim(i) == index->unitNum, "Illegal dimension!");
-        }
-        else {
-            CheckNTErrors(collection->GetDim(i) == source->GetDim(i), "Illegal dimension!");
-        }
-    }
+    //for(int i = 0; i < order; i++){
+    //    if(i == dim){
+    //        CheckNTErrors(collection->GetDim(i) == index->unitNum, "Illegal dimension!");
+    //    }
+    //    else {
+    //        CheckNTErrors(collection->GetDim(i) == source->GetDim(i), "Illegal dimension!");
+    //    }
+    //}
 
 #ifdef USE_CUDA
     if(source->devID >= 0 && collection->devID >= 0) {

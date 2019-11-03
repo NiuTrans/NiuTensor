@@ -42,9 +42,6 @@ public:
     /* device id */
     int devID;
     
-    /* memory pool */
-    XMem * mem;
-    
     /* head number */
     int nhead;
 
@@ -61,7 +58,7 @@ public:
     XTensor wa;
     
     XTensor wbig;
-	
+    
     /* size of transformed Q and K */
     int dk;
 
@@ -94,10 +91,16 @@ public:
     /* initialize the model */
     void InitModel(int argc, char ** argv, 
                    bool myIsMasked, int myIgnored, 
-                   int myDevID = -1, XMem * myMem = NULL);
+                   int myDevID = -1);
 
     /* make the network */
-    XTensor Make(XTensor &k, XTensor &q, XTensor &v, XTensor &mask, bool isTraining, bool selfatt);
+    XTensor Make(XTensor &k, XTensor &q, XTensor &v, XTensor &mask, bool isTraining);
+    
+    /* make the network given a big tensor that keeps keys, queries and values */
+    XTensor MakeBig(XTensor &kqv, XTensor &mask, bool isTraining);
+    
+    /* make the attention network given keys, queries and values (after linear transformation) */
+    XTensor MakeAttention(XTensor &k, XTensor &q, XTensor &v, XTensor &mask, bool isTraining);
 };
 
 }

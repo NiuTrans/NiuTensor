@@ -32,6 +32,8 @@ namespace nts { // namespace nts(NiuTrans.Tensor)
 /* gather indexed sub-tensors(cuda version) */
 void _CudaGather(const XTensor * s, XTensor * t, XTensor * srcIndex);
 
+void _CudaGather(const XTensor * s, XTensor * t, XTensor * srcIndex,int dim);
+
 #endif // USE_CUDA
 
 } // namespace nts(NiuTrans.Tensor)

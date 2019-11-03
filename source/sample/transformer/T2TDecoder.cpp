@@ -31,6 +31,10 @@ namespace transformer
 /* constructor */
 AttDecoder::AttDecoder()
 {
+    attentions = NULL;
+    fnns = NULL;
+    attLayerNorms = NULL;
+    fnnLayerNorms = NULL;
     attentionsEnde = NULL;
     attEndeLayerNorms = NULL;
 }
@@ -38,6 +42,10 @@ AttDecoder::AttDecoder()
 /* de-constructor */
 AttDecoder::~AttDecoder()
 {
+    delete[] attentions;
+    delete[] fnns;
+    delete[] attLayerNorms;
+    delete[] fnnLayerNorms;
     delete[] attentionsEnde;
     delete[] attEndeLayerNorms;
 }
@@ -49,16 +57,14 @@ initialize the model
 >> myIsMasked - indicates whether the masked attention is employed
 >> myIgnored - number of positions ignored in attention (from the start)
 >> myDevID - device id
->> myMem - the memory pool
 */
 void AttDecoder::InitModel(int argc, char ** argv, 
                            bool myIsMasked, int myIgnored, 
-                           int myDevID, XMem * myMem)
+                           int myDevID)
 {
-    //AttEncoder::InitModel(argc, argv, myIsMasked, myIgnored, myDevID, myMem);
+    //AttEncoder::InitModel(argc, argv, myIsMasked, myIgnored, myDevID);
 
     devID = myDevID;
-    mem = myMem;
     ignored = myIgnored;
 
     LoadParamInt(argc, argv, "nlayer", &nlayer, 6);
@@ -68,10 +74,10 @@ void AttDecoder::InitModel(int argc, char ** argv,
     LoadParamFloat(argc, argv, "dropout", &dropoutP, 0);
 
     CheckNTErrors(nlayer >= 1, "We have one encoding layer at least!");
-    CheckNTErrors(vSize > 1, "set vocabulary size by \"-vsize\"");
+    CheckNTErrors(vSize > 1, "set vocabulary size by \"-vsizetgt\"");
 
     /* embedding model */
-    embedder.InitModel(argc, argv, devID, mem, false);
+    embedder.InitModel(argc, argv, devID, false);
 
     attentions = new T2TAttention[nlayer];
     fnns = new T2TFNN[nlayer];
@@ -82,12 +88,12 @@ void AttDecoder::InitModel(int argc, char ** argv,
 
     /* initialize the stacked layers */
     for (int i = 0; i < nlayer; i++) {
-        attentions[i].InitModel(argc, argv, myIsMasked, myIgnored, myDevID, myMem);
-        fnns[i].InitModel(argc, argv, myDevID, myMem);
-        attLayerNorms[i].InitModel(argc, argv, myDevID, myMem);
-        fnnLayerNorms[i].InitModel(argc, argv, myDevID, myMem);
-        attentionsEnde[i].InitModel(argc, argv, true, myIgnored, myDevID, myMem);
-        attEndeLayerNorms[i].InitModel(argc, argv, myDevID, myMem);
+        attentions[i].InitModel(argc, argv, myIsMasked, myIgnored, myDevID);
+        fnns[i].InitModel(argc, argv, myDevID);
+        attLayerNorms[i].InitModel(argc, argv, myDevID);
+        fnnLayerNorms[i].InitModel(argc, argv, myDevID);
+        attentionsEnde[i].InitModel(argc, argv, true, myIgnored, myDevID);
+        attEndeLayerNorms[i].InitModel(argc, argv, myDevID);
     }
 }
 
@@ -119,7 +125,7 @@ XTensor AttDecoder::Make(XTensor &inputDec, XTensor &outputEnc, XTensor &mask, X
 
         /******************/
         /* self attention */
-        att = attentions[i].Make(x, x, x, mask, isTraining, true);
+        att = attentions[i].MakeBig(x, mask, isTraining);
 
         /* dropout */
         if(isTraining && dropoutP > 0)
@@ -133,7 +139,7 @@ XTensor AttDecoder::Make(XTensor &inputDec, XTensor &outputEnc, XTensor &mask, X
 
         /*****************************/
         /* encoder-decoder attention */
-        ende = attentionsEnde[i].Make(outputEnc, x, outputEnc, maskEncDec, isTraining, false);
+        ende = attentionsEnde[i].Make(outputEnc, x, outputEnc, maskEncDec, isTraining);
 
         /* dropout */
         if(isTraining && dropoutP > 0)
@@ -159,6 +165,8 @@ XTensor AttDecoder::Make(XTensor &inputDec, XTensor &outputEnc, XTensor &mask, X
         /* layer normalization */
         x = fnnLayerNorms[i].Make(res);
     }
+    
+    x.SetName(DECODING_NAME);
 
     return x;
 }

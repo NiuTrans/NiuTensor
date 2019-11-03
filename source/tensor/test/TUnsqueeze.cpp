@@ -20,6 +20,7 @@
 */
 
 #include "../XList.h"
+#include "../core/utilities/CheckData.h"
 #include "TUnsqueeze.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
@@ -81,9 +82,9 @@ bool TestUnsqueeze1()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s = NewTensor(sOrder, sDimSize);
-    XTensor * t1 = NewTensor(tOrder1, tDimSize1);
-    XTensor * t2 = NewTensor(tOrder2, tDimSize2);
+    XTensor * s = NewTensorV2(sOrder, sDimSize);
+    XTensor * t1 = NewTensorV2(tOrder1, tDimSize1);
+    XTensor * t2 = NewTensorV2(tOrder2, tDimSize2);
     XTensor tUser1;
     XTensor tUser2;
 
@@ -99,17 +100,17 @@ bool TestUnsqueeze1()
     tUser2 = Unsqueeze(*s, 2, 2);
 
     /* check results */
-    cpuTest = t1->CheckData(answer1, tUnitNum1) && tUser1.CheckData(answer1, tUnitNum1) && 
-              t2->CheckData(answer2, tUnitNum2) && tUser2.CheckData(answer2, tUnitNum2);
+    cpuTest = _CheckData(t1, answer1, tUnitNum1) && _CheckData(&tUser1, answer1, tUnitNum1) &&
+              _CheckData(t2, answer2, tUnitNum2) && _CheckData(&tUser2, answer2, tUnitNum2);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensor */
-    XTensor * sGPU = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * tGPU1 = NewTensor(tOrder1, tDimSize1, X_FLOAT, 1.0F, 0);
-    XTensor * tGPU2 = NewTensor(tOrder2, tDimSize2, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU1 = NewTensorV2(tOrder1, tDimSize1, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU2 = NewTensorV2(tOrder2, tDimSize2, X_FLOAT, 1.0F, 0);
     XTensor tUserGPU1;
     XTensor tUserGPU2;
 
@@ -125,8 +126,8 @@ bool TestUnsqueeze1()
     tUserGPU2 = Unsqueeze(*sGPU, 2, 2);
 
     /* check results */
-    gpuTest = tGPU1->CheckData(answer1, tUnitNum1) && tUserGPU1.CheckData(answer1, tUnitNum1)
-        && tGPU2->CheckData(answer2, tUnitNum2) && tUserGPU2.CheckData(answer2, tUnitNum2);
+    gpuTest = _CheckData(tGPU1, answer1, tUnitNum1) && _CheckData(&tUserGPU1, answer1, tUnitNum1)
+        && _CheckData(tGPU2, answer2, tUnitNum2) && _CheckData(&tUserGPU2, answer2, tUnitNum2);
 
     /* destroy variables */
     delete s;

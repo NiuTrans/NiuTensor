@@ -22,57 +22,142 @@
 #include <math.h>
 #include "../../XDevice.h"
 #include "../../XName.h"
+#include "../shape/IsSameShaped.h"
 #include "Unary.h"
 #include "Unary.cuh"
+#include<cuda_runtime.h>
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
 #ifdef USE_CUDA
 
+template<class T>
 __device__
-DTYPE cudasquare(DTYPE x)
+T UnaryCudaCeil(T x)
+{
+    return (T)ceil((float)x);
+}
+
+template<class T>
+__device__
+T UnaryCudaExp(T x)
+{
+    return (T)exp((float)x);
+}
+
+template<class T>
+__device__
+T UnaryCudaFabs(T x)
+{
+    return (T)fabs((float)x);
+}
+
+template<class T>
+__device__
+T UnaryCudaFloor(T x)
+{
+    return (T)floor((float)x);
+}
+
+template<class T>
+__device__
+T UnaryCudaIsNonZero(T r)
+{
+    return (r != (T)0.0) ? (T)1.0 : (T)0.0;
+}
+
+template<class T>
+__device__
+T UnaryCudaIsZero(T r)
+{
+    return (r == (T)0.0) ? (T)1.0 : (T)0.0;
+}
+
+template<class T>
+__device__
+T UnaryCudaLog(T x)
+{
+    return (T)log((float)x);
+}
+
+template<class T>
+__device__
+T UnaryCudaNegate(T x)
+{
+    return -x;
+}
+
+template<class T>
+__device__
+T UnaryCudaSign(T r)
+{
+    if (r > (T)0)
+       return 1.0;
+    else if (r == (T)0)
+       return 0.0;
+    else
+       return -1.0;
+}
+
+template<class T>
+__device__
+T UnaryCudaSqrt(T x)
+{
+    return (T)sqrt((float)x);
+}
+
+template<class T>
+__device__
+T UnaryCudaSquare(T x)
 {
     return x * x;
 }
 
+template<class T>
 __device__
-DTYPE cudaround(DTYPE r)
+T UnaryCudaRound(T r)
 {
-	return (r > 0.0) ? (DTYPE)floor(r + 0.5) : (DTYPE)ceil(r - 0.5);
+	return (r > (T)0.0) ? (T)UnaryCudaFloor(r + (T)0.5) : (T)UnaryCudaCeil(r - (T)0.5);
 }
 
+
+template<class T>
 __device__
-DTYPE cudaisnonzero(DTYPE r)
+T UnaryCudaSin(T x)
 {
-    return (r != 0.0) ? (DTYPE)1.0 : (DTYPE)0.0;
+    return (T)sin((float)x);
 }
 
+template<class T>
 __device__
-DTYPE cudaiszero(DTYPE r)
+T UnaryCudaCos(T x)
 {
-    return (r == 0.0) ? (DTYPE)1.0 : (DTYPE)0.0;
+    return (T)cos((float)x);
+}
+
+template<class T>
+__device__
+T UnaryCudaTan(T x)
+{
+    return (T)tan((float)x);
 }
 
 
 #define SIMPLE_UNARY_FUNCTION_GPU(funcName, origFunc)                       \
+template<class T>                                                           \
 __global__                                                                  \
-void Kernel##funcName(DTYPE * a, DTYPE * b, int size)                       \
+void Kernel##funcName(T * a, T * b, int size)                               \
 {                                                                           \
     int i = blockDim.x * blockIdx.x + threadIdx.x;                          \
                                                                             \
     if (i < size)                                                           \
-        b[i] = (DTYPE)origFunc(a[i]);                                       \
-}                                                                           \
-__global__                                                                  \
-void Kernel##funcName(__half * a, __half * b, int size)                     \
-{                                                                           \
-    return;                                                                 \
+        b[i] = (T)origFunc(a[i]);                                           \
 }                                                                           \
 void _Cuda##funcName(const XTensor * a, XTensor * b)                        \
 {                                                                           \
-    CheckNTErrors((XTensor::IsSameShaped(a, b)),                            \
+    CheckNTErrors((_IsSameShaped(a, b)),                            \
                   "Input tensors should have the same type!");              \
-    CheckNTErrors((a->isSparse == false), "TODO!");                         \
+    CheckNTErrors(a->isSparse == false, "TODO!");                           \
                                                                             \
     int gridSize[3];                                                        \
     int blockSize[3];                                                       \
@@ -85,35 +170,43 @@ void _Cuda##funcName(const XTensor * a, XTensor * b)                        \
     int devIDBackup;                                                        \
     ProtectCudaDev(a->devID, devIDBackup);                                  \
                                                                             \
-    if (a->dataType == DEFAULT_DTYPE) {                                     \
+    if (a->dataType == X_FLOAT) {                                           \
         Kernel##funcName<<<blocks, threads>>>                               \
-                         ((DTYPE*)a->data, (DTYPE*)b->data, a->unitNum);    \
+                         ((float*)a->data, (float*)b->data, a->unitNum);    \
     }                                                                       \
-    else if (a->dataType == X_FLOAT16) {                                    \
+    else if (a->dataType == X_DOUBLE) {                                     \
         Kernel##funcName<<<blocks, threads>>>                               \
-                         ((__half*)a->data, (__half*)b->data, a->unitNum);  \
+                         ((double*)a->data, (double*)b->data, a->unitNum);  \
+    }                                                                       \
+    else if (a->dataType == X_INT) {                                        \
+        Kernel##funcName<<<blocks, threads>>>                               \
+                         ((int*)a->data, (int*)b->data, a->unitNum);        \
     }                                                                       \
     else {                                                                  \
         ShowNTErrors("TODO!");                                              \
     }                                                                       \
                                                                             \
     BacktoCudaDev(a->devID, devIDBackup);                                   \
-}                                                                           \
+}
 
-SIMPLE_UNARY_FUNCTION_GPU(Absolute, fabs)
-SIMPLE_UNARY_FUNCTION_GPU(Ceil, ceil)
-SIMPLE_UNARY_FUNCTION_GPU(Exp, exp)
-SIMPLE_UNARY_FUNCTION_GPU(Floor, floor)
-SIMPLE_UNARY_FUNCTION_GPU(IsNonZero, cudaisnonzero)
-SIMPLE_UNARY_FUNCTION_GPU(IsZero, cudaiszero)
-SIMPLE_UNARY_FUNCTION_GPU(Log, log)
-SIMPLE_UNARY_FUNCTION_GPU(Round, cudaround)
-SIMPLE_UNARY_FUNCTION_GPU(Sqrt, sqrt)
-SIMPLE_UNARY_FUNCTION_GPU(Square, cudasquare)
 
-SIMPLE_UNARY_FUNCTION_GPU(Sin, sin)
-SIMPLE_UNARY_FUNCTION_GPU(Cos, cos)
-SIMPLE_UNARY_FUNCTION_GPU(Tan, tan)
+
+SIMPLE_UNARY_FUNCTION_GPU(Absolute, UnaryCudaFabs)
+SIMPLE_UNARY_FUNCTION_GPU(Ceil, UnaryCudaCeil)
+SIMPLE_UNARY_FUNCTION_GPU(Exp, UnaryCudaExp)
+SIMPLE_UNARY_FUNCTION_GPU(Floor, UnaryCudaFloor)
+SIMPLE_UNARY_FUNCTION_GPU(IsNonZero, UnaryCudaIsNonZero)
+SIMPLE_UNARY_FUNCTION_GPU(IsZero, UnaryCudaIsZero)
+SIMPLE_UNARY_FUNCTION_GPU(Log, UnaryCudaLog)
+SIMPLE_UNARY_FUNCTION_GPU(Negate, UnaryCudaNegate)
+SIMPLE_UNARY_FUNCTION_GPU(Round, UnaryCudaRound)
+SIMPLE_UNARY_FUNCTION_GPU(Sign, UnaryCudaSign)
+SIMPLE_UNARY_FUNCTION_GPU(Sqrt, UnaryCudaSqrt)
+SIMPLE_UNARY_FUNCTION_GPU(Square, UnaryCudaSquare)
+
+SIMPLE_UNARY_FUNCTION_GPU(Sin, UnaryCudaSin)
+SIMPLE_UNARY_FUNCTION_GPU(Cos, UnaryCudaCos)
+SIMPLE_UNARY_FUNCTION_GPU(Tan, UnaryCudaTan)
 
 #endif // USE_CUDA
 

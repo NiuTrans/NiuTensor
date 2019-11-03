@@ -21,6 +21,7 @@
 
 #include "../../XDevice.h"
 #include "../../XTensor.h"
+#include "../shape/IsSameShaped.h"
 #include "Clip.h"
 #include "Clip.cuh"
 
@@ -36,18 +37,18 @@ set each entry to its clip value (CUDA Kernel)
 >> size - size of the data array
 */
 __global__
-	void KernelClip(DTYPE * a, DTYPE * b, DTYPE lower, DTYPE upper, int size)
+void KernelClip(DTYPE * a, DTYPE * b, DTYPE lower, DTYPE upper, int size)
 {
-	int i = blockDim.x * blockIdx.x + threadIdx.x;
+    int i = blockDim.x * blockIdx.x + threadIdx.x;
 
-	if (i < size) {
-		if (a[i] > upper)
-			b[i] = upper;
-		else if (a[i] < lower)
-			b[i] = lower;
-		else
-			b[i] = a[i];
-	}
+    if (i < size) {
+        if (a[i] > upper)
+            b[i] = upper;
+        else if (a[i] < lower)
+            b[i] = lower;
+        else
+            b[i] = a[i];
+    }
 }
 
 /*
@@ -62,7 +63,7 @@ This is for float16 computation
 __global__
 void KernelClip(__half * a, __half * b, DTYPE lower, DTYPE upper, int size)
 {
-	return;
+    return;
 }
 
 /*
@@ -74,31 +75,31 @@ set each entry to its clip value
 */
 void _CudaClip(const XTensor * a, XTensor * b, DTYPE lower, DTYPE upper)
 {
-	CheckNTErrors((XTensor::IsSameShaped(a, b)), "Input tensors should have the same type!");
-	CheckNTErrors((a->isSparse == false), "TODO!");
+    CheckNTErrors((_IsSameShaped(a, b)), "Input tensors should have the same type!");
+    CheckNTErrors((a->isSparse == false), "TODO!");
 
-	int gridSize[3];
-	int blockSize[3];
+    int gridSize[3];
+    int blockSize[3];
 
-	GDevs.GetCudaThread(a->devID, a->unitNum, gridSize, blockSize);
+    GDevs.GetCudaThread(a->devID, a->unitNum, gridSize, blockSize);
 
-	dim3 blocks(gridSize[0]);
-	dim3 threads(blockSize[0]);
+    dim3 blocks(gridSize[0]);
+    dim3 threads(blockSize[0]);
 
-	int devIDBackup;
-	ProtectCudaDev(a->devID, devIDBackup);
+    int devIDBackup;
+    ProtectCudaDev(a->devID, devIDBackup);
 
-	if (a->dataType == DEFAULT_DTYPE) {
-		KernelClip << <blocks, threads >> >((DTYPE*)a->data, (DTYPE*)b->data, lower, upper, a->unitNum);
-	}
-	else if (a->dataType == X_FLOAT16) {
-		KernelClip << <blocks, threads >> >((__half*)a->data, (__half*)b->data, lower, upper, a->unitNum);
-	}
-	else {
-		ShowNTErrors("TODO!");
-	}
+    if (a->dataType == DEFAULT_DTYPE) {
+        KernelClip << <blocks, threads >> >((DTYPE*)a->data, (DTYPE*)b->data, lower, upper, a->unitNum);
+    }
+    else if (a->dataType == X_FLOAT16) {
+        KernelClip << <blocks, threads >> >((__half*)a->data, (__half*)b->data, lower, upper, a->unitNum);
+    }
+    else {
+        ShowNTErrors("TODO!");
+    }
 
-	BacktoCudaDev(a->devID, devIDBackup);
+    BacktoCudaDev(a->devID, devIDBackup);
 }
 
 /*

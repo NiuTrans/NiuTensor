@@ -25,6 +25,7 @@
 #include "../core/arithmetic/MultiplyDim.h"
 #include "../core/reduce/ReduceSum.cuh"
 #include "../core/reduce/ReduceMax.cuh"
+#include "../core/shape/IsSameShaped.h"
 #include "../XDevice.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
@@ -384,13 +385,12 @@ void _CudaLogSoftmaxBackward(XTensor * gold, XTensor * y, XTensor * x,
                   "Tensors used in log softmax are not on the same GPU.");
     CheckNTErrors((gold != NULL), "No x gold standard is found!");
 
-    int leadDimRDI = y->order - leadDim - 1;
-    int dimensionSize = y->dimSizeRDI[leadDimRDI];
+    int dimensionSize = y->dimSize[leadDim];
     int stride = 1;
     int blockSize = 1;
     int blockNum = 1;
-    for (int i = 0; i < leadDimRDI; i++)
-        stride *= y->dimSizeRDI[i];
+    for (int i = leadDim + 1; i < y->order; i++)
+        stride *= y->dimSize[i];
     blockSize = stride * dimensionSize;
     blockNum = y->unitNum / blockSize;
 
@@ -430,7 +430,7 @@ void _CudaLogSoftmaxBackward(XTensor * gold, XTensor * y, XTensor * x,
                                                            dedx->dimSize[0], dedx->dimSize[1], gold->unitNumNonZero, lossName);
             }
             else {
-                CheckNTErrors((XTensor::IsSameShaped(gold, y)), "The tensors must be of the same size!");
+                CheckNTErrors((_IsSameShaped(gold, y)), "The tensors must be of the same size!");
 
                 for (int k = 0; k < blockNum; k++) {
                     GDevs.GetCudaThread(x->devID, blockSize, cudaGridSize, cudaBlockSize);

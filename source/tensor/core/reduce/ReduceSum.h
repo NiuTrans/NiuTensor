@@ -44,6 +44,8 @@ sum = \sum_i exp(a_i - shift) if isExp == true
 */
 XTensor ReduceSum(const XTensor &input, int dim, const XTensor &shift, DTYPE power = (DTYPE)1.0F, bool isExp = false);
 
+void ReduceSum(const XTensor &input, XTensor &output, int dim, const XTensor &shift, DTYPE power = (DTYPE)1.0F, bool isExp = false);
+
 /* 
 sum the items along a dimension of the tensor (return an XTensor structure)
 make a new tensor to keep the result and return it
@@ -52,6 +54,14 @@ sum = \sum_i (a_i) if isExp == false
 sum = \sum_i exp(a_i) if isExp == true
 */
 XTensor ReduceSum(const XTensor &input, int dim, DTYPE power = (DTYPE)1.0F, bool isExp = false);
+
+/* 
+sum the items along a dimension of the tensor
+For a 1-dimensional data array a,
+sum = \sum_i (a_i - shift) if isExp == false
+sum = \sum_i exp(a_i - shift) if isExp == true
+*/
+void ReduceSum(const XTensor &input, XTensor &output, int dim, DTYPE power = (DTYPE)1.0F, bool isExp = false);
 
 } // namespace nts(NiuTrans.Tensor)
 

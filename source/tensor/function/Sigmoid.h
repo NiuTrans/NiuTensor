@@ -16,14 +16,13 @@
  */
 
 /*
-* $Created by: XIAO Tong (email: xiaotong@mail.neu.edu.cn) 2018-04-25
-*/
+ * $Created by: XIAO Tong (email: xiaotong@mail.neu.edu.cn) 2018-04-25
+ */
 
 #ifndef __SIGMOID_H__
 #define __SIGMOID_H__
 
 #include "../XTensor.h"
-#include "Loss.h"
 
 namespace nts{ // namespace nts(NiuTrans.Tensor)
 
@@ -33,10 +32,11 @@ void _Sigmoid(const XTensor * x, XTensor * y);
 /* sigmoid function y = 1/(1+exp(-x)) (return an XTensor structure) */
 XTensor Sigmoid(const XTensor &x);
 
+void Sigmoid(const XTensor &x, XTensor &y);
+
 /* de/dx */
-void _SigmoidBackward(XTensor * gold, XTensor * y, XTensor * x, 
-                      XTensor * dedy, XTensor * dedx,
-                      LOSS_FUNCTION_NAME lossName);
+void _SigmoidBackward(XTensor * y, XTensor * x, 
+                      XTensor * dedy, XTensor * dedx);
 
 } // namespace nts(NiuTrans.Tensor)
 

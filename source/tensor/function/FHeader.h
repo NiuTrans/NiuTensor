@@ -26,8 +26,8 @@
 
 #include "../XTensor.h"
 
-#include "CrossEntropy.h"
 #include "Dropout.h"
+#include "DropoutWithIndex.h"
 #include "HardTanH.h"
 #include "Identity.h"
 #include "LogSoftmax.h"

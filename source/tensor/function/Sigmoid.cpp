@@ -20,10 +20,11 @@
  */
 
 #include "../XName.h"
+#include "../core/shape/IsSameShaped.h"
 #include <math.h>
 #include "Sigmoid.h"
 #include "Sigmoid.cuh"
-#include "CrossEntropy.h"
+#include "../loss/LHeader.h"
 
 namespace nts{ // namespace nts(NiuTrans.Tensor)
 
@@ -34,6 +35,9 @@ sigmoid function y = 1/(1+exp(-x))
 */
 void _Sigmoid(const XTensor * x, XTensor * y)
 {
+    CheckNTErrors(_IsSameShaped(x, y), 
+                 "The input tensor and output tensor must have the same shape!")
+
 #ifdef USE_CUDA
     if(x->devID >= 0 || y->devID >= 0){
         _CudaSigmoid(x, y);
@@ -59,7 +63,7 @@ sigmoid function y = 1/(1+exp(-x)) (return an XTensor structure)
 make a new tensor to keep the result and return it
 
 >> x - input tensor
-<< return - y
+<< return - output tensor
 */
 XTensor Sigmoid(const XTensor &x)
 {
@@ -70,9 +74,26 @@ XTensor Sigmoid(const XTensor &x)
     _Sigmoid(&x, &y);
 
     /* tensor connection */
-    XLink::MakeLink(&x, NULL, &y, FUNC_SIGMOID);
+    if (x.enableGrad) {
+        XLink::MakeLink(&x, NULL, &y, FUNC_SIGMOID);
+    }
 
     return y;
+}
+
+void Sigmoid(const XTensor &x, XTensor &y)
+{
+    if (!y.isInit || !IsSameShaped(y, x)) {
+        InitTensorV2(&y, &x);
+    }
+
+    /* call _Sigmoid function */
+    _Sigmoid(&x, &y);
+
+    if (x.enableGrad) {
+        /* tensor connection */
+        XLink::MakeLink(&x, NULL, &y, FUNC_SIGMOID);
+    }
 }
 
 /*
@@ -82,50 +103,32 @@ dE/ds = dE/dy * dy/dx
 
 sigmoid: y = 1/(1+exp(-x))
 
-   and dy/dx = y * (1 -y)
+   and dy/dx = y * (1 - y)
 
->> gold - gold standard to measure the error (or loss)
 >> y - output of the function
 >> x - input of the function
 >> dedy - dE/dy
 >> dedx - dE/dx
->> lossName - type of loss function, e.g., cross entropy
 */
-void _SigmoidBackward(XTensor * gold, XTensor * y, XTensor * x, 
-                      XTensor * dedy, XTensor * dedx,
-                      LOSS_FUNCTION_NAME lossName)
+void _SigmoidBackward(XTensor * y, XTensor * x, 
+                      XTensor * dedy, XTensor * dedx)
 {
-    CheckNTErrors((gold == NULL || XTensor::IsSameShaped(gold, y)), 
-                  "The tensors must be of the same size!");
-
 #ifdef USE_CUDA
-    if(x->devID >= 0 || y->devID >= 0){
-        _CudaSigmoidBackward(gold, y, x, dedy, dedx, lossName);
+    if(x->devID >= 0){
+        _CudaSigmoidBackward(y, x, dedy, dedx);
         return;
     }
 #endif
+    DTYPE * dedyp = (DTYPE*)dedy->data;
+    DTYPE * dedxp = (DTYPE*)dedx->data;
+    DTYPE * op = (DTYPE*)y->data;
+    int size = y->unitNum;
 
-    if(x->dataType == DEFAULT_DTYPE && y->dataType == DEFAULT_DTYPE)
-    {
-        /* calculate dE/dy */
-        if(lossName == CROSSENTROPY)
-            _CrossEntropyBackward(dedy, y, gold);
-        else if(lossName != NOLOSS)
-            _LossBackward(dedy, gold, y, lossName);
-
-        DTYPE * dedyp = (DTYPE*)dedy->data;
-        DTYPE * dedxp = (DTYPE*)dedx->data;
-        DTYPE * op = (DTYPE*)y->data;
-        int size = y->unitNum;
-
-        /* dE/dx = dE/dy * dy/dx */
-        for(int i = 0; i < size; i++){
-            DTYPE y = op[i];
-            dedxp[i] = dedyp[i] * (DTYPE)y * ((DTYPE)1.0 - y);
-        }
+    /* dE/dx = dE/dy * dy/dx */
+    for(int i = 0; i < size; i++){
+        DTYPE y = op[i];
+        dedxp[i] = dedyp[i] * (DTYPE)y * ((DTYPE)1.0 - y);
     }
-    else
-        ShowNTErrors("TODO!");
 }
 
 } // namespace nts(NiuTrans.Tensor)

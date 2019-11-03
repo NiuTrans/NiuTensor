@@ -22,6 +22,7 @@
 #include <math.h>
 #include "../../XTensor.h"
 #include "../../XName.h"
+#include "../shape/IsSameShaped.h"
 #include "Normalize.h"
 #include "Normalize.cuh"
 
@@ -42,28 +43,29 @@ where a and b are the scalar and bias respectively, and \epsilon is the adjustme
 >> b - the bias
 >> epsilon - a parameter
 */
-void _Normalize(const XTensor * input, XTensor * output, int dim, const XTensor * mean, const XTensor * var, const XTensor * a, const XTensor * b, DTYPE epsilon)
+void _Normalize(const XTensor * input, XTensor * output, int dim, 
+                const XTensor * mean, const XTensor * var, 
+                const XTensor * a, const XTensor * b, DTYPE epsilon)
 {
-	int dimRDI = input->order - dim - 1;
-    CheckNTErrors((XTensor::IsSameShaped(input, output)), "Unmatched input tensors!");
-    CheckNTErrors((XTensor::IsSameShaped(a, b)), "Unmatched input tensors");
-    CheckNTErrors((XTensor::IsSameShaped(mean, var)), "Unmatched input tensors");
+    CheckNTErrors((_IsSameShaped(input, output)), "Unmatched input tensors!");
+    CheckNTErrors((_IsSameShaped(a, b)), "Unmatched input tensors");
+    CheckNTErrors((_IsSameShaped(mean, var)), "Unmatched input tensors");
     CheckNTErrors((input && output && mean && var && a && b), "Empty input tensors!");
-    CheckNTErrors((dimRDI >= 0 && dimRDI < input->order), "Incorrect reduction dimension!");
+    CheckNTErrors((dim >= 0 && dim < input->order), "Incorrect reduction dimension!");
     CheckNTErrors((input->order == mean->order + 1), "Incorrect reduction dimension!");
 
     int stride = 1;
-    int strideNum = input->dimSizeRDI[dimRDI];
+    int strideNum = input->dimSize[dim];
     int blockSize = 1;
     int blockNum = 1;
     for (int i = 0; i < input->order; i++) {
-        if (i < dimRDI) {
-            CheckNTErrors((input->dimSizeRDI[i] == mean->dimSizeRDI[i]), "Wrong size!");
-            stride *= input->dimSizeRDI[i];
+        if (i < dim) {
+            CheckNTErrors((input->dimSize[i] == mean->dimSize[i]), "Wrong size!");
+            blockNum *= input->dimSize[i];
         }
-        else if (i > dimRDI) {
-            CheckNTErrors((input->dimSizeRDI[i] == mean->dimSizeRDI[i - 1]), "Wrong size!");
-            blockNum *= input->dimSizeRDI[i];
+        else if (i > dim) {
+            CheckNTErrors((input->dimSize[i] == mean->dimSize[i - 1]), "Wrong size!");
+            stride *= input->dimSize[i];
         }
     }
     blockSize = stride * strideNum;
@@ -109,10 +111,35 @@ where a and b are the scalar and bias respectively, and \epsilon is the adjustme
 >> b - the bias
 >> epsilon - a parameter
 */
-void _NormalizeMe(XTensor * input, int dim, const XTensor * mean, const XTensor * var, const XTensor * a, const XTensor * b, DTYPE epsilon)
+void _NormalizeMe(XTensor * input, int dim, 
+                  const XTensor * mean, const XTensor * var, 
+                  const XTensor * a, const XTensor * b, DTYPE epsilon)
 {
     _Normalize(input, input, dim, mean, var, a, b, epsilon);
 }
+
+/*
+normalized the data with normal distribution (do it on site)
+keep the result in the input tensor and return nothing
+
+For an input x, x = a * (x-mean)/sqrt(variance+\epsilon) + b
+where a and b are the scalar and bias respectively, and \epsilon is the adjustment parameter.
+
+>> input - the input tensor
+>> dim - dimension alone which we generate the mean and variance
+>> mean - the mean of the input
+>> var - the variance of the input
+>> a - the scalar
+>> b - the bias
+>> epsilon - a parameter
+*/
+void NormalizeMe(XTensor& input, int dim, 
+                 const XTensor& mean, const XTensor& var, 
+                 const XTensor& a, const XTensor& b, DTYPE epsilon)
+{
+    _Normalize(&input, &input, dim, &mean, &var, &a, &b, epsilon);
+}
+
 /*
 normalized the data with normal distribution (return an XTensor structure)
 make a new tensor to keep the result and return it 
@@ -129,7 +156,9 @@ where a and b are the scalar and bias respectively, and \epsilon is the adjustme
 >> epsilon - a parameter
 << return - the result of normalized the data with normal distribution
 */
-XTensor Normalize(const XTensor &input, int dim, const XTensor &mean, const XTensor &var, const XTensor &a, const XTensor &b, DTYPE epsilon)
+XTensor Normalize(const XTensor &input, int dim, 
+                  const XTensor &mean, const XTensor &var, 
+                  const XTensor &a, const XTensor &b, DTYPE epsilon)
 {
     XTensor output(&input);
     output.SetTMPFlag();
@@ -138,16 +167,62 @@ XTensor Normalize(const XTensor &input, int dim, const XTensor &mean, const XTen
     _Normalize(&input, &output, dim, &mean, &var, &a, &b, epsilon);
 
     /* tensor connections */
-    XList list(5);
-    list.Add(&input);
-    list.Add(&mean);
-    list.Add(&var);
-    list.Add(&a);
-    list.Add(&b);
-    XLink::MakeLink(&list, &output, MATH_NORMALIZE);
-    XLink::AddParamToHeadInt(&output, dim);
-    XLink::AddParamToHead(&output, epsilon);
+    TensorList list(5);
+    list.Add((XTensor*)&input);
+    list.Add((XTensor*)&mean);
+    list.Add((XTensor*)&var);
+    list.Add((XTensor*)&a);
+    list.Add((XTensor*)&b);
+    if (input.enableGrad) {
+        XLink::MakeLink(&list, &output, MATH_NORMALIZE);
+        XLink::AddParamToHeadInt(&output, dim);
+        XLink::AddParamToHead(&output, epsilon);
+    }
 
     return output;
 }
+
+/*
+normalized the data with normal distribution (return an XTensor structure)
+make a new tensor to keep the result and return it 
+
+For an input x, y = a * (x-mean)/sqrt(variance+\epsilon) + b
+where a and b are the scalar and bias respectively, and \epsilon is the adjustment parameter.
+
+>> input - the input tensor
+>> output - the output tensor
+>> dim - dimension alone which we generate the mean and variance
+>> mean - the mean of the input
+>> var - the variance of the input
+>> a - the scalar
+>> b - the bias
+>> epsilon - a parameter
+<< return - the result of normalized the data with normal distribution
+*/
+void Normalize(const XTensor &input, XTensor &output, int dim, 
+               const XTensor &mean, const XTensor &var, 
+               const XTensor &a, const XTensor &b, DTYPE epsilon)
+{
+    if (!output.isInit || !IsSameShaped(input, output)) {
+        InitTensorV2(&output, &input);
+    }
+
+    /* call _Normalize function */
+    _Normalize(&input, &output, dim, &mean, &var, &a, &b, epsilon);
+
+    if (input.enableGrad == true) {
+        /* tensor connections */
+        TensorList list(5);
+        list.Add((XTensor*)&input);
+        list.Add((XTensor*)&mean);
+        list.Add((XTensor*)&var);
+        list.Add((XTensor*)&a);
+        list.Add((XTensor*)&b);
+        XLink::MakeLink(&list, &output, MATH_NORMALIZE);
+        XLink::AddParamToHeadInt(&output, dim);
+        XLink::AddParamToHead(&output, epsilon);
+    }
+}
+
+
 } // namespace nts(NiuTrans.Tensor)

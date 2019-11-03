@@ -31,15 +31,15 @@ namespace nts{
 
 /* constructor */
 template<HeapType hType, typename T>
+XHeap<hType, T>::XHeap()
+{
+}
+
+/* constructor */
+template<HeapType hType, typename T>
 XHeap<hType, T>::XHeap(int mySize, XMem * myMem)
 {
-    mem = myMem;
-    size = mySize;
-    count = 0;
-    if (mem == NULL)
-        items = new HeapNode<T>[mySize];
-    else
-        mem->Alloc(mem->devID, mySize * sizeof(T));
+    Init(mySize, myMem);
 }
 
 /* deconstructor */
@@ -47,6 +47,19 @@ template<HeapType hType, typename T>
 XHeap<hType, T>::~XHeap()
 {
     delete[] items;
+}
+
+template<HeapType hType, typename T>
+void XHeap<hType, T>::Init(int mySize, XMem * myMem)
+{
+    mem = myMem;
+    size = mySize;
+    count = 0;
+
+    if (mem == NULL)
+        items = new HeapNode<T>[mySize];
+    else
+        mem->Alloc(mem->devID, mySize * sizeof(T));
 }
 
 template<HeapType hType, typename T>
@@ -89,10 +102,24 @@ _XINLINE_ HeapNode<T> XHeap<hType, T>::End()
 template<HeapType hType, typename T>
 _XINLINE_ void XHeap<hType, T>::Push(HeapNode<T> node)
 {
-    //CheckNTErrors((count < size), "Heap is full!");
-    items[count] = node;
-    Up(count);
-    count++;
+    if (count < size) {
+        items[count] = node;
+        Up(count);
+        count++;
+    }
+    else if(count == size){
+        HeapNode<T> & item0 = items[0];
+        if (hType == MIN_HEAP && item0.value >= node.value)
+            return;
+        else if (hType == MAX_HEAP && item0.value <= node.value)
+            return;
+        items[0] = node;
+        Down(0);
+    }
+    else {
+        ShowNTErrors("Overflow of the heap!");
+    }
+    
 }
 
 /* replace the top-most item and update the heap */
@@ -107,7 +134,7 @@ _XINLINE_ void XHeap<hType, T>::ReplaceTop(HeapNode<T> node)
 template<HeapType hType, typename T>
 _XINLINE_ HeapNode<T> XHeap<hType, T>::Pop()
 {
-    //CheckNTErrors((size > 0), "Empty heap!");
+    CheckNTErrors(count > 0, "Empty heap!");
     HeapNode<T> node = items[0];
     items[0] = items[count - 1];
     count--;

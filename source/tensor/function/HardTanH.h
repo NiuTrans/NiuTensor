@@ -23,7 +23,6 @@
 #define __HARDHANH_H__
 
 #include "../XTensor.h"
-#include "Loss.h"
 
 namespace nts{ // namespace nts(NiuTrans.Tensor)
 
@@ -40,10 +39,11 @@ void _HardTanH(const XTensor * x, XTensor * y);
 /* hard tanh function (return an XTensor structure) */
 XTensor HardTanH(const XTensor &x);
 
+void HardTanH(const XTensor &x, XTensor &y);
+
 /* de/dx */
-void _HardTanHBackward(XTensor * gold, XTensor * y, XTensor * x, 
-                       XTensor * dedy, XTensor * dedx,
-                       LOSS_FUNCTION_NAME lossName);
+void _HardTanHBackward(XTensor * y, XTensor * x, 
+                       XTensor * dedy, XTensor * dedx);
 
 } // namespace nts(NiuTrans.Tensor)
 

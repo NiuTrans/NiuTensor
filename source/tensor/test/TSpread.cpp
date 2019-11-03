@@ -19,9 +19,10 @@
  * $Created by: Xu Chen (email: hello_master1954@163.com) 2018-09-25
  */
 
-#include "TSpread.h"
 #include "../core/getandset/SetData.h"
 #include "../core/movement/Spread.h"
+#include "../core/utilities/CheckData.h"
+#include "TSpread.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
@@ -86,8 +87,8 @@ bool TestSpread1()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s = NewTensor(sOrder, sDimSize);
-    XTensor * modify = NewTensor(dataOrder, dataDimSize);
+    XTensor * s = NewTensorV2(sOrder, sDimSize);
+    XTensor * modify = NewTensorV2(dataOrder, dataDimSize);
 
     /* Initialize variables */
     _SetDataFixedFloat(s, 0.0F);
@@ -97,15 +98,15 @@ bool TestSpread1()
     _Spread(s, modify, 0, srcIndex, 2, tgtIndex);
     
     /* check results */
-    cpuTest = s->CheckData(answer, sUnitNum, 1e-5F);
+    cpuTest = _CheckData(s, answer, sUnitNum, 1e-5F);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensors */
-    XTensor * sGPU = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * modifyGPU = NewTensor(dataOrder, dataDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * modifyGPU = NewTensorV2(dataOrder, dataDimSize, X_FLOAT, 1.0F, 0);
 
     /* Initialize variables */
     _SetDataFixedFloat(sGPU, 0.0F);
@@ -114,7 +115,7 @@ bool TestSpread1()
     /* call _Spread function */
     _Spread(sGPU, modifyGPU, 0, srcIndex, 2, tgtIndex);
     
-    gpuTest = sGPU->CheckData(answer, sUnitNum, 1e-5F);
+    gpuTest = _CheckData(sGPU, answer, sUnitNum, 1e-5F);
 
     /* destroy variables */
     delete s;
@@ -188,64 +189,64 @@ bool TestSpread2()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s1 = NewTensor(sOrder, sDimSize);
-    XTensor * s2 = NewTensor(sOrder, sDimSize);
-    XTensor * t = NewTensor(tOrder, tDimSize);
-    XTensor * sIndex = NewTensor(indexOrder, indexDimSize, X_INT);
-    XTensor * cIndex = NewTensor(indexOrder, indexDimSize, X_INT);
+    XTensor * s1 = NewTensorV2(sOrder, sDimSize);
+    XTensor * s2 = NewTensorV2(sOrder, sDimSize);
+    XTensor * t = NewTensorV2(tOrder, tDimSize);
+    XTensor * sIndex = NewTensorV2(indexOrder, indexDimSize, X_INT);
+    XTensor * tIndex = NewTensorV2(indexOrder, indexDimSize, X_INT);
 
     /* initialize variables */
     s1->SetData(sData, sUnitNum);
     s2->SetData(sData, sUnitNum);
     t->SetData(tData, tUnitNum);
     sIndex->SetData(srcIndex, indexSize);
-    cIndex->SetData(tgtIndex, indexSize);
+    tIndex->SetData(tgtIndex, indexSize);
 
     /* call _SpreadForGather function */
-    _SpreadForCopyIndexed(s1, t, dim, sIndex, cIndex, 1);
+    _SpreadForCopyIndexed(s1, t, dim, sIndex, tIndex, 1);
     _SpreadForGather(s2, t, sIndex);
 
     /* check results */
-    cpuTest = s1->CheckData(answer, tUnitNum) &&
-              s2->CheckData(answer, tUnitNum);
+    cpuTest = _CheckData(s1, answer, sUnitNum) &&
+              _CheckData(s2, answer, sUnitNum);
     
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensors */
-    XTensor * sGPU1 = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * sGPU2 = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * tGPU = NewTensor(sOrder, tDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * sIndexGPU = NewTensor(indexOrder, indexDimSize, X_INT, 1.0F, 0);
-    XTensor * cIndexGPU = NewTensor(indexOrder, indexDimSize, X_INT, 1.0F, 0);
+    XTensor * sGPU1 = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU2 = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(sOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sIndexGPU = NewTensorV2(indexOrder, indexDimSize, X_INT, 1.0F, 0);
+    XTensor * tIndexGPU = NewTensorV2(indexOrder, indexDimSize, X_INT, 1.0F, 0);
 
     /* initialize variables */
     sGPU1->SetData(sData, sUnitNum);
     sGPU2->SetData(sData, sUnitNum);
     tGPU->SetData(tData, tUnitNum);
     sIndexGPU->SetData(srcIndex, indexSize);
-    cIndexGPU->SetData(tgtIndex, indexSize);
+    tIndexGPU->SetData(tgtIndex, indexSize);
 
     /* call _SpreadForGather function */
-    _SpreadForCopyIndexed(sGPU1, tGPU, dim, sIndex, cIndex, 1);
+    _SpreadForCopyIndexed(sGPU1, tGPU, dim, sIndexGPU, tIndexGPU, 1);
     _SpreadForGather(sGPU2, tGPU, sIndexGPU);
 
     /* check results */
-    gpuTest = sGPU1->CheckData(answer, tUnitNum) && 
-              sGPU2->CheckData(answer, tUnitNum);
+    gpuTest = _CheckData(sGPU1, answer, sUnitNum) &&
+              _CheckData(sGPU2, answer, sUnitNum);
 
     /* destroy variables */
     delete s1;
     delete s2;
     delete t;
     delete sIndex;
-    delete cIndex;
+    delete tIndex;
     delete sGPU1;
     delete sGPU2;
     delete tGPU;
     delete sIndexGPU;
-    delete cIndexGPU;
+    delete tIndexGPU;
     delete[] sDimSize;
     delete[] tDimSize;
     delete[] indexDimSize;
@@ -257,7 +258,142 @@ bool TestSpread2()
     delete s2;
     delete t;
     delete sIndex;
-    delete cIndex;
+    delete tIndex;
+    delete[] sDimSize;
+    delete[] tDimSize;
+    delete[] indexDimSize;
+
+    return cpuTest;
+#endif // USE_CUDA
+}
+
+
+/* 
+case 3: test _SpreadForGather and _SpreadForCopyIndexed function 
+spread a collection tensor to source tensor
+*/
+bool TestSpread3()
+{
+    /* a input tensor of size (3, 3) */
+    int sOrder = 2;
+    int * sDimSize = new int[sOrder];
+    sDimSize[0] = 3;
+    sDimSize[1] = 3;
+
+    int sUnitNum = 1;
+    for (int i = 0; i < sOrder; i++)
+        sUnitNum *= sDimSize[i];
+
+    /* a output tensor of size (2, 3) */
+    int tOrder = 2;
+    int * tDimSize = new int[tOrder];
+    tDimSize[0] = 3;
+    tDimSize[1] = 2;
+
+    int tUnitNum = 1;
+    for (int i = 0; i < tOrder; i++)
+        tUnitNum *= tDimSize[i];
+        
+    /* a index tensor of size (2) */
+    int indexOrder = 1;
+    int * indexDimSize = new int[indexOrder];
+    indexDimSize[0] = 2;
+
+    int indexUnitNum = 1;
+    for (int i = 0; i < indexOrder; i++)
+        indexUnitNum *= indexDimSize[i];
+
+    DTYPE sData[3][3] = { {0.0F, 0.0F, 2.0F},
+                          {2.0F, 1.0F, 3.0F},
+                          {2.0F, 2.0F, 4.0F} };
+
+    DTYPE tData[3][2] = { {0.0F, -1.0F}, 
+                          {2.0F, 1.0F},
+                          {2.0F, 0.0F} };
+
+    DTYPE answer[3][3] = { {-1.0F, 0.0F, 2.0F},
+                           {3.0F, 1.0F, 5.0F},
+                           {2.0F, 2.0F, 6.0F} };
+
+    int dim = 1;
+    int indexSize = 2;
+    int srcIndex[2] = {0, 2};
+    int tgtIndex[2] = {1, 0};
+
+    /* CPU test */
+    bool cpuTest = true;
+
+    /* create tensors */
+    XTensor * s1 = NewTensorV2(sOrder, sDimSize);
+    XTensor * s2 = NewTensorV2(sOrder, sDimSize);
+    XTensor * t = NewTensorV2(tOrder, tDimSize);
+    XTensor * sIndex = NewTensorV2(indexOrder, indexDimSize, X_INT);
+    XTensor * tIndex = NewTensorV2(indexOrder, indexDimSize, X_INT);
+
+    /* initialize variables */
+    s1->SetData(sData, sUnitNum);
+    s2->SetData(sData, sUnitNum);
+    t->SetData(tData, tUnitNum);
+    sIndex->SetData(srcIndex, indexSize);
+    tIndex->SetData(tgtIndex, indexSize);
+
+    /* call _SpreadForGather function */
+    _SpreadForCopyIndexed(s1, t, dim, sIndex, tIndex, 1);
+    _SpreadForCopyIndexed(s2, t, dim, sIndex, tIndex, 1);
+
+    /* check results */
+    cpuTest = _CheckData(s1, answer, sUnitNum) &&
+              _CheckData(s2, answer, sUnitNum);
+    
+#ifdef USE_CUDA
+    /* GPU test */
+    bool gpuTest = true;
+
+    /* create tensors */
+    XTensor * sGPU1 = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU2 = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(sOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sIndexGPU = NewTensorV2(indexOrder, indexDimSize, X_INT, 1.0F, 0);
+    XTensor * tIndexGPU = NewTensorV2(indexOrder, indexDimSize, X_INT, 1.0F, 0);
+
+    /* initialize variables */
+    sGPU1->SetData(sData, sUnitNum);
+    sGPU2->SetData(sData, sUnitNum);
+    tGPU->SetData(tData, tUnitNum);
+    sIndexGPU->SetData(srcIndex, indexSize);
+    tIndexGPU->SetData(tgtIndex, indexSize);
+
+    /* call _SpreadForGather function */
+    _SpreadForCopyIndexed(sGPU1, tGPU, dim, sIndexGPU, tIndexGPU, 1);
+    _SpreadForCopyIndexed(sGPU2, tGPU, dim, sIndexGPU, tIndexGPU, 1);
+
+    /* check results */
+    gpuTest = _CheckData(sGPU1, answer, sUnitNum) &&
+              _CheckData(sGPU2, answer, sUnitNum);
+
+    /* destroy variables */
+    delete s1;
+    delete s2;
+    delete t;
+    delete sIndex;
+    delete tIndex;
+    delete sGPU1;
+    delete sGPU2;
+    delete tGPU;
+    delete sIndexGPU;
+    delete tIndexGPU;
+    delete[] sDimSize;
+    delete[] tDimSize;
+    delete[] indexDimSize;
+
+    return cpuTest && gpuTest;
+#else
+    /* destroy variables */
+    delete s1;
+    delete s2;
+    delete t;
+    delete sIndex;
+    delete tIndex;
     delete[] sDimSize;
     delete[] tDimSize;
     delete[] indexDimSize;
@@ -285,6 +421,24 @@ bool TestSpread()
     }
     else
         XPRINT(0, stdout, ">> case 1 passed!\n");
+        
+    /* case 1 test */
+    caseFlag = TestSpread2();
+    if (!caseFlag) {
+        returnFlag = false;
+        XPRINT(0, stdout, ">> case 2 failed!\n");
+    }
+    else
+        XPRINT(0, stdout, ">> case 2 passed!\n");
+        
+    /* case 1 test */
+    caseFlag = TestSpread3();
+    if (!caseFlag) {
+        returnFlag = false;
+        XPRINT(0, stdout, ">> case 3 failed!\n");
+    }
+    else
+        XPRINT(0, stdout, ">> case 3 passed!\n");
 
     /* other cases test */
     /*

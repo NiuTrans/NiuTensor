@@ -19,8 +19,9 @@
  * $Created by: Xu Chen (email: hello_master1954@163.com) 2018-07-06
  */
 
-#include "TSetData.h"
+#include "../core/utilities/CheckData.h"
 #include "../core/getandset/SetData.h"
+#include "TSetData.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
@@ -46,25 +47,25 @@ bool TestSetData1()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s = NewTensor(sOrder, sDimSize);
+    XTensor * s = NewTensorV2(sOrder, sDimSize);
 
     /* call SetDataRand function */
     s->SetDataRand(0.0, 1.0);
     
     /* check results */
-    cpuTest = s->CheckData(answer, sUnitNum, 1.0F);
+    cpuTest = _CheckData(s, answer, sUnitNum, 1.0F);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensors */
-    XTensor * sGPU = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
 
     /* call SetDataRand function */
     sGPU->SetDataRand(0.0, 1.0);
     
-    gpuTest = sGPU->CheckData(answer, sUnitNum, 1.0F);
+    gpuTest = _CheckData(sGPU, answer, sUnitNum, 1.0F);
 
     /* destroy variables */
     delete s;
@@ -114,8 +115,8 @@ bool TestSetData2()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s = NewTensor(sOrder, sDimSize);
-    XTensor * modify = NewTensor(dataOrder, dataDimSize);
+    XTensor * s = NewTensorV2(sOrder, sDimSize);
+    XTensor * modify = NewTensorV2(dataOrder, dataDimSize);
 
     /* Initialize variables */
     _SetDataFixedFloat(s, 1.0F);
@@ -125,15 +126,15 @@ bool TestSetData2()
     _SetDataIndexed(s, modify, 0, 1);
 
     /* check results */
-    cpuTest = s->CheckData(answer, sUnitNum, 1e-5F);
+    cpuTest = _CheckData(s, answer, sUnitNum, 1e-5F);
     
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensors */
-    XTensor * sGPU = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * modifyGPU = NewTensor(dataOrder, dataDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * modifyGPU = NewTensorV2(dataOrder, dataDimSize, X_FLOAT, 1.0F, 0);
 
     /* Initialize variables */
     _SetDataFixedFloat(sGPU, 1.0F);
@@ -142,7 +143,7 @@ bool TestSetData2()
     /* call SetDataIndexed function */
     _SetDataIndexed(sGPU, modifyGPU, 0, 1);
     
-    gpuTest = sGPU->CheckData(answer, sUnitNum, 1e-5F);
+    gpuTest = _CheckData(sGPU, answer, sUnitNum, 1e-5F);
 
     /* destroy variables */
     delete s;
@@ -207,8 +208,8 @@ bool TestSetData3()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s = NewTensor(sOrder, sDimSize);
-    XTensor * modify = NewTensor(dataOrder, dataDimSize);
+    XTensor * s = NewTensorV2(sOrder, sDimSize);
+    XTensor * modify = NewTensorV2(dataOrder, dataDimSize);
 
     /* Initialize variables */
     _SetDataFixedFloat(s, 1.0F);
@@ -219,15 +220,15 @@ bool TestSetData3()
     _SetDataIndexed(s, modify, 1, 1);
     
     /* check results */
-    cpuTest = s->CheckData(answer, sUnitNum, 1e-5F);
+    cpuTest = _CheckData(s, answer, sUnitNum, 1e-5F);
     
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensors */
-    XTensor * sGPU = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * modifyGPU = NewTensor(dataOrder, dataDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * modifyGPU = NewTensorV2(dataOrder, dataDimSize, X_FLOAT, 1.0F, 0);
 
     /* Initialize variables */
     _SetDataFixedFloat(sGPU, 1.0F);
@@ -236,7 +237,7 @@ bool TestSetData3()
     /* call SetDataIndexed function */
     _SetDataIndexed(sGPU, modifyGPU, 1, 1);
     
-    gpuTest = sGPU->CheckData(answer, sUnitNum, 1e-5F);
+    gpuTest = _CheckData(sGPU, answer, sUnitNum, 1e-5F);
 
     /* destroy variables */
     delete s;
@@ -285,7 +286,7 @@ bool TestSetData4()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s = NewTensor(order, dimSize);
+    XTensor * s = NewTensorV2(order, dimSize);
 
     /* initialize variables */
     s->SetData(sData, unitNum);
@@ -294,14 +295,14 @@ bool TestSetData4()
     _SetDataDim(s, 1, 1, 0, 0);
 
     /* check results */
-    cpuTest = s->CheckData(answer, unitNum, 1e-4F);
+    cpuTest = _CheckData(s, answer, unitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensors */
-    XTensor * sGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
 
     /* initialize variables */
     sGPU->SetData(sData, unitNum);
@@ -309,7 +310,7 @@ bool TestSetData4()
     /* call _SetDataDim function */
     _SetDataDim(sGPU, 1, 1, 0, 0);
 
-    gpuTest = sGPU->CheckData(answer, unitNum, 1e-4F);
+    gpuTest = _CheckData(sGPU, answer, unitNum, 1e-4F);
 
     /* destroy variables */
     delete s;
@@ -365,7 +366,7 @@ bool TestSetData5()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s = NewTensor(order, dimSize);
+    XTensor * s = NewTensorV2(order, dimSize);
 
     /* initialize variables */
     s->SetData(data, unitNum);
@@ -374,14 +375,14 @@ bool TestSetData5()
     _SetDataDim(s, 2, 1, 1, 5.0F);
 
     /* check results */
-    cpuTest = s->CheckData(answer, unitNum, 1e-4F);
+    cpuTest = _CheckData(s, answer, unitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensors */
-    XTensor * sGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
 
     /* initialize variables */
     sGPU->SetData(data, unitNum);
@@ -389,7 +390,69 @@ bool TestSetData5()
     /* call _SetDataDim function */
     _SetDataDim(sGPU, 2, 1, 1, 5.0F);
 
-    gpuTest = sGPU->CheckData(answer, unitNum, 1e-4F);
+    gpuTest = _CheckData(sGPU, answer, unitNum, 1e-4F);
+
+    /* destroy variables */
+    delete s;
+    delete sGPU;
+    delete[] dimSize;
+
+    return cpuTest && gpuTest;
+#else
+    /* destroy variables */
+    delete s;
+    delete[] dimSize;
+
+    return cpuTest;
+#endif // USE_CUDA
+}
+
+/*
+case 6: test SetDataRange function.
+generate data items with a range by start, end and the step
+*/
+bool TestSetData6()
+{
+    /* a input tensor of size (5) */
+    int order = 1;
+    int * dimSize = new int[order];
+    dimSize[0] = 5;
+
+    int unitNum = 1;
+    for (int i = 0; i < order; i++)
+        unitNum *= dimSize[i];
+
+    DTYPE answer[5] = {5.2F, 3.2F, 1.2F, -0.8F, -2.8F};
+
+    /* CPU test */
+    bool cpuTest = true;
+
+    /* create tensors */
+    XTensor * s = NewTensorV2(order, dimSize);
+
+    /* initialize variables */
+    s->SetZeroAll();
+
+    /* call _SetDataRange function */
+    _SetDataRange(s, 5.2, -3.2, -2);
+
+    /* check results */
+    cpuTest = _CheckData(s, answer, unitNum, 1e-4F);
+
+#ifdef USE_CUDA
+    /* GPU test */
+    bool gpuTest = true;
+
+    /* create tensors */
+    XTensor * sGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+
+    /* initialize variables */
+    sGPU->SetZeroAll();
+
+    /* call _SetDataRange function */
+    _SetDataRange(sGPU, 5.2, -3.2, -2);
+
+    gpuTest = _CheckData(sGPU, answer, unitNum, 1e-4F);
 
     /* destroy variables */
     delete s;
@@ -461,6 +524,15 @@ bool TestSetData()
     }
     else
         XPRINT(0, stdout, ">> case 5 passed!\n");
+
+    /* case 6 test */
+    caseFlag = TestSetData6();
+    if (!caseFlag) {
+        returnFlag = false;
+        XPRINT(0, stdout, ">> case 6 failed!\n");
+    }
+    else
+        XPRINT(0, stdout, ">> case 6 passed!\n");
 
     /* other cases test */
     /*

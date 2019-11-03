@@ -22,7 +22,7 @@
 #ifndef __TEST_NEGATE_H__
 #define __TEST_NEGATE_H__
 
-#include "../core/arithmetic/Negate.h"
+#include "../core/math/Unary.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
 

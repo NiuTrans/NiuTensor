@@ -52,7 +52,7 @@ public:
     void * job;
 
     /* arguments of the job */
-    XList * args;
+    TensorList * args;
 
 public:
     /* constructor */
@@ -102,7 +102,7 @@ private:
     XThread jobDequeuer;
 
     /* argument list of jobDequeuer */
-    XList * jobDequeuerArgs;
+    TensorList * jobDequeuerArgs;
 
     /* indicates whether jobDequeuer stops */
     bool jobDequeuerBreak;
@@ -141,11 +141,11 @@ public:
     void StopJobConsumer();
 
     /* add a job item to process */
-    void EnqueueJob(void * job, XList * jobArgs);
+    void EnqueueJob(void * job, TensorList * jobArgs);
 
     /* job item consumer */
     static
-    void DequeueJobs(XList * args);
+    void DequeueJobs(TensorList * args);
 
     /* get the break flag */
     bool GetJobBreak();

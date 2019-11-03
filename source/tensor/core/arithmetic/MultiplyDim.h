@@ -33,10 +33,15 @@ void _MultiplyDim(const XTensor * a, const XTensor * b, XTensor * c, int n, DTYP
 /* tensor multiplication a = a * b + \alpha * c where the size of b is equal to the n-th dimension of a,
    i.e., a is multiplied with b by broadcasting. we keep the result in the input tensor a and return nothing */
 void _MultiplyDimMe(XTensor * a, const XTensor * b, int n, DTYPE alpha = 0.0);
+void MultiplyDimMe(XTensor & a, const XTensor & b, int n, DTYPE alpha = 0.0);
 
 /* tensor multiplication c = a * b where the size of b is equal to the n-th dimension of a,
    i.e., a is multiplied with b by broadcasting. We make a new tensor c to keep the result and return it */
 XTensor MultiplyDim(const XTensor &a, const XTensor &b, int n);
+
+/* tensor multiplication c = a * b + \alpha * c  where the size of b is equal to the n-th dimension of a,
+   i.e., a is multiplied with b by broadcasting */
+void MultiplyDim(const XTensor &a, const XTensor &b, XTensor &c, int n);
 
 /* tensor multiplication summation c = a * b + c * \beta where some of dimensions of b can be of size 1 */
 void _MultiplyBroadcast(const XTensor * a, const XTensor * b, XTensor * c, DTYPE beta = (DTYPE)1.0);
@@ -44,6 +49,9 @@ void _MultiplyBroadcast(const XTensor * a, const XTensor * b, XTensor * c, DTYPE
 /* tensor broadcast multiplication c = a * b where some of dimensions of b can be of size 1.
    we return the resulting tensor here */
 XTensor MultiplyBroadcast(const XTensor &a, const XTensor &b);
+
+/* tensor multiplication summation c = a * b + c * \beta where some of dimensions of b can be of size 1 */
+void MultiplyBroadcast(const XTensor &a, const XTensor &b, XTensor &c);
 
 } // namespace nts(NiuTrans.Tensor)
 

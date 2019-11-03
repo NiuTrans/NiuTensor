@@ -23,7 +23,6 @@
 #define __IDENTITY_H__
 
 #include "../XTensor.h"
-#include "Loss.h"
 
 namespace nts{ // namespace nts(NiuTrans.Tensor)
 
@@ -33,10 +32,11 @@ void _Identity(const XTensor * x, XTensor * y);
 /* identity function y = x (return an XTensor structure) */
 XTensor Identity(const XTensor &x);
 
+void Identity(const XTensor &x, XTensor &y);
+
 /* de/dx */
-void _IdentityBackward(XTensor * gold, XTensor * y, XTensor * x, 
-                       XTensor * dedy, XTensor * dedx,
-                       LOSS_FUNCTION_NAME lossName);
+void _IdentityBackward(const XTensor * y, const XTensor * x, 
+                       const XTensor * dedy, XTensor * dedx);
 
 } // namespace nts(NiuTrans.Tensor)
 

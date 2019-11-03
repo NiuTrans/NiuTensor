@@ -30,7 +30,9 @@
 #include "XDevice.h"
 #include "./test/Test.h"
 #include "./core/CHeader.h"
-
+#include "./XBLAS.h"
+#include "./core/sort/TopK.h"
+#include "./core/movement/Gather.h"
 //#define CRTDBG_MAP_ALLOC
 //#include <stdlib.h>  
 //#include <crtdbg.h> 
@@ -39,9 +41,6 @@ using namespace nts;
 
 void SmallTest();
 void TransposeTest();
-void LittleTest();
-void T2TTest();
-void T2TTest2();
 void PowerTest();
 
 int main( int argc, const char ** argv )
@@ -166,127 +165,5 @@ void TransposeTest()
     delete[] data;
 }
 
-void LittleTest()
-{
-    int a = 5000;
-    int b = 100000;
-    int c = a*b;
-    printf("%d\n", c);
 
-    exit(1);
-}
-
-void T2TTest()
-{
-    XTensor * input;
-    XTensor * weight;
-    XTensor * output;
-    XTensor * gold;
-    XTensor * dedy;
-    XTensor * dedx;
-    XTensor * dedxTmp;
-    XTensor * dedw;
-    XTensor * padding;
-
-    DTYPE loss;
-
-    int * dimSize = new int[2];
-    dimSize[0] = 256;
-    dimSize[1] = 10001;
-
-    int * dimSize2 = new int[3];
-    dimSize2[0] = 2;
-    dimSize2[1] = 31;
-    dimSize2[2] = 256;
-   
-    int * dimSize3 = new int[3];
-    dimSize3[0] = 2;
-    dimSize3[1] = 31;
-    dimSize3[2] = 10001;
-
-    int * dimSize4 = new int[2];
-    dimSize4[0] = 2;
-    dimSize4[1] = 31;
-
-    input = NewTensor(3, dimSize2, X_FLOAT, 1.0F, 0);
-    weight = NewTensor(2, dimSize, X_FLOAT, 1.0F, 0);
-    dedw = NewTensor(2, dimSize, X_FLOAT, 1.0F, 0);
-    gold = NewTensor(3, dimSize3, X_FLOAT, 1.0F, 0);
-    output = NewTensor(3, dimSize3, X_FLOAT, 1.0F, 0);
-    dedy = NewTensor(3, dimSize3, X_FLOAT, 1.0F, 0);
-    dedx = NewTensor(3, dimSize3, X_FLOAT, 1.0F, 0);
-    dedxTmp = NewTensor(3, dimSize3, X_FLOAT, 1.0F, 0);
-    padding = NewTensor(2, dimSize4, X_FLOAT, 1.0F, 0);
-
-    //weight = NewTensor(2, dimSize);
-    //dedw = NewTensor(2, dimSize);
-    //input = NewTensor(3, dimSize2);
-    //gold = NewTensor(3, dimSize3);
-    //output = NewTensor(3, dimSize3);
-    //dedy = NewTensor(3, dimSize3);
-    //dedx = NewTensor(3, dimSize3);
-    //dedxTmp = NewTensor(3, dimSize3);
-    //padding = NewTensor(2, dimSize4);
-
-    myRead(input, "x.txt", "x");
-    myRead(weight, "w.txt", "w");
-    myRead(gold, "gold.txt", "gold");
-    myRead(padding, "padding.txt", "padding");
-
-    XTensor inter;
-    inter = MMul(*input, *weight);
-
-    _Softmax(&inter, output, 2);
-
-    //_LogMe(output);
-    loss = _CrossEntropyFast(output, gold, REDUCE_MEAN, NULL, padding);
-
-    printf("loss: %f\n", loss);
-
-    _CrossEntropyBackward(dedy, output, gold, NULL);
-    //_CrossEntropyBackward(dedy, output, gold, NULL, padding);
-
-    myDump(dedy, "dedy.txt", "dedy");
-
-    _SoftmaxBackward(NULL, output, input, dedy, dedx, NULL, -1, NOLOSS);
-    _Sub(output, gold, dedxTmp);
-
-    myDump(dedx, "dedx.txt", "dedx");
-    dedx->Dump(stderr, "dedx", 200);
-    dedxTmp->Dump(stderr, "dedxTmp", 200);
-
-    input->Reshape(input->unitNum/input->GetDim(-1), input->GetDim(-1));
-    dedx->Reshape(dedx->unitNum/dedx->GetDim(-1), dedx->GetDim(-1));
-
-    _MatrixMulBatched(input, X_TRANS, dedx, X_NOTRANS, dedw);
-
-    myDump(dedw, "dedw.txt", "dedw");
-}
-
-void T2TTest2()
-{
-    int dimSize[3];
-    dimSize[0] = 161;
-    dimSize[1] = 47;
-    dimSize[2] = 10001;
-    XTensor * probs = NewTensor(3, dimSize, X_FLOAT, 1.0F, 0);
-    //XTensor * probs = NewTensor(3, dimSize, X_FLOAT, 1.0F, -1);
-
-    //myRead(probs, "probs.txt", " ");
-    _SetDataFixedFloat(probs, 1.0F);
-
-    probs->Reshape(1, probs->unitNum);
-
-    DTYPE sum = _ReduceSumAll(probs);
-    printf("%e\n", sum);
-
-    //XTensor tmp;
-    //tmp = IsNonZero(*probs);
-    //DTYPE nonZeroNum = ReduceSumAll(tmp);
-    //printf("%f\n", nonZeroNum);
-    //
-    //DTYPE gpu = ReduceSum(*probs, 1).Get2D(0, 0);
-
-    //printf("%e\n", gpu);
-}
 

@@ -40,8 +40,11 @@ bj is the j-th element tensor of B, and c_{i,j} is the (i,j) elementtensor of th
 C should be a tensor of z * x * n * m. 
 Obviously C = A * B performs normal matrix multiplication if A = y * z and B = x * y.
 */
-void _MatrixMul(const XTensor * a, MATRIX_TRANS_TYPE transposedA, const XTensor * b, MATRIX_TRANS_TYPE transposedB, XTensor * c,
-                DTYPE alpha = (DTYPE)1.0, DTYPE beta = 0, XPRunner * parallelRunner = NULL);
+void _MatrixMul(const XTensor * a, MATRIX_TRANS_TYPE transposedA, 
+                const XTensor * b, MATRIX_TRANS_TYPE transposedB, 
+                XTensor * c,
+                DTYPE alpha = (DTYPE)1.0, DTYPE beta = 0, 
+                XPRunner * parallelRunner = NULL);
 
 /* 
 matrix multiplication (return an XTensor structure) c = trans(a) * trans(b) * alpha
@@ -56,13 +59,23 @@ bj is the j-th element tensor of B, and c_{i,j} is the (i,j) elementtensor of th
 C should be a tensor of z * x * n * m. 
 Obviously C = A * B performs normal matrix multiplication if A = y * z and B = x * y.
 */
-XTensor MatrixMul(const XTensor &a, MATRIX_TRANS_TYPE transposedA, const XTensor &b, MATRIX_TRANS_TYPE transposedB, 
-                  DTYPE alpha = (DTYPE)1.0, XPRunner * parallelRunner = NULL);
+XTensor MatrixMul(const XTensor &a, MATRIX_TRANS_TYPE transposedA, 
+                  const XTensor &b, MATRIX_TRANS_TYPE transposedB, 
+                  DTYPE alpha = (DTYPE)1.0, 
+                  XPRunner * parallelRunner = NULL);
+
+void MatrixMul(const XTensor &a, MATRIX_TRANS_TYPE transposedA, 
+               const XTensor &b, MATRIX_TRANS_TYPE transposedB,
+               XTensor &c, 
+               DTYPE alpha = (DTYPE)1.0, DTYPE beta = 0, 
+               XPRunner * parallelRunner = NULL);
 
 /* matrix multiplication with no transposition c = a * b * alpha*/
 XTensor MatrixMul(const XTensor &a, const XTensor &b, 
                   DTYPE alpha = (DTYPE)1.0, XPRunner * parallelRunner = NULL);
 
+void MatrixMul(const XTensor &a, const XTensor &b, XTensor &c, 
+               DTYPE alpha = (DTYPE)1.0, XPRunner * parallelRunner = NULL);
 
 } // namespace nts(NiuTrans.Tensor)
 

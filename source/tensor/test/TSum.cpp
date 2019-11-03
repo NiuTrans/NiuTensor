@@ -19,6 +19,7 @@
  * $Created by: LI Yinqiao (li.yin.qiao.2012@hotmail.com) 2018-04-30
  */
 
+#include "../core/utilities/CheckData.h"
 #include "TSum.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
@@ -47,10 +48,10 @@ bool TestSum1()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * a = NewTensor(order, dimSize);
-    XTensor * b = NewTensor(order, dimSize);
-    XTensor * c = NewTensor(order, dimSize);
-    XTensor * cMe = NewTensor(order, dimSize);
+    XTensor * a = NewTensorV2(order, dimSize);
+    XTensor * b = NewTensorV2(order, dimSize);
+    XTensor * c = NewTensorV2(order, dimSize);
+    XTensor * cMe = NewTensorV2(order, dimSize);
     XTensor cUser;
 
     /* initialize variables */
@@ -65,18 +66,18 @@ bool TestSum1()
     cUser = Sum(*a, *b);
 
     /* check results */
-    cpuTest = c->CheckData(answer, unitNum)
-              && cMe->CheckData(answer, unitNum) && cUser.CheckData(answer, unitNum);
+    cpuTest = _CheckData(c, answer, unitNum)
+              && _CheckData(cMe, answer, unitNum) && _CheckData(&cUser, answer, unitNum);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensor */
-    XTensor * aGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * bGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * cGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * cMeGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * aGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * bGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * cGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * cMeGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
     XTensor cUserGPU;
 
     /* Initialize variables */
@@ -91,8 +92,8 @@ bool TestSum1()
     cUserGPU = Sum(*aGPU, *bGPU);
 
     /* check results */
-    gpuTest = cGPU->CheckData(answer, unitNum)
-              && cMeGPU->CheckData(answer, unitNum) && cUserGPU.CheckData(answer, unitNum);
+    gpuTest = _CheckData(cGPU, answer, unitNum)
+              && _CheckData(cMeGPU, answer, unitNum) && _CheckData(&cUserGPU, answer, unitNum);
 
     /* destroy variables */
     delete a;
@@ -109,8 +110,8 @@ bool TestSum1()
 #else
     /* destroy variables */
     delete a;
-	delete b;
-	delete c;
+    delete b;
+    delete c;
     delete cMe;
     delete[] dimSize;
 
@@ -143,10 +144,10 @@ bool TestSum2()
     bool cpuTest = true;
 
     /* create tensor */
-    XTensor * a = NewTensor(order, dimSize);
-    XTensor * b = NewTensor(order, dimSize);
-    XTensor * c = NewTensor(order, dimSize);
-    XTensor * cMe = NewTensor(order, dimSize);
+    XTensor * a = NewTensorV2(order, dimSize);
+    XTensor * b = NewTensorV2(order, dimSize);
+    XTensor * c = NewTensorV2(order, dimSize);
+    XTensor * cMe = NewTensorV2(order, dimSize);
     XTensor cUser;
 
     /* initialize variables */
@@ -161,18 +162,18 @@ bool TestSum2()
     cUser = Sum(*a, *b, beta);
 
     /* check results */
-    cpuTest = c->CheckData(answer, unitNum)
-              && cMe->CheckData(answer, unitNum) && cUser.CheckData(answer, unitNum);
+    cpuTest = _CheckData(c, answer, unitNum)
+              && _CheckData(cMe, answer, unitNum) && _CheckData(&cUser, answer, unitNum);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensor */
-    XTensor * aGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * bGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * cGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * cMeGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * aGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * bGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * cGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * cMeGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
     XTensor cUserGPU;
 
     /* Initialize variables */
@@ -187,8 +188,8 @@ bool TestSum2()
     cUserGPU = Sum(*aGPU, *bGPU, beta);
 
     /* check results */
-    gpuTest = cGPU->CheckData(answer, unitNum)
-              && cMeGPU->CheckData(answer, unitNum) && cUserGPU.CheckData(answer, unitNum);
+    gpuTest = _CheckData(cGPU, answer, unitNum)
+              && _CheckData(cMeGPU, answer, unitNum) && _CheckData(&cUserGPU, answer, unitNum);
 
     /* destroy variables */
     delete a;

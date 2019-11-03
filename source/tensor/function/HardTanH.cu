@@ -21,8 +21,6 @@
 
 #include "HardTanH.h"
 #include "HardTanH.cuh"
-#include "Loss.cuh"
-#include "CrossEntropy.cuh"
 #include "../XDevice.h"
 
 namespace nts{ // namespace nts(NiuTrans.Tensor)
@@ -63,25 +61,19 @@ y =  1    if x > 1
 */
 void _CudaHardTanH(const XTensor * x, XTensor * y)
 {
-    if(x->dataType == DEFAULT_DTYPE && y->dataType == DEFAULT_DTYPE){
+    CheckNTErrors(!x->isSparse && !y->isSparse, 
+                  "The hard tanh activation function does not support sparse tensors.");
 
-        CheckNTErrors(!x->isSparse && !y->isSparse, "The hard tanh activation function does not support sparse tensors.");
-        CheckNTErrors(x->unitNum && y->unitNum, "The x vectors must be of the same length.");
+    int gridSize[3], blockSize[3];
 
-        int gridSize[3], blockSize[3];
+    GDevs.GetCudaThread(x->devID, x->unitNum, gridSize, blockSize);
 
-        GDevs.GetCudaThread(x->devID, x->unitNum, gridSize, blockSize);
+    int devIDBackup;
+    ProtectCudaDev(x->devID, devIDBackup);
 
-        int devIDBackup;
-        ProtectCudaDev(x->devID, devIDBackup);
+    KernelHardtanhCompute<<<dim3(gridSize[0]), dim3(blockSize[0])>>>((DTYPE*)x->data, (DTYPE*)y->data, x->unitNum);
 
-        KernelHardtanhCompute<<<dim3(gridSize[0]), dim3(blockSize[0])>>>((DTYPE*)x->data, (DTYPE*)y->data, x->unitNum);
-
-        BacktoCudaDev(x->devID, devIDBackup);
-    }
-    else{
-        ShowNTErrors("TODO!");
-    }
+    BacktoCudaDev(x->devID, devIDBackup);
 }
 
 /* 
@@ -92,13 +84,12 @@ dy/dx = 1     if -1 <= x <= 1
 
 >> dedy - dE/dy
 >> dedx - dE/dx
->> gold - gold standard
 >> y - y of the function
 >> x - x of the function
 >> size - size of y/x
 */
 __global__ 
-void KernelHardtanhBackward(DTYPE * dedy, DTYPE * dedx, DTYPE * gold, DTYPE * y, DTYPE * x, int size)
+void KernelHardtanhBackward(DTYPE * dedy, DTYPE * dedx, DTYPE * x, int size)
 {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
 
@@ -123,44 +114,29 @@ hard tanh: y =  1    if x > 1
    and dy/dx =  1    if -1 <= x <= 1
                 0    otherwise
 
->> gold - gold standard to measure error (or loss)
->> y - output of the function
->> x - input of the function
+>> y - output of the hardtanh function
+>> x - input of the hardtanh function
 >> dedy - dE/dy
 >> dedx - dE/dx
->> lossName - type of loss function, e.g., cross entropy
 */
-void _CudaHardTanHBackward(XTensor * gold, XTensor * y, XTensor * x, 
-                           XTensor * dedy, XTensor * dedx,
-                           LOSS_FUNCTION_NAME lossName)
+void _CudaHardTanHBackward(XTensor * y, XTensor * x, 
+                           XTensor * dedy, XTensor * dedx)
 {
-    if(x->dataType == DEFAULT_DTYPE && y->dataType == DEFAULT_DTYPE){
+    int gridSize[3], blockSize[3];
 
-        /* calculate dE/dy */
-        if(lossName == CROSSENTROPY)
-            _CudaCrossEntropyBackward(dedy, y, gold);
-        else if(lossName != NOLOSS)
-            _CudaLossBackward(dedy, gold, y, lossName);
+    GDevs.GetCudaThread(x->devID, x->unitNum, gridSize, blockSize);
 
-        int gridSize[3], blockSize[3];
+    int devIDBackup;
+    ProtectCudaDev(x->devID, devIDBackup);
 
-        GDevs.GetCudaThread(x->devID, x->unitNum, gridSize, blockSize);
+    /* dE/dx = dE/dy * dy/dx */
+    KernelHardtanhBackward<<<dim3(gridSize[0]),dim3(blockSize[0])>>>
+                            ((DTYPE*)dedy->data, 
+                            (DTYPE*)dedx->data,
+                            (DTYPE*)x->data, 
+                             x->unitNum);
 
-        int devIDBackup;
-        ProtectCudaDev(x->devID, devIDBackup);
-
-        /* dE/dx = dE/dy * dy/dx */
-        KernelHardtanhBackward<<<dim3(gridSize[0]),dim3(blockSize[0])>>>
-                               ((DTYPE*)dedy->data, 
-                                (DTYPE*)dedx->data,
-                                 gold == NULL ? NULL : (DTYPE*)gold->data, 
-                                (DTYPE*)y->data, (DTYPE*)x->data, 
-                                 x->unitNum);
-
-        BacktoCudaDev(x->devID, devIDBackup);
-    }
-    else
-        ShowNTErrors("TODO!");
+    BacktoCudaDev(x->devID, devIDBackup);
 }
 
 #endif

@@ -19,6 +19,7 @@
 * $Created by: Xu Chen (email: hello_master1954@163.com) 2018-06-27
 */
 
+#include "../core/utilities/CheckData.h"
 #include "TReduceVariance.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
@@ -67,9 +68,9 @@ bool TestReduceVariance1()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s = NewTensor(sOrder, sDimSize);
-    XTensor * t = NewTensor(tOrder, tDimSize);
-    XTensor * mean = NewTensor(meanOrder, meanDimSize);
+    XTensor * s = NewTensorV2(sOrder, sDimSize);
+    XTensor * t = NewTensorV2(tOrder, tDimSize);
+    XTensor * mean = NewTensorV2(meanOrder, meanDimSize);
     XTensor tUser;
 
     /* initialize variables */
@@ -82,16 +83,16 @@ bool TestReduceVariance1()
     tUser = ReduceVariance(*s, 0, *mean);
 
     /* check results */
-    cpuTest = t->CheckData(answer, tUnitNum) && tUser.CheckData(answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensors */
-    XTensor * sGPU = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * tGPU = NewTensor(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * meanGPU = NewTensor(meanOrder, meanDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * meanGPU = NewTensorV2(meanOrder, meanDimSize, X_FLOAT, 1.0F, 0);
     XTensor tUserGPU;
 
     /* initialize variables */
@@ -104,7 +105,7 @@ bool TestReduceVariance1()
     tUserGPU = ReduceVariance(*sGPU, 0, *meanGPU);
 
     /* check results */
-    gpuTest = tGPU->CheckData(answer, tUnitNum) && tUserGPU.CheckData(answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
 
     /* destroy variables */
     delete s;

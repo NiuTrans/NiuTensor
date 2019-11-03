@@ -39,6 +39,12 @@ For a 1-dimensional data array a, mean = (1/n) * sum_i input_i
 */
 XTensor ReduceMean(const XTensor &input, int dim);
 
+/* 
+get the mean value along a dimension of the tensor
+For a 1-dimensional data array a, mean = (1/n) * sum_i input_i
+*/
+void ReduceMean(const XTensor &input, XTensor &output, int dim);
+
 } // namespace nts(NiuTrans.Tensor)
 
 #endif // __REDUCEMEAN_H__

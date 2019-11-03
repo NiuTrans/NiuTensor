@@ -39,25 +39,25 @@ where a is a tensor and b is a row vector
 */
 template <class T, bool betaFired>
 __global__
-	void KernelSubWithRow(T * a, T * b, T * c, int rowNum, int colNum, T beta)
+void KernelSubWithRow(T * a, T * b, T * c, int rowNum, int colNum, T beta)
 {
-	__shared__ T bv[MAX_CUDA_THREAD_NUM_PER_BLOCK];
-	int col = blockDim.x * blockIdx.x + threadIdx.x;
-	int row = blockDim.y * blockIdx.y + threadIdx.y;
+    __shared__ T bv[MAX_CUDA_THREAD_NUM_PER_BLOCK];
+    int col = blockDim.x * blockIdx.x + threadIdx.x;
+    int row = blockDim.y * blockIdx.y + threadIdx.y;
 
-	if (col >= colNum || row >= rowNum)
-		return;
+    if (col >= colNum || row >= rowNum)
+        return;
 
-	if (threadIdx.y == 0)
-		bv[threadIdx.x] = b[col];
+    if (threadIdx.y == 0)
+        bv[threadIdx.x] = b[col];
 
-	__syncthreads();
+    __syncthreads();
 
-	int offset = colNum * row + col;
-	if (betaFired)
-		c[offset] = a[offset] - bv[threadIdx.x] * beta;
-	else
-		c[offset] = a[offset] - bv[threadIdx.x];
+    int offset = colNum * row + col;
+    if (betaFired)
+        c[offset] = a[offset] - bv[threadIdx.x] * beta;
+    else
+        c[offset] = a[offset] - bv[threadIdx.x];
 }
 
 /*
@@ -75,30 +75,30 @@ where a is a tensor and b is a colum vector
 */
 template <class T, bool betaFired>
 __global__
-	void KernelSubWithCol(T * a, T * b, T * c, int rowNum, int colNum, int blockSize, int blockNum, T beta)
+void KernelSubWithCol(T * a, T * b, T * c, int rowNum, int colNum, int blockSize, int blockNum, T beta)
 {
-	__shared__ T bv[MAX_CUDA_THREAD_NUM_PER_BLOCK];
+    __shared__ T bv[MAX_CUDA_THREAD_NUM_PER_BLOCK];
 
-	int colIndex = blockDim.x * blockIdx.x + threadIdx.x;
-	int row = blockDim.y * blockIdx.y + threadIdx.y;
+    int colIndex = blockDim.x * blockIdx.x + threadIdx.x;
+    int row = blockDim.y * blockIdx.y + threadIdx.y;
 
-	int col = colIndex % colNum;
-	int block = colIndex / colNum;
+    int col = colIndex % colNum;
+    int block = colIndex / colNum;
 
-	if (row >= rowNum || block >= blockNum)
-		return;
+    if (row >= rowNum || block >= blockNum)
+        return;
 
-	if (threadIdx.x == 0)
-		bv[threadIdx.y] = b[row];
+    if (threadIdx.x == 0)
+        bv[threadIdx.y] = b[row];
 
-	__syncthreads();
+    __syncthreads();
 
-	int offset = block * blockSize + row * colNum + col;
+    int offset = block * blockSize + row * colNum + col;
 
-	if (betaFired)
-		c[offset] = a[offset] - bv[threadIdx.y] * beta;
-	else
-		c[offset] = a[offset] - bv[threadIdx.y];
+    if (betaFired)
+        c[offset] = a[offset] - bv[threadIdx.y] * beta;
+    else
+        c[offset] = a[offset] - bv[threadIdx.y];
 }
 
 /*
@@ -116,63 +116,63 @@ i.e., a is subtracted with b by broadcasting
 */
 void _CudaSubDim(const XTensor * a, const XTensor * b, XTensor * c, int n, DTYPE beta)
 {
-	CheckNTErrors(a && b && c, "Empty tensor input!");
-	CheckNTErrors(a->unitNum == c->unitNum, "Unmatched tensors in subtraction!");
-	CheckNTErrors(a->dataType == b->dataType && a->dataType == c->dataType,
-		          "Unmatched data types in subtraction!");
-	CheckNTErrors(a->order == c->order, "The input tensors do not have the same order in subtraction!");
-	CheckNTErrors(!a->isSparse && !b->isSparse && !c->isSparse, "Dense tensors are required!");
-	CheckNTErrors(a->dimSize[n] == b->unitNum, "Wrong tensor size!");
+    CheckNTErrors(a && b && c, "Empty tensor input!");
+    CheckNTErrors(a->unitNum == c->unitNum, "Unmatched tensors in subtraction!");
+    CheckNTErrors(a->dataType == b->dataType && a->dataType == c->dataType,
+                  "Unmatched data types in subtraction!");
+    CheckNTErrors(a->order == c->order, "The input tensors do not have the same order in subtraction!");
+    CheckNTErrors(!a->isSparse && !b->isSparse && !c->isSparse, "Dense tensors are required!");
+    CheckNTErrors(a->dimSize[n] == b->unitNum, "Wrong tensor size!");
 
-	int stride = 1;
-	int blockSize = a->dimSize[n];
-	int blockNum = 1;
+    int stride = 1;
+    int blockSize = a->dimSize[n];
+    int blockNum = 1;
 
-	for (int i = a->order - 1; i >= 0; i--) {
-		if (i > n)
-			stride *= a->dimSize[i];
-		else if (i < n)
-			blockNum *= a->dimSize[i];
-	}
+    for (int i = a->order - 1; i >= 0; i--) {
+        if (i > n)
+            stride *= a->dimSize[i];
+        else if (i < n)
+            blockNum *= a->dimSize[i];
+    }
 
-	int cudaGrids[3];
-	int cudaBlocks[3];
+    int cudaGrids[3];
+    int cudaBlocks[3];
 
-	int devIDBackup = 0;
-	ProtectCudaDev(a->devID, devIDBackup);
+    int devIDBackup = 0;
+    ProtectCudaDev(a->devID, devIDBackup);
 
-	if (a->dataType == DEFAULT_DTYPE) {
-		if (stride > 1) {
-			GDevs.GetCudaThread2D(a->devID, stride * blockNum, blockSize, MAX_INT, cudaGrids, cudaBlocks);
-			if (beta == (DTYPE)1.0F)
-				KernelSubWithCol<DTYPE, false> <<<dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1])>>>
-				                                ((DTYPE*)a->data, (DTYPE*)b->data, (DTYPE*)c->data,
-					                              blockSize, stride, blockSize * stride, blockNum, beta);
-			else
-				KernelSubWithCol<DTYPE, true>  <<<dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1])>>>
-				                                ((DTYPE*)a->data, (DTYPE*)b->data, (DTYPE*)c->data,
-					                              blockSize, stride, blockSize * stride, blockNum, beta);
-		}
-		else if (stride == 1) {
-			GDevs.GetCudaThread2D(a->devID, blockSize, blockNum, MAX_INT, cudaGrids, cudaBlocks);
-			if (beta == (DTYPE)1.0F)
-				KernelSubWithRow<DTYPE, false> <<<dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1]) >> >
-				                                ((DTYPE*)a->data, (DTYPE*)b->data, (DTYPE*)c->data,
-					                              blockNum, blockSize, beta);
-			else
-				KernelSubWithRow<DTYPE, true>  <<<dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1]) >> >
-				                                ((DTYPE*)a->data, (DTYPE*)b->data, (DTYPE*)c->data,
-					                              blockNum, blockSize, beta);
-		}
-		else {
-			ShowNTErrors("Something is wrong!");
-		}
-	}
-	else {
-		ShowNTErrors("TODO!");
-	}
+    if (a->dataType == DEFAULT_DTYPE) {
+        if (stride > 1) {
+            GDevs.GetCudaThread2D(a->devID, stride * blockNum, blockSize, MAX_INT, cudaGrids, cudaBlocks);
+            if (beta == (DTYPE)1.0F)
+                KernelSubWithCol<DTYPE, false> <<<dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1])>>>
+                                                ((DTYPE*)a->data, (DTYPE*)b->data, (DTYPE*)c->data,
+                                                  blockSize, stride, blockSize * stride, blockNum, beta);
+            else
+                KernelSubWithCol<DTYPE, true>  <<<dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1])>>>
+                                                ((DTYPE*)a->data, (DTYPE*)b->data, (DTYPE*)c->data,
+                                                  blockSize, stride, blockSize * stride, blockNum, beta);
+        }
+        else if (stride == 1) {
+            GDevs.GetCudaThread2D(a->devID, blockSize, blockNum, MAX_INT, cudaGrids, cudaBlocks);
+            if (beta == (DTYPE)1.0F)
+                KernelSubWithRow<DTYPE, false> <<<dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1]) >> >
+                                                ((DTYPE*)a->data, (DTYPE*)b->data, (DTYPE*)c->data,
+                                                  blockNum, blockSize, beta);
+            else
+                KernelSubWithRow<DTYPE, true>  <<<dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1]) >> >
+                                                ((DTYPE*)a->data, (DTYPE*)b->data, (DTYPE*)c->data,
+                                                  blockNum, blockSize, beta);
+        }
+        else {
+            ShowNTErrors("Something is wrong!");
+        }
+    }
+    else {
+        ShowNTErrors("TODO!");
+    }
 
-	BacktoCudaDev(a->devID, devIDBackup);
+    BacktoCudaDev(a->devID, devIDBackup);
 }
 
 #endif

@@ -41,14 +41,16 @@ e.g., (M, N) -> (M, N/3, 3)
 */
 XTensor Split(const XTensor &s, int whereToSplit, int splitNum);
 
+void Split(const XTensor &s, XTensor &t, int whereToSplit, int splitNum);
+
 /* split a big tensor into small tensors */
-void _Split(const XTensor * big, XList * smalls, int whereToSplit, int splitNum);
+void _Split(const XTensor * big, TensorList * smalls, int whereToSplit, int splitNum);
 
 /* 
-split a big tensor into small tensors (return a XList structure)
+split a big tensor into small tensors (return a TensorList structure)
 make a new list to keep the result and return it
 */
-void Split(const XTensor &big, XList &smalls, int whereToSplit, int splitNum);
+void Split(const XTensor &big, TensorList &smalls, int whereToSplit, int splitNum);
 
 } // namespace nts(NiuTrans.Tensor)
 

@@ -32,6 +32,7 @@
 #include <stdarg.h>
 #include <time.h>
 #include "XTensor.h"
+#include "XCall.h"
 #include "XGlobal.h"
 #include "XUtility.h"
 #include "XDevice.h"
@@ -48,6 +49,7 @@
 #include "core/math/ScaleAndShift.h"
 #include "core/getandset/SetData.h"
 #include "function/Identity.h"
+#include "core/CHeader.h"
 
 #ifdef USE_CUDA
 
@@ -81,11 +83,7 @@ int MakeTensorID()
     return id;
 }
 
-/* 
-constructor 
->> myOrder - order of the tensor
->> myMem - memory pool used to allocating the data array
-*/
+/* constructor */
 XTensor::XTensor()
 {
     Init();
@@ -105,7 +103,7 @@ XTensor::XTensor(const XTensor * reference)
     SetDataPointer();
     id = MakeTensorID();
 
-    InitTensor(this, reference);
+    InitTensorV2(this, reference);
 }
 
 /* 
@@ -130,9 +128,9 @@ XTensor::XTensor(const int myOrder, int myDevID, XMem * myMem)
 /* 
 constructor 
 >> myOrder - order of the tensor
->> myDimSize - the size of each dimension
+>> myDimSize - size of each dimension
 >> myDataType - unit size (e.g., int, float, and double)
->> myDenseRatio - how often an element has non-zero value
+>> myDenseRatio - how often an element has a non-zero value
 >> myDevID - device id
 >> myMem - memory pool used to allocating the data array
 */
@@ -168,16 +166,16 @@ XTensor::XTensor(const XTensor &reference)
         signature = reference.signature;
         
         /* what we really want to do is "reference.data = NULL;"
-           As "reference" is constant, we cannot reset reference.data
-           here. So we save the ADDRESS of reference.data in
-           reference.dataP, and do this work by updating "*reference.dataP".
-           This is VERY trick and might not be the best solution :) */
+           As "reference" is constant, we cannot reset "reference.data"
+           here. So we save the ADDRESS of "reference.data" in
+           "reference.dataP", and do this work by updating "*reference.dataP".
+           This is VERY tricky and there might be better solutions :) */
         *reference.dataP = NULL;
     }
     else{
         devID = reference.devID;
         mem = reference.mem;
-        InitTensor(this, &reference);
+        InitTensorV2(this, &reference);
         _CopyValues(&reference, this);
     }
 
@@ -187,6 +185,34 @@ XTensor::XTensor(const XTensor &reference)
         CheckNTErrors(outgo.tailNum == 0, "The node has outgoing edge to other nodes!");
         XLink::CopyIncoming(&reference, this);
     }
+
+    isInit = true;
+    isTmp  = reference.isTmp;
+}
+
+/* copy constructor (with right value reference) */
+XTensor::XTensor(const XTensor &&reference)
+{
+    Init();
+    SetDataPointer();
+    id = MakeTensorID();
+    ShallowCopy(reference);
+    data = NULL;
+    dataHost = NULL;
+    
+    devID = reference.devID;
+    mem = reference.mem;
+    data = reference.data;
+    signature = reference.signature;
+        
+    /* what we really want to do is "reference.data = NULL;"
+       As "reference" is constant, we cannot reset "reference.data"
+       here. So we save the ADDRESS of "reference.data" in
+       "reference.dataP", and do this work by updating "*reference.dataP".
+       This is VERY tricky and there might be better solutions :) */
+    *reference.dataP = NULL;
+
+    XLink::Replace(&reference, this);
 
     isInit = true;
     isTmp  = reference.isTmp;
@@ -221,9 +247,16 @@ XTensor::~XTensor()
         delete grad;
 }
 
+/* set the name of the tensor */
+void XTensor::SetName(const char * myName)
+{
+    strcpy(name, myName);
+}
+
 /* initialize member variables */
 void XTensor::Init()
 {
+    name[0] = '\0';
     id = -1;
     mem = NULL;
     signature = 0;
@@ -233,7 +266,6 @@ void XTensor::Init()
     devID = -1;
     order = -1;
     memset(dimSize, 0, sizeof(int) * MAX_TENSOR_DIM_NUM);
-    memset(dimSizeRDI, 0, sizeof(int) * MAX_TENSOR_DIM_NUM);
     dataType = DEFAULT_DTYPE;
     unitSize = sizeof(float);
     unitNum = 0;
@@ -248,6 +280,7 @@ void XTensor::Init()
     isTmp =  false;
     isGrad = false;
     isVar  = false;
+    enableGrad = true;
     visitMark = 0;
     grad = NULL;
 }
@@ -270,15 +303,16 @@ void XTensor::DestroyData()
 }
 
 /* 
-shallow copy of tensor
+shallow copy of the tensor
 Note that we do not copy data array here
 >> tensor - the source tensor
 */
 void XTensor::ShallowCopy(const XTensor &tensor)
 {
+    strcpy(name, tensor.name);
     order = tensor.order;
+    enableGrad = tensor.enableGrad;
     memcpy(dimSize, tensor.dimSize, sizeof(int) * MAX_TENSOR_DIM_NUM);
-    memcpy(dimSizeRDI, tensor.dimSizeRDI, sizeof(int) * MAX_TENSOR_DIM_NUM);
     dataType = tensor.dataType;
     unitSize = tensor.unitSize;
     unitNum = tensor.unitNum;
@@ -294,7 +328,6 @@ void XTensor::ShallowCopy(const XTensor &tensor)
 /* overloading of the equal-sign */
 XTensor& XTensor::operator= (const XTensor& tensor)
 {
-    
     /* we must make a hard copy of the tensor if it is the input
        of another node. */
     if(outgo.tailNum > 0){
@@ -318,14 +351,14 @@ XTensor& XTensor::operator= (const XTensor& tensor)
     }
 
     if(false && !tensor.isTmp){
-        /* NOTE: this might lead to additional data copy on Mac machines */
+        /* NOTE: this might lead to additional data copy by Mac LLVM compilers */
         /* we make an identity transformation here */
         
         if(outgo.tailNum > 0)
             XLink::ClearOutgoing(this);
         XLink::ClearIncoming(this);
         
-        if(!IsSameShaped(this, &tensor))
+        if(!_IsSameShaped(this, &tensor))
             Resize(tensor.order, tensor.dimSize, tensor.dataType, tensor.denseRatio);
         
         _Identity(&tensor, this);
@@ -363,56 +396,109 @@ XTensor& XTensor::operator= (const XTensor& tensor)
         CheckNTErrors(outgo.tailNum == 0, "The node has outgoing edge to other nodes!");
 
         /* create tensor links for the new tensor */
-        XLink::Replace(&tensor, this);
+        XLink::Copy(&tensor, this);
     }
 
     return *this;
 }
 
+/* overloading of the equal-sign (with right value reference) */
+XTensor& XTensor::operator= (const XTensor&& tensor)
+{
+    /* we must make a hard copy of the tensor if it is the input
+       of another node. */
+    if(outgo.tailNum > 0){
+        int dims[MAX_TENSOR_DIM_NUM];
+        memcpy(dims, dimSize, order * sizeof(int));
+        dims[0] = -dims[0];
+        
+        XTensor * newTensor = new XTensor(order, dims, dataType, denseRatio, devID, mem);
+        newTensor->SetTMPFlag();
+        newTensor->data = data;
+        newTensor->dataHost = dataHost;
+        newTensor->signature = tensor.signature;
+        
+        XLink::Replace(this, newTensor);
+        XLink::ClearOutgoing(this);
+        XLink::ClearIncoming(this);
+        newTensor->ShallowCopy(this);
+
+        data = NULL;
+        dataHost = NULL;
+    }
+    
+    DestroyData();
+
+    ShallowCopy(tensor);
+    
+    isInit = true;
+    devID = tensor.devID;
+    mem  = tensor.mem;
+    data = tensor.data;
+    signature = tensor.signature;
+        
+    /* what we really want to do is "reference.data = NULL;"
+       As "reference" is constant, we cannot reset "reference.data"
+       here. So we save the ADDRESS of "reference.data" in
+       "reference.dataP", and do this work by updating "*reference.dataP".
+       This is VERY tricky and there might be better solutions :) */
+    *tensor.dataP = NULL;
+
+    XLink::Copy(&tensor, this);
+
+    return *this;
+}
+
 /* overloading of the plus-sign */
-XTensor XTensor::operator+ (const XTensor& tensor)
+XTensor XTensor::operator+ (const XTensor& tensor) const
 {
     return Sum(*this, tensor);
 }
 
 /* overloading of the plus-sign */
-XTensor XTensor::operator+ (const DTYPE shift)
+XTensor XTensor::operator+ (const DTYPE shift) const 
 {
     return ScaleAndShift(*this, 1, shift);
 }
 
 /* overloading of the multiply-sign */
-XTensor XTensor::operator* (const XTensor& tensor)
+XTensor XTensor::operator* (const XTensor& tensor) const
 {
     return Multiply(*this, tensor);
 }
 
 /* overloading of the multiply-sign */
-XTensor XTensor::operator* (const DTYPE scale)
+XTensor XTensor::operator* (const DTYPE scale) const
 {
     return ScaleAndShift(*this, scale, 0);
 }
 
 /* overloading of the minus-sign */
-XTensor XTensor::operator- (const XTensor& tensor)
+XTensor XTensor::operator- (const XTensor& tensor) const
 {
     return Sub(*this, tensor);
 }
 
 /* overloading of the minus-sign */
-XTensor XTensor::operator- (const DTYPE shift)
+XTensor XTensor::operator- (const DTYPE shift) const
 {
     return ScaleAndShift(*this, 1, -shift);
 }
 
+/* overloading of the minus-sign */
+XTensor XTensor::operator- () const
+{
+    return Negate(*this);
+}
+
 /* overloading of the division-sign */
-XTensor XTensor::operator/ (const XTensor& tensor)
+XTensor XTensor::operator/ (const XTensor& tensor) const
 {
     return Div(*this, tensor);
 }
 
 /* overloading of the division-sign */
-XTensor XTensor::operator/ (const DTYPE scale)
+XTensor XTensor::operator/ (const DTYPE scale) const
 {
     return ScaleAndShift(*this, (DTYPE)1/scale, 0);
 }
@@ -422,28 +508,44 @@ linear transformation b = a * \scale + \shift
 >> scale - the slope
 >> shift - the intercept
 */
-XTensor XTensor::Lin(DTYPE scale, DTYPE shift)
+XTensor XTensor::Lin(DTYPE scale, DTYPE shift) const
 {
     return Linear(*this, scale, shift);
 }
 
 /* 
-judge whether the two matrices are in the same type and size 
->> a - input tensor
->> b - anther tensor to compare with
-<< return - whether the two input tensors are identical
+relocate the data on the target device 
+>> myDevId - target device id
+>> myMem - memory pool on the target device
 */
-bool XTensor::IsSameShaped(const XTensor * a, const XTensor * b)
+void XTensor::SetDevice(int myDevId, XMem * myMem)
+{
+    if (myMem != NULL) {
+        FlushToMem(myMem);
+        isInGlobalMem = false;
+    }
+    else {
+        myMem = GMems.GetMem(myDevId);
+    }
+}
+
+bool XTensor::IsReduceShaped(const XTensor * a, const XTensor * b, int dim)
 {
     if(a == NULL || b == NULL)
         return false;
 
-    if(a->order != b->order)
+    if ((a->order - 1) != b->order)
         return false;
 
-    for(int i = 0; i < a->order; i++){
-        if(a->dimSizeRDI[i] != b->dimSizeRDI[i])
-            return false;
+    for (int i = 0; i < b->order; i++) {
+        if (i < dim) {
+            if (a->dimSize[i] != b->dimSize[i])
+                return false;
+        }
+        else if (i >= dim) {
+            if (a->dimSize[i+1] != b->dimSize[i])
+                return false;
+        }
     }
 
     if(a->dataType != b->dataType)
@@ -459,18 +561,6 @@ bool XTensor::IsSameShaped(const XTensor * a, const XTensor * b)
 }
 
 /* 
-judge whether the three matrices are in the same type and size 
->> a - input tensor
->> b - anther tensor to compare with
->> c - a tensor again
-<< return - whether the two input tensors are identical
-*/
-bool XTensor::IsSameShaped(const XTensor * a, const XTensor * b, const XTensor * c)
-{
-    return IsSameShaped(a, b) && IsSameShaped(a, c);
-}
-
-/* 
 set the size of each dimension 
 >> myDimSize - size of each dimension
 */
@@ -478,7 +568,6 @@ void XTensor::SetDim(int * myDimSize)
 {
     for (int i = 0; i < order; i++) {
         dimSize[i] = myDimSize[i];
-        dimSizeRDI[order - i - 1] = myDimSize[i];
     }
 }
 
@@ -489,10 +578,11 @@ get the size of a given dimension
 int XTensor::GetDim(const int dim) const
 {
     CheckNTErrors(dim < order, "dimenision is out of range!");
+    CheckNTErrors(dim >= -order, "dimenision is out of range!");
     
     int d = dim;
     if(dim < 0)
-        d = order - 1;
+        d = order + dim;
 
     return dimSize[d];
 }
@@ -500,29 +590,26 @@ int XTensor::GetDim(const int dim) const
 /* 
 reshape the tensor 
 >> myOrder - order of the tensor
->> myDimSize - the size of each dimension
+>> myDimSize - size of each dimension
 */
 void XTensor::Reshape(const int myOrder, const int * myDimSize)
 {
     int dims[MAX_TENSOR_DIM_NUM];
-    int dimsRDI[MAX_TENSOR_DIM_NUM];
     int num = 1;
 
     for(int i = 0; i < myOrder; i++){
         num *= myDimSize[i];
         dims[i] = abs(myDimSize[i]);
-        dimsRDI[myOrder - i - 1] = dims[i];
     }
 
     CheckNTErrors(abs(num) == unitNum, "Wrong size found when we reshape the tensor!");
 
     order = myOrder;
     memcpy(dimSize, dims, sizeof(int) * order);
-    memcpy(dimSizeRDI, dimsRDI, sizeof(int) * order);
 }
 
 /* 
-reshape the tensor to a vector 
+reshape the tensor into a vector
 >> num - number of elements
 */
 void XTensor::Reshape(const int num)
@@ -532,7 +619,7 @@ void XTensor::Reshape(const int num)
 }
 
 /* 
-reshape the tensor to a matrix 
+reshape the tensor into a matrix
 >> rowNum - number of rows
 >> colNum - number of columns
 */
@@ -540,6 +627,39 @@ void XTensor::Reshape(const int rowNum, const int colNum)
 {
     int dims[2] = {rowNum, colNum};
     Reshape(2, dims);
+}
+
+/*
+reshape the tensor by merging two consecutive dimensions
+>> i - dimension i
+>> j - i + 1
+*/
+void XTensor::ReshapeMerged(const int i, const int j)
+{
+    if (i < 0)
+        return;
+
+    int di = i;
+    int dj = j < 0 ? i + 1 : j;
+
+    CheckNTErrors(di < order, "Wrong dimension index!");
+
+
+    int dims[MAX_TENSOR_DIM_NUM];
+
+    for (int k = 0; k < di; k++)
+        dims[k] = dimSize[k];
+    dims[di] = dimSize[di] * dimSize[dj];
+    for (int k = dj + 1; k < order; k++)
+        dims[k - 1] = dimSize[k];
+
+    Reshape(order - 1, dims);
+}
+
+/* return a tensor that datatype is same as the special tensor */
+XTensor XTensor::TypeAs(const XTensor input)
+{
+    return ConvertDataType(*this, input.dataType);
 }
 
 /* get the number of items in the data array */
@@ -551,8 +671,8 @@ int XTensor::GetSize() const
         return unitNum;
 }
 
-/* get size of the memory used */
-int XTensor::GetDataSizeInChar()
+/* get the size of the memory space used */
+int XTensor::GetDataSizeInChar() const
 {
     if(isSparse){
         int num = int(unitNum * denseRatio + 1);
@@ -570,7 +690,7 @@ get unit size in terms of "dataType"
 >> myDataType - type of unit
 << return - unit size
 */
-int XTensor::GetUnitSize(TENSOR_DATA_TYPE myDataType)
+int XTensor::GetUnitSize(TENSOR_DATA_TYPE myDataType) const
 {
     if(myDataType == X_INT)
         return sizeof(int);
@@ -590,7 +710,7 @@ get offset (2D)
 >> row - index of demension 0
 >> col - index of demension 1
 */
-MTYPE XTensor::GetOffset2D(int row, int col)
+MTYPE XTensor::GetOffset2D(int row, int col) const
 {
     CheckNTErrors(order == 2, "Cannot get a 2d cell for a tensor whose order is not 2!");
     CheckNTErrors(row >= 0 && row < dimSize[0], "dimension 0 is out of range!");
@@ -605,7 +725,7 @@ get offset (3D)
 >> d1 - index of demension 1
 >> d2 - index of demension 2
 */
-MTYPE XTensor::GetOffset3D(int d0, int d1, int d2)
+MTYPE XTensor::GetOffset3D(int d0, int d1, int d2) const
 {
     CheckNTErrors(order == 3, "Cannot get a 3d cell for a tensor whose order is not 2!");
     CheckNTErrors(d0 >= 0 && d0 < dimSize[0], "dimension 0 is out of range!");
@@ -669,7 +789,7 @@ void XTensor::SetZeroAll(XStream * stream)
 /*  set the tensor with an data array 
 >> d - input data. it must be on CPU
 >> num - number of data items
->> beg - where we start this in the data array of the tensor
+>> beg - where we start the data copy in the data array of the tensor
 */
 void XTensor::SetData(const void * d, int num, int beg)
 {
@@ -682,6 +802,22 @@ void XTensor::SetData(const void * d, int num, int beg)
     XMemCopy((char*)data + beg * unitSize, devID, d, -1, num * unitSize);
 }
 
+/* generate data items with a uniform distribution in [0, 1] */
+void XTensor::Rand(int rNum, int cNum)
+{
+    _SetDataRand(this, rNum, cNum);
+}
+
+/* generate data items with a range by start, end and the step
+>> start - the begin of the array
+>> end - the end of the array (not included self)
+>> step - the step of two items
+*/
+void XTensor::Range(DTYPE lower, DTYPE upper, DTYPE step)
+{
+    _SetDataRange(this, lower, upper, step);
+}
+
 /* 
 set the tensor items by a uniform distribution in range [lower, upper]
 >> lower - lower value of the range
@@ -689,7 +825,7 @@ set the tensor items by a uniform distribution in range [lower, upper]
 */
 void XTensor::SetDataRand(DTYPE lower, DTYPE upper)
 {
-    // TODO: cuda code!!!!!!!
+    // TODO: GPU code!!!!!!!
 
     if (data == NULL)
         return;
@@ -727,7 +863,7 @@ void XTensor::SetDataRand(DTYPE lower, DTYPE upper)
 /* a gauss distribution (Box-Muller method) */
 double GaussRand(DTYPE mean, DTYPE standardDeviation)
 {
-    // TODO: cuda code!!!!!!!
+    // TODO: GPU code!!!!!!!
 
     static double u, v;
     static int phase = 0;
@@ -790,7 +926,7 @@ void XTensor::SetDataRandn(DTYPE mean, DTYPE standardDeviation)
 /* 
 set tensor items with an array of offsets 
 >> offsets - offset for each data item
->> value - value for data items
+>> value - value for the data items
 >> num - number of the data items
 */
 void XTensor::SetDataBatched(MTYPE * offsets, DTYPE value, int num)
@@ -809,124 +945,40 @@ void XTensor::SetDataBatchedWithValues(MTYPE * offsets, void * values, int num)
     _SetDataWithOffsetAndValue(this, offsets, values, num);
 }
 
-/* check whether the data array is the same as the answer
->> d - input data. it must be on CPU
->> num - number of data items
->> beg - where we start this in the data array of the tensor
-*/
-bool XTensor::CheckData(const void * d, int num, int beg)
-{
-    if (data == NULL || d == NULL)
-        return false;
-
-    CheckNTErrors(!isSparse, "TODO");
-    CheckNTErrors(num == unitNum - beg, "Illegal size!");
-
-    if (devID < 0) {
-        return !memcmp(data, d, num * unitSize);
-    }
-#ifdef USE_CUDA
-    else {
-        char * copy = new char[num * unitSize];
-        XMemCopy(copy, -1, data, devID, num * unitSize);
-        int cmpResult = memcmp(copy, d, num * unitSize);
-        bool result = (cmpResult == 0) ? true : false;
-        delete[] copy;
-        return result;
-    }
-#endif
-    return true;
-}
-    
 /* set the pointer to "data" */
 void XTensor::SetDataPointer()
 {
     dataP = &data;
 }
 
-/* compare two number */
-bool IsFloatEqual(DTYPE a, DTYPE b, float absError, float relError)
-{
-    if(a == b)
-        return true;
-    if(fabs(a - b) < absError)
-        return true;
-    if(fabs(a) < fabs(b))
-        return (fabs((a - b) / b) < relError) ? true : false;
-    else
-        return (fabs((a - b) / a) < relError) ? true : false;
-}
-
-/* check whether the data array is the same as the answer */
-bool XTensor::CheckData(const void * d, int num, float tolerance, int beg)
-{
-    if (data == NULL || d == NULL)
-        return false;
-
-    CheckNTErrors(!isSparse, "TODO");
-    CheckNTErrors(num == unitNum - beg, "Illegal size!");
-
-    DTYPE * valuePrt = (DTYPE*)data;
-    DTYPE value = 0;
-    DTYPE * answerPrt = (DTYPE*)d;
-    for (int i = beg; i < num; i++) {
-        value = ToCPU(devID, valuePrt);
-        if(IsFloatEqual(value, *answerPrt, tolerance, 1e-4F) == false)
-            return false;
-        valuePrt++;
-        answerPrt++;
-    }
-    return true;
-}
-
-/* 
-set the cell to the ascending order along a given dimension 
->> dim - the dimension specified
-*/
-void XTensor::SetAscendingOrder(int dim)
-{
-    CheckNTErrors((dim >= 0 && dim < order), "Wrong dimension specified!");
-    CheckNTErrors((dataType == X_INT), "TODO!");
-
-    int dimRDI = order - dim - 1;
-    if(devID >= 0){
-#ifdef USE_CUDA
-        CudaSetAscendingOrder(this, dim);
-#else
-        ShowNTErrors("Plesae specify USE_CUDA and recompile the code!");
-#endif
-    }
-    else{
-        int stride = 1;
-        int strideNum = dimSizeRDI[dimRDI];
-        for(int i = 0; i < dimRDI; i++)
-            stride *= dimSizeRDI[i];
-
-        int blockNum = 1;
-        for(int i = dimRDI + 1; i < order; i++)
-            blockNum *= dimSizeRDI[i];
-
-        for(int k = 0; k < blockNum; k++){
-            for(int j = 0; j < strideNum; j++){
-                int * d = (int*)data + stride * strideNum * k + stride * j;
-                for(int i = 0; i < stride; i++)
-                    d[i] = j;
-            }
-        }
-    }
-}
-
 /* 
 get the value of a cell with the index 
 >> index - index of each dimension
->> size - size of index
+>> size - size of the index
 << return - cell value
 */
-DTYPE XTensor::Get(int index[], int size)
+DTYPE XTensor::Get(int index[], int size) const
 {
-    CheckNTErrors((dataType == DEFAULT_DTYPE), "The tensor is not in default type.");
+    CheckNTErrors(dataType == DEFAULT_DTYPE, "The tensor is not in the default type.");
 
     return ToCPU(devID, GetCell(index, size));
+}
+    
+/*
+get the value of a cell with its offset
+>> offset - offset in the array
+<< return - cell value
+*/
+DTYPE XTensor::Get(int offset) const
+{
+    CheckNTErrors(dataType == DEFAULT_DTYPE, "The tensor is not in the default type.");
+    CheckNTErrors(offset >= 0 && offset < unitNum, "Invalid index!");
+    CheckNTErrors(data != NULL, "Cannot use an uninitialized tensor!");
+    CheckNTErrors(denseRatio == 1.0F, "Only dense tensors are supported in Get(offset).");
+    
+    DTYPE * address = (DTYPE*)data + offset;
+    
+    return ToCPU(devID, address);
 }
 
 /* 
@@ -939,18 +991,12 @@ void * XTensor::GetCell(int index[], int size) const
 {
     CheckNTErrors((size == order), "Illegal index!");
 
-    int * indexRDI = new int[size];
-    for (int i = 0; i < size; i++)
-        indexRDI[size - i - 1] = index[i];
-
-    int offset = indexRDI[size - 1];
-    for(int i = size - 2; i >= 0; i--){
-        CheckNTErrors((indexRDI[i] < dimSizeRDI[i]), "Index is out of range!");
-        offset = offset * dimSizeRDI[i] + indexRDI[i];
+    int offset = index[0];
+    for(int i = 1; i < size; ++i){
+        CheckNTErrors((index[i] < dimSize[i]), "Index is out of range!");
+        offset = offset * dimSize[i] + index[i];
     }
     
-    delete[] indexRDI;
-
     if(isSparse){
         DTYPE value;
         void * p;
@@ -969,7 +1015,7 @@ get the value of a cell in a 1d tensor in default type
 >> i - idex
 << return - value of cell(i) in float
 */
-DTYPE XTensor::Get1D(int i)
+DTYPE XTensor::Get1D(int i) const
 {
     CheckNTErrors((order == 1), "Cannot get a 2d cell for a tensor whose order is not 2!");
     CheckNTErrors((i >= 0 && i < dimSize[0]), "dimension 0 is out of range!");
@@ -1006,7 +1052,7 @@ get the value of a cell in a 3d tensor
 >> d1 - index of dimension 1
 >> d2 - index of dimension 2
 */
-DTYPE XTensor::Get3D(int d0, int d1, int d2)
+DTYPE XTensor::Get3D(int d0, int d1, int d2) const
 {
     CheckNTErrors((order == 3), "Cannot get a 2d cell for a tensor whose order is not 2!");
     CheckNTErrors((d0 >= 0 && d0 < dimSize[0]), "dimension 0 is out of range!");
@@ -1019,17 +1065,33 @@ DTYPE XTensor::Get3D(int d0, int d1, int d2)
     
     return ToCPU(devID, value);
 }
+    
+/*
+get the int value of a cell by its offset
+>> offset - offset of the item
+*/
+int XTensor::GetInt(int offset) const
+{
+    CheckNTErrors(dataType == X_INT, "The tensor is not in the integer type.");
+    CheckNTErrors(offset >= 0 && offset < unitNum, "Invalid index!");
+    CheckNTErrors(data != NULL, "Cannot use an uninitialized tensor!");
+    CheckNTErrors(denseRatio == 1.0F, "Only dense tensors are supported in Get(offset).");
+    
+    int * address = (int*)data + offset;
+    
+    return ToCPUInt(devID, address);
+}
 
 /*
 get the value of a cell in a 1d tensor in int type
 >> i - index
 << return - value of cell(i) in int
 */
-int XTensor::Get1DInt(int i)
+int XTensor::Get1DInt(int i) const
 {
-    CheckNTErrors((order == 1), "Cannot get a 2d cell for a tensor whose order is not 2!");
-    CheckNTErrors((i >= 0 && i < dimSize[0]), "dimension 0 is out of range!");
-    CheckNTErrors((dataType == X_INT), "The tensor is not in int type.");
+    CheckNTErrors(order == 1, "Cannot get a 2d cell for a tensor whose order is not 2!");
+    CheckNTErrors(i >= 0 && i < dimSize[0], "dimension 0 is out of range!");
+    CheckNTErrors(dataType == X_INT, "The tensor is not in int type.");
     
     int dimSize[1] = {i};
     void * value = GetCell(dimSize, 1);
@@ -1043,12 +1105,12 @@ get the value of a cell in a 2d tensor in int type
 >> mi - column index
 << return - value of cell(ni, mi) in int
 */
- int XTensor::Get2DInt(int ni, int mi)
+ int XTensor::Get2DInt(int ni, int mi) const
 {
-    CheckNTErrors((order == 2), "Cannot get a 2d cell for a tensor whose order is not 2!");
-    CheckNTErrors((ni >= 0 && ni < dimSize[0]), "dimension 0 is out of range!");
-    CheckNTErrors((mi >= 0 && mi < dimSize[1]), "dimension 1 is out of range!");
-    CheckNTErrors((dataType == X_INT), "The tensor is not in default type.");
+    CheckNTErrors(order == 2, "Cannot get a 2d cell for a tensor whose order is not 2!");
+    CheckNTErrors(ni >= 0 && ni < dimSize[0], "dimension 0 is out of range!");
+    CheckNTErrors(mi >= 0 && mi < dimSize[1], "dimension 1 is out of range!");
+    CheckNTErrors(dataType == X_INT, "The tensor is not in default type.");
 
     int dims[2] = {ni, mi};
     void * value = GetCell(dims, 2);
@@ -1063,13 +1125,13 @@ get the value of a cell in a 3d tensor in int type
 >> d2 - index of dimension 2
 << return - value of cell(d0, d1, d2) in int
 */
-int XTensor::Get3DInt(int d0, int d1, int d2)
+int XTensor::Get3DInt(int d0, int d1, int d2) const
 {
-    CheckNTErrors((order == 3), "Cannot get a 2d cell for a tensor whose order is not 2!");
-    CheckNTErrors((d0 >= 0 && d0 < dimSize[0]), "dimension 0 is out of range!");
-    CheckNTErrors((d1 >= 0 && d1 < dimSize[1]), "dimension 1 is out of range!");
-    CheckNTErrors((d2 >= 0 && d2 < dimSize[2]), "dimension 2 is out of range!");
-    CheckNTErrors((dataType == X_INT), "The tensor is not in default type.");
+    CheckNTErrors(order == 3, "Cannot get a 2d cell for a tensor whose order is not 2!");
+    CheckNTErrors(d0 >= 0 && d0 < dimSize[0], "dimension 0 is out of range!");
+    CheckNTErrors(d1 >= 0 && d1 < dimSize[1], "dimension 1 is out of range!");
+    CheckNTErrors(d2 >= 0 && d2 < dimSize[2], "dimension 2 is out of range!");
+    CheckNTErrors(dataType == X_INT, "The tensor is not in default type.");
 
     int dims[3] = {d0, d1, d2};
     void * value = GetCell(dims, 3);
@@ -1082,10 +1144,10 @@ get the value of a cell in the sparse tensor
 >> i - i-th tuple in the tuple list of the sparse tensor
 << return - value of the tuple
 */
-DTYPE XTensor::GetInSparse(int i)
+DTYPE XTensor::GetInSparse(int i) const
 {
-    CheckNTErrors((i >= 0 && i < unitNum), "Index is out of range!");
-    CheckNTErrors((dataType == DEFAULT_DTYPE), "The tensor is not in default type.");
+    CheckNTErrors(i >= 0 && i < unitNum, "Index is out of range!");
+    CheckNTErrors(dataType == DEFAULT_DTYPE, "The tensor is not in default type.");
 
     char * d = (char*)data + sizeof(int);
     DTYPE * value = (DTYPE*)(d + (sizeof(int) + sizeof(DTYPE)) * i + sizeof(int));
@@ -1098,10 +1160,10 @@ get the key value of a tuple in a sparse tensor
 >> i - i-th tuple in the tuple list of the sparse tensor
 << return - key of the tuple
 */
-int XTensor::GetKeyInSparse(int i)
+int XTensor::GetKeyInSparse(int i) const
 {
-    CheckNTErrors((i >= 0 && i < unitNum), "Index is out of range!");
-    CheckNTErrors((dataType == DEFAULT_DTYPE), "The tensor is not in default type.");
+    CheckNTErrors(i >= 0 && i < unitNum, "Index is out of range!");
+    CheckNTErrors(dataType == DEFAULT_DTYPE, "The tensor is not in default type.");
 
     char * d = (char*)data + sizeof(int);
     int * key = (int*)(d + (sizeof(int) + sizeof(DTYPE)) * i);
@@ -1117,9 +1179,24 @@ set the value of a cell
 */
 bool XTensor::Set(DTYPE value, int index[], int size)
 {
-	CheckNTErrors((dataType == DEFAULT_DTYPE), "The tensor is not in default type.");
+    CheckNTErrors(dataType == DEFAULT_DTYPE, "The tensor is not in default type.");
 
     return SetToDevice(devID, GetCell(index, size), value);
+}
+
+/*
+set the value of a cell with its offset in the array
+>> value - the value we intend to set
+>> offset - the offset in the array
+*/
+bool XTensor::Set(DTYPE value, int offset)
+{
+    CheckNTErrors(offset >= 0 && offset < unitNum, "Invalid index!");
+    CheckNTErrors(data != NULL, "Cannot use an uninitialized tensor!");
+
+    DTYPE * d = (DTYPE*)data + offset;
+
+    return SetToDevice(devID, d, value);
 }
 
 /* 
@@ -1130,9 +1207,9 @@ set the value of a cell in a 1d tensor
 */
 bool XTensor::Set1D(DTYPE value, int i)
 {
-    CheckNTErrors((order == 1), "Cannot get a 2d cell for a tensor whose order is not 2!");
-    CheckNTErrors((i >= 0 && i < dimSize[0]), "dimension 0 is out of range!");
-    CheckNTErrors((dataType == DEFAULT_DTYPE), "The tensor is not in default type.");
+    CheckNTErrors(order == 1, "Cannot get a 2d cell for a tensor whose order is not 2!");
+    CheckNTErrors(i >= 0 && i < dimSize[0], "dimension 0 is out of range!");
+    CheckNTErrors(dataType == DEFAULT_DTYPE, "The tensor is not in default type.");
 
     int dims[1] = {i};
 
@@ -1148,10 +1225,10 @@ set the value of a cell in a 2d tensor in default type
 */
 bool XTensor::Set2D(DTYPE value, int ni, int mi)
 {
-    CheckNTErrors((order == 2), "Cannot get a 2d cell for a tensor whose order is not 2!");
-    CheckNTErrors((ni >= 0 && ni < dimSize[0]), "dimension 0 is out of range!");
-    CheckNTErrors((mi >= 0 && mi < dimSize[1]), "dimension 1 is out of range!");
-    CheckNTErrors((dataType == DEFAULT_DTYPE), "The tensor is not in default type.");
+    CheckNTErrors(order == 2, "Cannot get a 2d cell for a tensor whose order is not 2!");
+    CheckNTErrors(ni >= 0 && ni < dimSize[0], "dimension 0 is out of range!");
+    CheckNTErrors(mi >= 0 && mi < dimSize[1], "dimension 1 is out of range!");
+    CheckNTErrors(dataType == DEFAULT_DTYPE, "The tensor is not in default type.");
 
     int dims[2] = {ni, mi};
 
@@ -1178,6 +1255,21 @@ bool XTensor::Set3D(DTYPE value, int d0, int d1, int d2)
 
     return SetToDevice(devID, GetCell(dims, 3), value);
 }
+    
+/*
+set the integer value of a cell by its offset
+>> value - value we tend to set to the item
+>> offset - offset of the item
+*/
+bool XTensor::SetInt(int value, int offset)
+{
+    CheckNTErrors(offset >= 0 && offset < unitNum, "Invalid index!");
+    CheckNTErrors(data != NULL, "Cannot use an uninitialized tensor!");
+    
+    int * d = (int*)data + offset;
+    
+    return SetToDeviceInt(devID, d, value);
+}
 
 
 /* 
@@ -1189,7 +1281,7 @@ set the integer value of a cell
 */
 bool XTensor::SetInt(int value, int index[], int size)
 {
-    CheckNTErrors((dataType == X_INT), "The tensor is not in integer type.");
+    CheckNTErrors(dataType == X_INT, "The tensor is not in integer type.");
 
     return SetToDeviceInt(devID, GetCell(index, size), value);
 }
@@ -1202,9 +1294,9 @@ set the integer value of a cell in a 1d tensor
 */
 bool XTensor::Set1DInt(int value, int i)
 {
-    CheckNTErrors((order == 1), "Cannot get a 2d cell for a tensor whose order is not 2!");
-    CheckNTErrors((i >= 0 && i < dimSize[0]), "dimension 0 is out of range!");
-    CheckNTErrors((dataType == X_INT), "The tensor is not in integer type.");
+    CheckNTErrors(order == 1, "Cannot get a 2d cell for a tensor whose order is not 2!");
+    CheckNTErrors(i >= 0 && i < dimSize[0], "dimension 0 is out of range!");
+    CheckNTErrors(dataType == X_INT, "The tensor is not in integer type.");
 
     int dims[1] = {i};
 
@@ -1220,10 +1312,10 @@ set the integer value of a cell in a 2d tensor in default type
 */
 bool XTensor::Set2DInt(int value, int ni, int mi)
 {
-    CheckNTErrors((order == 2), "Cannot get a 2d cell for a tensor whose order is not 2!");
-    CheckNTErrors((ni >= 0 && ni < dimSize[0]), "dimension 0 is out of range!");
-    CheckNTErrors((mi >= 0 && mi < dimSize[1]), "dimension 1 is out of range!");
-    CheckNTErrors((dataType == X_INT), "The tensor is not in integer type.");
+    CheckNTErrors(order == 2, "Cannot get a 2d cell for a tensor whose order is not 2!");
+    CheckNTErrors(ni >= 0 && ni < dimSize[0], "dimension 0 is out of range!");
+    CheckNTErrors(mi >= 0 && mi < dimSize[1], "dimension 1 is out of range!");
+    CheckNTErrors(dataType == X_INT, "The tensor is not in integer type.");
 
     int dims[2] = {ni, mi};
 
@@ -1260,10 +1352,10 @@ increase the value of a cell in a 2d tensor
 */
  bool XTensor::Add2D(DTYPE value, int ni, int mi)
 {
-    CheckNTErrors((ni >= 0 && ni < dimSize[0]), "the row index is out of range!");
-    CheckNTErrors((mi >= 0 && mi < dimSize[1]), "the column index is out of range!");
-    CheckNTErrors((dataType == DEFAULT_DTYPE), "The tensor is not in default type.");
-    CheckNTErrors((isSparse == false), "TODO!");
+    CheckNTErrors(ni >= 0 && ni < dimSize[0], "the row index is out of range!");
+    CheckNTErrors(mi >= 0 && mi < dimSize[1], "the column index is out of range!");
+    CheckNTErrors(dataType == DEFAULT_DTYPE, "The tensor is not in default type.");
+    CheckNTErrors(isSparse == false, "TODO!");
 
     if(devID < 0){
         DTYPE * p = (DTYPE*)data + ni * dimSize[1] + mi;
@@ -1281,7 +1373,7 @@ increase the value of a cell in a 2d tensor
 }
 
 /* get the number of non-zero elements (in a sparse tensor) */
-int XTensor::GetNonzeroSize()
+int XTensor::GetNonzeroSize() const
 {
     if(!isSparse){
         XPRINT(1, stderr, "WARNING! Counting non-zero elements in a dense tensor might be slow!\n");
@@ -1365,7 +1457,6 @@ bool XTensor::Resize(const int myOrder, const int * myDimSize,
     bool zeroData = false;
     for(int i = 0; i < order; i++){
         dimSize[i] = abs(myDimSize[i]);
-        dimSizeRDI[order - i - 1] = dimSize[i];
         if(myDimSize[i] < 0)
             filledData = false;
         if(myDimSize[i] == 0)
@@ -1457,7 +1548,7 @@ bool XTensor::Resize(const int myOrder, const int * myDimSize,
 }
 
 /* 
-resize a tensor by another one 
+resize a tensor by another
 >> myTensor - tensor for reference
 */
 bool XTensor::Resize(const XTensor * myTensor)
@@ -1479,7 +1570,7 @@ binary search to find an element in a sparse tensor
 >> value - value for return
 >> position - the position of the tuple.
               it is the previous one if there is no hit
-<< return - find it or not?
+<< return - found it or not?
 */
 bool XTensor::BinarySearch(int key, DTYPE &value, void * &position) const
 {
@@ -1564,7 +1655,7 @@ void XTensor::Dump(FILE * file, const char * label, const int n, const int beg, 
         if (isSparse) {
             int num = 0;
             for (int i = 0; i < order; i++)
-                num *= dimSizeRDI[i];
+                num *= dimSize[i];
             num = int(num * denseRatio + 1);
             int tupleSize = sizeof(int) + sizeof(DTYPE);
             int size = sizeof(int) + tupleSize*(num);
@@ -1648,10 +1739,10 @@ void XTensor::Dump(FILE * file, const char * label, const int n, const int beg, 
 
 /* 
 dump data to a file
->> tensor - tensor whose data is dumped
+>> tensor - the tensor for dumping
 >> file - where to domp the data
 >> label - label of the tensor
->> n - number of items to dump
+>> n - number of the items to dump
 >> beg - the first item id
 >> verbose - verbose level
 */
@@ -1660,6 +1751,26 @@ void XTensor::Dump(const XTensor * tensor, FILE * file, const char * label, cons
     XTensor a(tensor->order, tensor->dimSize, tensor->dataType, tensor->denseRatio, tensor->devID, tensor->mem);
     _CopyValues(tensor, &a);
     a.Dump(file, label, n, beg, verbose);
+}
+
+/* 
+dump data to a binary file 
+>> file - where to dump the data
+*/
+void XTensor::BinaryDump(FILE* file)
+{
+    XTensor tmp;
+    InitTensorOnCPU(&tmp, this);
+    _CopyValues(this, &tmp);
+
+    switch (dataType) {
+    case X_INT: {
+        fwrite(tmp.data, sizeof(int), unitNum, file);
+    }
+    default: {
+        fwrite(tmp.data, sizeof(float), unitNum, file);
+    }
+    }
 }
 
 /* 
@@ -1756,8 +1867,8 @@ void XTensor::Read(FILE * file, const char * label)
 
             int ds[MAX_TENSOR_DIM_NUM];
             for (int i = 0; i < order; i++) {
-                ds[i] = key % dimSizeRDI[i];
-                key /= dimSizeRDI[i];
+                ds[i] = key % dimSize[i];
+                key /= dimSize[i];
             }
             Set(value, ds);
         }
@@ -1774,6 +1885,30 @@ void XTensor::Read(FILE * file, const char * label)
     delete[](char*)dataBuf;
 }
 
+/* 
+read data from a binary file
+>>> file - the file stream pointer
+>>> offset - the distance from the start to this tensor
+*/
+void XTensor::BinaryRead(FILE* file, size_t offset)
+{
+    fseek(file, offset, 0);
+    switch (dataType) {
+    case X_INT: {
+        int * d = new int[unitNum];
+        fread(d, sizeof(int), unitNum, file);
+        SetData(d, unitNum);
+        delete[] d;
+    }
+    default: {
+        float * d = new float[unitNum];
+        fread(d, sizeof(float), unitNum, file);
+        SetData(d, unitNum);
+        delete[] d;
+    }
+    }
+}
+
 /*
 flush the data to the target device
 >> targetMem - memory pool on the target device
@@ -1786,7 +1921,7 @@ void XTensor::FlushToMem(XMem * targetMem)
     if (targetMem->devID >= 0) {
 #ifdef USE_CUDA
         if (devID < 0) {
-            XList l(1);
+            TensorList l(1);
             l.Add(this);
             CudaCPUToGPUFlush(&l, targetMem->devID, targetMem);
         }
@@ -1818,7 +1953,7 @@ void XTensor::FlushToMem(XMem * targetMem)
 allocate the memory space of the tensor (in the global memory) 
 >> tensor - the tensor we intend to process
 >> myMem - the memory pool we are using
->> useBuf - use the buffer in the memory pool
+>> useBuf - indicates whether we use the buffer in the memory pool
 */
 void XTensor::AllocateData(XTensor * tensor, XMem * myMem, bool useBuf)
 {
@@ -1850,7 +1985,7 @@ void XTensor::AllocateData(XTensor * tensor, XMem * myMem, bool useBuf)
 free the memory space of the tensor (in the global memory) 
 >> tensor - the tensor we intend to process
 >> myMem - the memory pool we are using
->> useBuf - use the buffer in the memory pool
+>> useBuf - indicates whether we use the buffer in the memory pool
 */
 void XTensor::FreeData(XTensor * tensor, XMem * myMem, bool useBuf)
 {
@@ -1871,443 +2006,28 @@ void XTensor::FreeData(XTensor * tensor, XMem * myMem, bool useBuf)
     tensor->isInGlobalMem = false;
 }
 
-/*************************************************
-* we define the "new and delete" functions below
-*/
-
-/* 
-initialize a tensor 
->> tensor - the tensor we intend to initialize
->> myOrder - order of the tensor
->> myDimSize - the size of each dimension
->> myDataType - unit size (e.g., int, float, and double)
->> myDenseRatio - how often an element has non-zero value
->> myDevID - when myMem is NULL, myDevID specifies the device 
-             on which we allocate the data on site
->> myMem - memory pool used to allocating the data array
-           myMem = NULL means that the tensor is allocated on
-           the device dynamically, rather than on the memory pool
-*/
-
-void InitTensor(XTensor * tensor,
-                const int myOrder, const int * myDimSize, const TENSOR_DATA_TYPE myDataType,
-                const float myDenseRatio, const int myDevID, XMem * myMem)
+/* overloading of the plus-sign */
+XTensor operator+ (const DTYPE shift, const XTensor &tensor) 
 {
-    if(myMem != NULL && tensor->mem == NULL){
-        tensor->mem = myMem;
-        tensor->devID = myMem->devID;
-    }
-
-    if(tensor->mem != NULL){
-        tensor->Resize(myOrder, myDimSize, myDataType, myDenseRatio);
-    }
-    else{
-        int dims[MAX_TENSOR_DIM_NUM];
-        memcpy(dims, myDimSize, sizeof(int) * myOrder);
-
-        bool allocated = true;
-        for (int i = 0; i < myOrder; i++) {
-            if (dims[i] < 0)
-                allocated = false;
-        }
-
-        dims[0] = -abs(dims[0]);
-
-        if (myDevID == CURRENT_GPU)
-            tensor->devID = XDevice::GetGPUDevice();
-        else
-            tensor->devID = myDevID;
-
-        tensor->Resize(myOrder, dims, myDataType, myDenseRatio);
-
-        if(allocated)
-            XTensor::AllocateData(tensor);
-    }
+    return ScaleAndShift(tensor, 1, shift);
 }
 
-/* 
-initialize a dense tensor 
->> tensor - the tensor we intend to initialize
->> num - number of elements
->> myDataType - unit size (e.g., int, float, and double) 
->> myDevID - when myMem is NULL, myDevID specifies the device 
-             on which we allocate the data on site
->> myMem - memory pool used to allocating the data array
-           myMem = NULL means that the tensor is allocated on
-           the device dynamically, rather than on the memory pool
-*/
-
-void InitTensor1D(XTensor * tensor, const int num,
-                  const TENSOR_DATA_TYPE myDataType, const int myDevID, XMem * myMem)
+/* overloading of the minus-sign */
+XTensor  operator- (const DTYPE shift, const XTensor &tensor)
 {
-    int dims[1];
-    dims[0] = num;
-
-    InitTensor(tensor, 1, dims, myDataType, 1.0F, myDevID, myMem);
+    return ScaleAndShift(tensor, 1, -shift);
 }
 
-/* 
-initialize a dense matrix 
->> tensor - the tensor we intend to initialize
->> rowNum - number of rows
->> colNum - number of columns
->> myDataType - unit size (e.g., int, float, and double) 
->> myDevID - when myMem is NULL, myDevID specifies the device 
-             on which we allocate the data on site
->> myMem - memory pool used to allocating the data array
-           myMem = NULL means that the tensor is allocated on
-           the device dynamically, rather than on the memory pool
-*/
-
-void InitTensor2D(XTensor * tensor, const int rowNum, const int colNum,
-                  const TENSOR_DATA_TYPE myDataType, const int myDevID, XMem * myMem)
+/* overloading of the multiply-sign */
+XTensor  operator* (const DTYPE scale, const XTensor &tensor)
 {
-    int dims[2];
-    dims[0] = rowNum;
-    dims[1] = colNum;
-
-    InitTensor(tensor, 2, dims, myDataType, 1.0F, myDevID, myMem);
+    return ScaleAndShift(tensor, scale, 0);
 }
 
-/* 
-initialize a dense 3d tensor 
->> tensor - the tensor we intend to initialize
->> d0 - size of dimension 0
->> d1 - size of dimension 1
->> d2 - size of dimension 2
->> myDataType - unit size (e.g., int, float, and double) 
->> myDevID - when myMem is NULL, myDevID specifies the device 
-             on which we allocate the data on site
->> myMem - memory pool used to allocating the data array
-           myMem = NULL means that the tensor is allocated on
-           the device dynamically, rather than on the memory pool
-*/
-
-void InitTensor3D(XTensor * tensor, const int d0, const int d1, const int d2, 
-                  const TENSOR_DATA_TYPE myDataType, const int myDevID, XMem * myMem)
+/* overloading of the division-sign */
+XTensor  operator/ (const DTYPE scale, const XTensor &tensor)
 {
-    int dims[3];
-    dims[0] = d0;
-    dims[1] = d1;
-    dims[2] = d2;
-
-    InitTensor(tensor, 3, dims, myDataType, 1.0F, myDevID, myMem);
-}
-    
-/*
-initialize a dense 4d tensor
->> tensor - the tensor we intend to initialize
->> d0 - size of dimension 0
->> d1 - size of dimension 1
->> d2 - size of dimension 2
->> d3 - size of dimension 3
->> myDataType - unit size (e.g., int, float, and double)
->> myDevID - when myMem is NULL, myDevID specifies the device
-             on which we allocate the data on site
->> myMem - memory pool used to allocating the data array
-           myMem = NULL means that the tensor is allocated on
-           the device dynamically, rather than on the memory pool
-*/
-
-void InitTensor4D(XTensor * tensor, const int d0, const int d1, const int d2, const int d3,
-                  const TENSOR_DATA_TYPE myDataType, const int myDevID, XMem * myMem)
-{
-    int dims[4];
-    dims[0] = d0;
-    dims[1] = d1;
-    dims[2] = d2;
-    dims[3] = d3;
-    
-    InitTensor(tensor, 4, dims, myDataType, 1.0F, myDevID, myMem);
-}
-    
-/*
-initialize a dense 5d tensor
->> tensor - the tensor we intend to initialize
->> d0 - size of dimension 0
->> d1 - size of dimension 1
->> d2 - size of dimension 2
->> d3 - size of dimension 3
->> d4 - size of dimension 4
->> myDataType - unit size (e.g., int, float, and double)
->> myDevID - when myMem is NULL, myDevID specifies the device
-             on which we allocate the data on site
->> myMem - memory pool used to allocating the data array
-           myMem = NULL means that the tensor is allocated on
-           the device dynamically, rather than on the memory pool
-*/
-
-void InitTensor5D(XTensor * tensor, const int d0, const int d1, const int d2, const int d3, const int d4,
-                  const TENSOR_DATA_TYPE myDataType, const int myDevID, XMem * myMem)
-{
-    int dims[5];
-    dims[0] = d0;
-    dims[1] = d1;
-    dims[2] = d2;
-    dims[3] = d3;
-    dims[4] = d4;
-    
-    InitTensor(tensor, 5, dims, myDataType, 1.0F, myDevID, myMem);
-}
-
-/* 
-initialize a tensor with a reference tensor 
->> tensor - the tensor we intend to initialize
->> reference - the reference tensor
-*/
-void InitTensor(XTensor * tensor, const XTensor * reference)
-{
-    if(reference->order < 0)
-        return;
-
-    InitTensor(tensor, reference->order, reference->dimSize, 
-               reference->dataType, reference->denseRatio, 
-               reference->devID, reference->mem);
-}
-
-/* 
-generate a XTensor 
->> myOrder - order of the tensor
->> myDimSize - the size of each dimension
->> myDataType - unit size (e.g., int, float, and double)
->> myDenseRatio - how often an element has non-zero value
->> myDevID - when myMem is NULL, myDevID specifies the device 
-             on which we allocate the data on site
->> myMem - memory pool used to allocating the data array
-           myMem = NULL means that the tensor is allocated on
-           the device dynamically, rather than on the memory pool.
-*/
-
-XTensor * NewTensor(const int myOrder, const int * myDimSize, const TENSOR_DATA_TYPE myDataType,
-                    const float myDenseRatio, const int myDevID, XMem * myMem)
-{
-    if(myMem != NULL)
-        return new XTensor(myOrder, myDimSize, myDataType, myDenseRatio, myDevID, myMem);
-    else{
-        XTensor * tensor = new XTensor();
-        InitTensor(tensor, myOrder, myDimSize, myDataType, myDenseRatio, myDevID, myMem);
-        return tensor;
-    }
-}
-
-/*
-generate a XTensor which allocates data on the buffer 
->> myOrder - order of the tensor
->> myDimSize - the size of each dimension
->> myMem - memory pool used to allocating the data array.
-           we actually allocate the data on the buffer associated with
-           the memory pool
->> devID - device id
->> myDataType - unit size (e.g., int, float, and double)
->> myDenseRatio - how often an element has non-zero value
-
-*/
-XTensor * NewTensorBuf(const int myOrder, const int * myDimSize,
-                       const TENSOR_DATA_TYPE myDataType, const float myDenseRatio,
-                       const int devID, XMem * myMem)
-{
-    int dims[MAX_TENSOR_DIM_NUM];
-    memcpy(dims, myDimSize, sizeof(int) * myOrder);
-
-    dims[0] = -abs(dims[0]);
-
-    XTensor * tensor = NewTensor(myOrder, dims, myDataType, myDenseRatio, devID, myMem);
-
-    if (tensor->unitNum * tensor->unitSize == 176657664) {
-        tensor->Dump(stderr, "", 200);
-    }
-    if(myMem != NULL)
-        tensor->data = myMem->AllocBuf(myMem->devID, tensor->unitNum * tensor->unitSize);
-    else
-        tensor->data = XMemAlloc(devID, tensor->unitNum * tensor->unitSize);
-
-    return tensor;
-}
-
-/* 
-generate a XTensor which allocates data on the buffer 
->> reference - reference tensor
->> devID - device id
->> myMem - memory pool used to allocating the data array.
-           we actually allocate the data on the buffer associated with
-           the memory pool
-*/
-XTensor * NewTensorBuf(const XTensor * reference, int devID, XMem * myMem)
-{
-    return NewTensorBuf(reference->order, reference->dimSize, 
-                        reference->dataType, reference->denseRatio,
-                        devID, myMem);
-}
-
-/* 
-generate a dense vector 
->> num - number of entries
->> myDataType - unit size (e.g., int, float, and double) 
->> myDevID - when myMem is NULL, myDevID specifies the device 
-             on which we allocate the data on site
->> myMem - memory pool used to allocating the data array
-           myMem = NULL means that the tensor is allocated on
-           the device dynamically, rather than on the memory pool.
-*/
-
-XTensor * NewTensor1D(const int num, 
-                      const TENSOR_DATA_TYPE myDataType, const int myDevID, XMem * myMem)
-{
-    int dims[1];
-    dims[0] = num;
-
-    return NewTensor(1, dims, myDataType, 1.0F, myDevID, myMem);
-}
-
-/* 
-generate a dense matrix
->> rowNum - number of rows
->> colNum - number of colums
->> myDataType - unit size (e.g., int, float, and double) 
->> myDevID - when myMem is NULL, myDevID specifies the device 
-             on which we allocate the data on site
->> myMem - memory pool used to allocating the data array
-           myMem = NULL means that the tensor is allocated on
-           the device dynamically, rather than on the memory pool.
-*/
-
-XTensor * NewTensor2D(const int rowNum, const int colNum,
-                      const TENSOR_DATA_TYPE myDataType, const int myDevID, XMem * myMem)
-{
-    int dims[2];
-    dims[0] = rowNum;
-    dims[1] = colNum;
-
-    return NewTensor(2, dims, myDataType, 1.0F, myDevID, myMem);
-}
-
-/* 
-generate a dense 3d tensor 
->> d0 - size of dimension 0
->> d1 - size of dimension 1
->> d2 - size of dimension 2
->> myDataType - unit size (e.g., int, float, and double) 
->> myDevID - when myMem is NULL, myDevID specifies the device 
-             on which we allocate the data on site
->> myMem - memory pool used to allocating the data array
-           myMem = NULL means that the tensor is allocated on
-           the device dynamically, rather than on the memory pool.
-*/
-
-XTensor * NewTensor3D(const int d0, const int d1, const int d2,
-                      const TENSOR_DATA_TYPE myDataType, const int myDevID, XMem * myMem)
-{
-    int dims[3];
-    dims[0] = d0;
-    dims[1] = d1;
-    dims[2] = d2;
-
-    return NewTensor(3, dims, myDataType, 1.0F, myDevID, myMem);
-}
-
-/* 
-generate a dense 4d tensor 
->> d0 - size of dimension 0
->> d1 - size of dimension 1
->> d2 - size of dimension 2
->> d3 - size of dimension 3
->> myDataType - unit size (e.g., int, float, and double) 
->> myDevID - when myMem is NULL, myDevID specifies the device 
-             on which we allocate the data on site
->> myMem - memory pool used to allocating the data array
-           myMem = NULL means that the tensor is allocated on
-           the device dynamically, rather than on the memory pool.
-*/
-
-XTensor * NewTensor4D(const int d0, const int d1, const int d2, const int d3,
-                      const TENSOR_DATA_TYPE myDataType, const int myDevID, XMem * myMem)
-{
-    int dims[4];
-    dims[0] = d0;
-    dims[1] = d1;
-    dims[2] = d2;
-    dims[3] = d3;
-
-    return NewTensor(4, dims, myDataType, 1.0F, myDevID, myMem);
-}
-
-/* 
-generate a dense 5d tensor 
->> d0 - size of dimension 0
->> d1 - size of dimension 1
->> d2 - size of dimension 2
->> d3 - size of dimension 3
->> d4 - size of dimension 4
->> myDataType - unit size (e.g., int, float, and double) 
->> myDevID - when myMem is NULL, myDevID specifies the device 
-             on which we allocate the data on site
->> myMem - memory pool used to allocating the data array
-           myMem = NULL means that the tensor is allocated on
-           the device dynamically, rather than on the memory pool.
-*/
-
-XTensor * NewTensor5D(const int d0, const int d1, const int d2, const int d3, const int d4,
-                      const TENSOR_DATA_TYPE myDataType, const int myDevID, XMem * myMem)
-{
-    int dims[5];
-    dims[0] = d0;
-    dims[1] = d1;
-    dims[2] = d2;
-    dims[3] = d3;
-    dims[4] = d4;
-
-    return NewTensor(5, dims, myDataType, 1.0F, myDevID, myMem);
-}
-
-/* 
-generate a copy of XTensor 
->> a - the tensor we copy from
->> isFilledData - indicates whether we allocate the data for
-                  the newly-generated tensor
-*/
-XTensor * NewTensor(const XTensor * a, bool isFilledData)
-{
-    int dims[MAX_TENSOR_DIM_NUM];
-    
-    CheckNTErrors((a != NULL), "Empty input!");
-    
-    memset(dims, 0, sizeof(int) * MAX_TENSOR_DIM_NUM);
-
-    if(a->order > 0)
-        memcpy(dims, a->dimSize, sizeof(int) * a->order);
-
-    if(!isFilledData)
-        dims[0] = -dims[0];
-
-    XTensor * newTensor = new XTensor(a->order, dims,
-                                      a->dataType, a->denseRatio,
-                                      a->devID, a->mem);
-
-    return newTensor;
-
-}
-
-/* 
-free the data space of a given tensor 
->> tensor - pointer to the tensor
-*/
-void DelTensor(XTensor * tensor)
-{
-    delete tensor;
-}
-
-/* 
-free the data space of a given tensor (on the buffer)
->> tensor - pointer to the tensor
-*/
-void DelTensorBuf(XTensor * tensor)
-{
-    if(tensor->mem != NULL)
-        tensor->mem->ReleaseBuf(tensor->devID, tensor->unitNum * tensor->unitSize);
-    else
-        XMemFree(tensor->devID, tensor->data);
-    tensor->data = NULL;
-    delete tensor;
+    return ScaleAndShift(tensor, (DTYPE)1/scale, 0);
 }
 
 } /* end of the nts (NiuTrans.Tensor) namespace */

@@ -22,7 +22,7 @@
 #include "Sigmoid.h"
 #include "Sigmoid.cuh"
 #include "Loss.cuh"
-#include "CrossEntropy.cuh"
+#include "../loss/CrossEntropy.cuh"
 #include "../XDevice.h"
 
 #ifdef USE_CUDA
@@ -61,24 +61,19 @@ sigmoid function y = 1/(1+exp(-x)) (Cuda version)
 */
 void _CudaSigmoid(const XTensor * x, XTensor * y)
 {
-    if(x->dataType == DEFAULT_DTYPE && y->dataType == DEFAULT_DTYPE){
+    CheckNTErrors(!x->isSparse && !y->isSparse, "the activation function (rectify) does not support sparse matrices.");
+    CheckNTErrors(x->unitNum && y->unitNum, "we require two vectors with the same length.");
 
-        CheckNTErrors(!x->isSparse && !y->isSparse, "the activation function (rectify) does not support sparse matrices.");
-        CheckNTErrors(x->unitNum && y->unitNum, "we require two vectors with the same length.");
+    int gridSize[3], blockSize[3];
 
-        int gridSize[3], blockSize[3];
+    GDevs.GetCudaThread(x->devID, x->unitNum, gridSize, blockSize);
 
-        GDevs.GetCudaThread(x->devID, x->unitNum, gridSize, blockSize);
+    int devIDBackup;
+    ProtectCudaDev(x->devID, devIDBackup);
 
-        int devIDBackup;
-        ProtectCudaDev(x->devID, devIDBackup);
+    KernelSigmoidCompute<<<dim3(gridSize[0]), dim3(blockSize[0])>>>((DTYPE*)x->data, (DTYPE*)y->data, x->unitNum);
 
-        KernelSigmoidCompute<<<dim3(gridSize[0]), dim3(blockSize[0])>>>((DTYPE*)x->data, (DTYPE*)y->data, x->unitNum);
-
-        BacktoCudaDev(x->devID, devIDBackup);
-    }
-    else
-        ShowNTErrors("TODO!");
+    BacktoCudaDev(x->devID, devIDBackup);
 }
 
 /* 
@@ -92,13 +87,12 @@ sigmoid: y = 1/(1+exp(-x))
 
 >> dedy - dE/dy
 >> dedx - dE/ds
->> gold - gold standard
 >> y - output of the function
 >> x - input of the function
 >> size - size of output/input
 */
 __global__ 
-void KernelSigmoidBackward(DTYPE * dedy, DTYPE * dedx, DTYPE * gold, DTYPE * y, DTYPE * x, int size)
+void KernelSigmoidBackward(DTYPE * dedy, DTYPE * dedx, DTYPE * y, int size)
 {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
 
@@ -116,46 +110,31 @@ sigmoid: y = 1/(1+exp(-x))
 
    and dy/dx = y * (1 -y)
 
->> gold - gold standard to measure error (or loss)
 >> y - output of the function
 >> x - input of the function
 >> dedy - dE/dy
 >> dedx - dE/dx
->> lossName - type of loss function, e.g., cross entropy
 */
-void _CudaSigmoidBackward(XTensor * gold, XTensor * y, XTensor * x, 
-                          XTensor * dedy, XTensor * dedx,
-                          LOSS_FUNCTION_NAME lossName)
+void _CudaSigmoidBackward(XTensor * y, XTensor * x, 
+                          XTensor * dedy, XTensor * dedx)
 {
-    if(x->dataType == DEFAULT_DTYPE && y->dataType == DEFAULT_DTYPE){
-        /* calculate dE/dy */
-        if(lossName == CROSSENTROPY)
-            _CudaCrossEntropyBackward(dedy, y, gold);
-        else if(lossName != NOLOSS)
-            _LossBackward(dedy, gold, y, lossName);
+    int gridSize[3], blockSize[3];
 
-        
-        int gridSize[3], blockSize[3];
+    GDevs.GetCudaThread(y->devID, y->unitNum, gridSize, blockSize);
 
-        GDevs.GetCudaThread(x->devID, x->unitNum, gridSize, blockSize);
+    int devIDBackup;
+    ProtectCudaDev(y->devID, devIDBackup);
 
-        int devIDBackup;
-        ProtectCudaDev(x->devID, devIDBackup);
+    /* dE/dx = dE/dy * dy/dx */
+    KernelSigmoidBackward<<<dim3(gridSize[0]),dim3(blockSize[0])>>>
+                            ((DTYPE*)dedy->data,
+                            (DTYPE*)dedx->data,
+                            (DTYPE*)y->data,
+                            y->unitNum);
 
-        /* dE/ds = dE/dy * dy/ds */
-        KernelSigmoidBackward<<<dim3(gridSize[0]),dim3(blockSize[0])>>>
-                              ((DTYPE*)dedy->data, 
-                               (DTYPE*)dedx->data,
-                                gold == NULL ? NULL : (DTYPE*)gold->data, 
-                               (DTYPE*)y->data, (DTYPE*)x->data, 
-                                x->unitNum);
-
-        BacktoCudaDev(x->devID, devIDBackup);
-    }
-    else
-        ShowNTErrors("TODO!");
+    BacktoCudaDev(x->devID, devIDBackup);
 }
 
-#endif
+#endif // USE_CUDA
 
 } // namespace nts(NiuTrans.Tensor)

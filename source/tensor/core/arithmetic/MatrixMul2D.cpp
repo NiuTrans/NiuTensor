@@ -54,15 +54,15 @@ void _MatrixMul2D(const XTensor * a, MATRIX_TRANS_TYPE transposedA,
     CheckNTErrors((a->order == 2 && b->order == 2 && c->order == 2),
                   "Input tensors must have a order = 2!");
 
-	int an = a->dimSize[0], am = a->dimSize[1];
-	int bn = b->dimSize[0], bm = b->dimSize[1];
-	int cn = c->dimSize[0], cm = c->dimSize[1];
-	int am2 = transposedA == X_TRANS ? an : am;
-	int an2 = transposedA == X_TRANS ? am : an;
-	int bm2 = transposedB == X_TRANS ? bn : bm;
-	int bn2 = transposedB == X_TRANS ? bm : bn;
-	int cm2 = cm;
-	int cn2 = cn;
+    int an = a->dimSize[0], am = a->dimSize[1];
+    int bn = b->dimSize[0], bm = b->dimSize[1];
+    int cn = c->dimSize[0], cm = c->dimSize[1];
+    int am2 = transposedA == X_TRANS ? an : am;
+    int an2 = transposedA == X_TRANS ? am : an;
+    int bm2 = transposedB == X_TRANS ? bn : bm;
+    int bn2 = transposedB == X_TRANS ? bm : bn;
+    int cm2 = cm;
+    int cn2 = cn;
 
     CheckNTErrors((am2 == bn2 && an2 == cn2 && bm2 == cm2),
                   "Unmatched tensors in multiplication!");
@@ -82,10 +82,11 @@ void _MatrixMul2D(const XTensor * a, MATRIX_TRANS_TYPE transposedA,
             b->dataType == DEFAULT_DTYPE &&
             c->dataType == DEFAULT_DTYPE)
         {
-            if (useBLAS)
+#if defined(USE_BLAS)
                 _MatrixMULCPU(a, transposedA, b, transposedB, c, alpha, beta);
-            else
+#else
                 _MatrixMul2DParallel(a, transposedA, b, transposedB, c, alpha, beta, parallelRunner);
+#endif
         }
         else {
             // TODO!!

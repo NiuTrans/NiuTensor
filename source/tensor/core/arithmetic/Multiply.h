@@ -40,6 +40,7 @@ a(i) = a(i)*b(i) + \alpha * a(i)
 where i is the index of the element 
 */
 void _MultiplyMe(XTensor * a, const XTensor * b, DTYPE alpha = 0.0, int leadingDim = 0);
+void MultiplyMe(XTensor & a, const XTensor & b, DTYPE alpha = 0.0, int leadingDim = 0);
 
 /* 
 element-wise product of two tensors (return an XTensor structure)
@@ -48,6 +49,13 @@ c(i) = a(i)*b(i)
 where i is the index of the element 
 */
 XTensor Multiply(const XTensor &a, const XTensor &b, DTYPE alpha = 0.0, int leadingDim = 0);
+
+/* 
+element-wise product of two tensors:
+c(i) = a(i)*b(i) + \alpha * c(i) 
+where i is the index of the element
+*/
+void Multiply(const XTensor &a, const XTensor &b, XTensor &c, DTYPE alpha = 0.0, int leadingDim = 0);
 
 } // namespace nts(NiuTrans.Tensor)
 

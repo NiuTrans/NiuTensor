@@ -34,35 +34,34 @@ concatenate a list of tensors along a given dimension
 >> big - the resulting tensor
 >> dim - which dimension we perform the concatenation
 */
-void _ConcatenateSolely(const XList * smalls, XTensor * big, int dim)
+void _ConcatenateSolely(const TensorList * smalls, XTensor * big, int dim)
 {
     CheckNTErrors(big->order > dim && dim >= 0, "Illegal dimension to concatenate!");
 
     int catDimSize = 0;
-    int dimRDI = big->order - dim - 1;
 
     for (int i = 0; i < smalls->count; i++) {
         XTensor * tensor = (XTensor*)smalls->GetItem(i);
         CheckNTErrors((big->order == tensor->order), "Unmatched tensor orders!");
         for (int j = 0; j < big->order; j++) {
-            if (j != dimRDI) {
-                CheckNTErrors((big->dimSizeRDI[j] == tensor->dimSizeRDI[j]), "Unmatched tensor sizes!");
+            if (j != dim) {
+                CheckNTErrors((big->dimSize[j] == tensor->dimSize[j]), "Unmatched tensor sizes!");
             }
             else {
-                catDimSize += tensor->dimSizeRDI[j];
+                catDimSize += tensor->dimSize[j];
             }
         }
     }
 
-    CheckNTErrors((catDimSize == big->dimSizeRDI[dimRDI]), "Unmatched tensor sizes!");
+    CheckNTErrors((catDimSize == big->dimSize[dim]), "Unmatched tensor sizes!");
 
     int stride = 1;
-    for (int i = 0; i < dimRDI; i++)
-        stride *= big->dimSizeRDI[i];
-
     int blockNum = 1;
-    for (int i = dimRDI + 1; i < big->order; i++)
-        blockNum *= big->dimSizeRDI[i];
+    for (int i = 0; i < dim; i++)
+        blockNum *= big->dimSize[i];
+
+    for (int i = dim + 1; i < big->order; i++)
+        stride *= big->dimSize[i];
 
     int offset = 0;
 
@@ -74,8 +73,8 @@ void _ConcatenateSolely(const XList * smalls, XTensor * big, int dim)
     if (smalls->count <= MIN_TENSOR_CAT_NUM) {
         for (int i = 0; i < smalls->count; i++) {
             XTensor * tensor = (XTensor*)smalls->GetItem(i);
-            int sPitch = stride * tensor->dimSizeRDI[dimRDI] * tensor->unitSize;
-            int tPitch = stride * big->dimSizeRDI[dimRDI] * big->unitSize;
+            int sPitch = stride * tensor->dimSize[dim] * tensor->unitSize;
+            int tPitch = stride * big->dimSize[dim] * big->unitSize;
             int mSize = sPitch;
             int n = blockNum;
             XMemCopy2D((char*)big->data + offset, tPitch, big->devID,
@@ -85,12 +84,12 @@ void _ConcatenateSolely(const XList * smalls, XTensor * big, int dim)
         }
     }
     else {
-        XList * sourceArrays = new XList(smalls->count);
+        StrList* sourceArrays = new StrList(smalls->count);
         int * blockSizes = new int[smalls->count];
         for (int i = 0; i < smalls->count; i++) {
             XTensor * tensor = (XTensor*)smalls->GetItem(i);
-            blockSizes[i] = stride * tensor->dimSizeRDI[dimRDI] * tensor->unitSize;
-            sourceArrays->Add(tensor->data);
+            blockSizes[i] = stride * tensor->dimSize[dim] * tensor->unitSize;
+            sourceArrays->Add((char*)tensor->data);
         }
 
         _MergeBlockLists(sourceArrays, blockSizes, blockNum, big->data, big->mem);

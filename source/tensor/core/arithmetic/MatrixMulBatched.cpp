@@ -22,6 +22,7 @@
 #include "../../XTensor.h"
 #include "../../XDevice.h"
 #include "../../XName.h"
+#include "../shape/IsSameShaped.h"
 #include "MatrixMulBatched.h"
 #include "XTensorBLAS.h"
 #include "MatrixMul2D.h"
@@ -94,27 +95,27 @@ void _MatrixMulBatchedGPU(const XTensor * a, MATRIX_TRANS_TYPE transposedA,
                   "Input tensor and output tensor must have same order!");
     CheckNTErrors(a->devID >= 0 && b->devID >= 0 && c->devID >= 0, "The tensors must be on GPUs");
 
-    int an = transposedA == X_TRANS ? a->dimSizeRDI[0] : a->dimSizeRDI[1];
-    int am = transposedA == X_TRANS ? a->dimSizeRDI[1] : a->dimSizeRDI[0];
-    int bn = transposedB == X_TRANS ? b->dimSizeRDI[0] : b->dimSizeRDI[1];
-    int bm = transposedB == X_TRANS ? b->dimSizeRDI[1] : b->dimSizeRDI[0];
-    int cn = c->dimSizeRDI[1];
-    int cm = c->dimSizeRDI[0];
+    int an = transposedA == X_TRANS ? a->dimSize[a->order - 1] : a->dimSize[a->order - 2];
+    int am = transposedA == X_TRANS ? a->dimSize[a->order - 2] : a->dimSize[a->order - 1];
+    int bn = transposedB == X_TRANS ? b->dimSize[b->order - 1] : b->dimSize[b->order - 2];
+    int bm = transposedB == X_TRANS ? b->dimSize[b->order - 2] : b->dimSize[b->order - 1];
+    int cn = c->dimSize[c->order - 2];
+    int cm = c->dimSize[c->order - 1];
 
     CheckNTErrors((am == bn && an == cn && bm == cm), "Unmatched tensors in multiplication!");
 
-    int aBlockSize = a->dimSizeRDI[0] * a->dimSizeRDI[1];
-    int bBlockSize = b->dimSizeRDI[0] * b->dimSizeRDI[1];
-    int cBlockSize = c->dimSizeRDI[0] * c->dimSizeRDI[1];
+    int aBlockSize = a->dimSize[a->order - 1] * a->dimSize[a->order - 2];
+    int bBlockSize = b->dimSize[b->order - 1] * b->dimSize[b->order - 2];
+    int cBlockSize = c->dimSize[c->order - 1] * c->dimSize[c->order - 2];
     int aRealBlockSize = aBlockSize * a->unitSize;
     int bRealBlockSize = bBlockSize * b->unitSize;
     int cRealBlockSize = cBlockSize * c->unitSize;
     int blockNum = 1;
 
-    for (int i = 2; i < a->order; i++) {
-        CheckNTErrors((a->dimSizeRDI[i] == c->dimSizeRDI[i]), "Incorrect tensor sizes!");
-        CheckNTErrors((b->dimSizeRDI[i] == c->dimSizeRDI[i]), "Incorrect tensor sizes!");
-        blockNum *= a->dimSizeRDI[i];
+    for (int i = 0; i < a->order - 2; i++) {
+        CheckNTErrors((a->dimSize[i] == c->dimSize[i]), "Incorrect tensor sizes!");
+        CheckNTErrors((b->dimSize[i] == c->dimSize[i]), "Incorrect tensor sizes!");
+        blockNum *= a->dimSize[i];
     }
 
     int devIDBackup = 0;
@@ -125,9 +126,9 @@ void _MatrixMulBatchedGPU(const XTensor * a, MATRIX_TRANS_TYPE transposedA,
                                      a->data, transposedA, a->dataType, aBlockSize,
                                      b->data, transposedB, b->dataType, bBlockSize,
                                      c->data, c->dataType, cBlockSize, blockNum,
-                                     a->dimSizeRDI[1], a->dimSizeRDI[0],
-                                     b->dimSizeRDI[1], b->dimSizeRDI[0],
-                                     c->dimSizeRDI[1], c->dimSizeRDI[0], alpha, beta);
+                                     a->dimSize[a->order - 2], a->dimSize[a->order - 1],
+                                     b->dimSize[b->order - 2], b->dimSize[b->order - 1],
+                                     c->dimSize[c->order - 2], c->dimSize[c->order - 1], alpha, beta);
 
     BacktoCudaDev(a->devID, devIDBackup);
 #endif
@@ -154,7 +155,7 @@ void _MatrixMulBatchedCPU(const XTensor * a, MATRIX_TRANS_TYPE transposedA,
                           const XTensor * b, MATRIX_TRANS_TYPE transposedB,
                           XTensor * c, DTYPE alpha, DTYPE beta)
 {
-CheckNTErrors((a && b && c), "Empty input tensors!");
+    CheckNTErrors(a && b && c, "Empty input tensors!");
     CheckNTErrors(a->dataType == b->dataType && a->dataType == c->dataType,
                  "Input tensors should have the same data type!");
     CheckNTErrors(a->order >= 2 && b->order >= 2 && c->order >= 2,
@@ -163,46 +164,43 @@ CheckNTErrors((a && b && c), "Empty input tensors!");
                  "Input tensor and output tensor must have same order!");
 
 
-    int an = transposedA == X_TRANS ? a->dimSizeRDI[0] : a->dimSizeRDI[1];
-    int am = transposedA == X_TRANS ? a->dimSizeRDI[1] : a->dimSizeRDI[0];
-    int bn = transposedB == X_TRANS ? b->dimSizeRDI[0] : b->dimSizeRDI[1];
-    int bm = transposedB == X_TRANS ? b->dimSizeRDI[1] : b->dimSizeRDI[0];
-    int cn = c->dimSizeRDI[1];
-    int cm = c->dimSizeRDI[0];
+    int an = transposedA == X_TRANS ? a->dimSize[a->order - 1] : a->dimSize[a->order - 2];
+    int am = transposedA == X_TRANS ? a->dimSize[a->order - 2] : a->dimSize[a->order - 1];
+    int bn = transposedB == X_TRANS ? b->dimSize[b->order - 1] : b->dimSize[b->order - 2];
+    int bm = transposedB == X_TRANS ? b->dimSize[b->order - 2] : b->dimSize[b->order - 1];
+    int cn = c->dimSize[c->order - 2];
+    int cm = c->dimSize[c->order - 1];
 
     CheckNTErrors(am == bn && an == cn && bm == cm, "Unmatched tensors in multiplication!");
 
-    int aBlockSize = a->dimSizeRDI[0] * a->dimSizeRDI[1];
-    int bBlockSize = b->dimSizeRDI[0] * b->dimSizeRDI[1];
-    int cBlockSize = c->dimSizeRDI[0] * c->dimSizeRDI[1];
+    int aBlockSize = a->dimSize[a->order - 1] * a->dimSize[a->order - 2];
+    int bBlockSize = b->dimSize[b->order - 1] * b->dimSize[b->order - 2];
+    int cBlockSize = c->dimSize[c->order - 1] * c->dimSize[c->order - 2];
     int aRealBlockSize = aBlockSize * a->unitSize;
     int bRealBlockSize = bBlockSize * b->unitSize;
     int cRealBlockSize = cBlockSize * c->unitSize;
     int blockNum = 1;
 
-    for (int i = 2; i < a->order; i++) {
-        CheckNTErrors((a->dimSizeRDI[i] == c->dimSizeRDI[i]), "Incorrect tensor sizes!");
-        CheckNTErrors((b->dimSizeRDI[i] == c->dimSizeRDI[i]), "Incorrect tensor sizes!");
-        blockNum *= a->dimSizeRDI[i];
+    for (int i = 0; i < a->order - 2; i++) {
+        CheckNTErrors((a->dimSize[i] == c->dimSize[i]), "Incorrect tensor sizes!");
+        CheckNTErrors((b->dimSize[i] == c->dimSize[i]), "Incorrect tensor sizes!");
+        blockNum *= a->dimSize[i];
     }
 
-    int aDimSize[2] = {-a->dimSizeRDI[1], a->dimSizeRDI[0]};
-    int bDimSize[2] = {-b->dimSizeRDI[1], b->dimSizeRDI[0]};
-    int cDimSize[2] = {-c->dimSizeRDI[1], c->dimSizeRDI[0]};
+    int aDimSize[2] = {-a->dimSize[a->order - 2], a->dimSize[a->order - 1]};
+    int bDimSize[2] = {-b->dimSize[b->order - 2], b->dimSize[b->order - 1]};
+    int cDimSize[2] = {-c->dimSize[c->order - 2], c->dimSize[c->order - 1]};
 
-    XTensor * ai = NewTensor2D(aDimSize[0], aDimSize[1], a->dataType, a->devID, a->mem);
-    XTensor * bi = NewTensor2D(bDimSize[0], bDimSize[1], b->dataType, b->devID, b->mem);
-    XTensor * ci = NewTensor2D(cDimSize[0], cDimSize[1], c->dataType, c->devID, c->mem);
+    XTensor * ai = NewTensor2DV2(aDimSize[0], aDimSize[1], a->dataType, a->devID, a->mem);
+    XTensor * bi = NewTensor2DV2(bDimSize[0], bDimSize[1], b->dataType, b->devID, b->mem);
+    XTensor * ci = NewTensor2DV2(cDimSize[0], cDimSize[1], c->dataType, c->devID, c->mem);
 
     for (int i = 0; i < blockNum; i++) {
         ai->data = (char*)a->data + i * aRealBlockSize;
         bi->data = (char*)b->data + i * bRealBlockSize;
         ci->data = (char*)c->data + i * cRealBlockSize;
 #ifdef USE_BLAS
-        if (useBLAS)
-            _MatrixMULCPU(ai, transposedA, bi, transposedB, ci, alpha, beta);
-        else
-            _MatrixMul2D(ai, transposedA, bi, transposedB, ci, alpha, beta);
+        _MatrixMULCPU(ai, transposedA, bi, transposedB, ci, alpha, beta);
 #else
         _MatrixMul2D(ai, transposedA, bi, transposedB, ci, alpha, beta);
 #endif
@@ -227,9 +225,9 @@ c_i = trans(a_i) * trans(b_i) * \alpha + c_i * \beta for each i in [0,count-1]
 >> alpha - scalar
 >> beta - scalar
 */
-void _MatrixMulBatchedCPU(const XList * a, MATRIX_TRANS_TYPE transposedA,
-                          const XList * b, MATRIX_TRANS_TYPE transposedB,
-                          XList * c, DTYPE alpha, DTYPE beta)
+void _MatrixMulBatchedCPU(const TensorList * a, MATRIX_TRANS_TYPE transposedA,
+                          const TensorList * b, MATRIX_TRANS_TYPE transposedB,
+                          TensorList * c, DTYPE alpha, DTYPE beta)
 {
     CheckNTErrors(a && b && c, "Empty input lists!");
     CheckNTErrors(a->count == b->count && a->count == c->count, "Input lists must be of the same size!");
@@ -245,9 +243,9 @@ void _MatrixMulBatchedCPU(const XList * a, MATRIX_TRANS_TYPE transposedA,
         XTensor * ai = (XTensor*)a->GetItem(i);
         XTensor * bi = (XTensor*)b->GetItem(i);
         XTensor * ci = (XTensor*)c->GetItem(i);
-        if (!XTensor::IsSameShaped(aim, ai) ||
-            !XTensor::IsSameShaped(bim, bi) ||
-            !XTensor::IsSameShaped(cim, ci))
+        if (!_IsSameShaped(aim, ai) ||
+            !_IsSameShaped(bim, bi) ||
+            !_IsSameShaped(cim, ci))
         {
             isUniform = false;
             break;
@@ -262,10 +260,7 @@ void _MatrixMulBatchedCPU(const XList * a, MATRIX_TRANS_TYPE transposedA,
         CheckNTErrors((bi->order == 2), "2d tensor (i.e., matrix) is required!");
         CheckNTErrors((ci->order == 2), "2d tensor (i.e., matrix) is required!");
 #ifdef USE_BLAS
-        if (useBLAS)
             _MatrixMULCPU(ai, transposedA, bi, transposedB, ci, alpha, beta);
-        else
-            _MatrixMul2D(ai, transposedA, bi, transposedB, ci, alpha, beta);
 #else
         _MatrixMul2D(ai, transposedA, bi, transposedB, ci, alpha, beta);
 #endif
@@ -297,10 +292,10 @@ XTensor MatrixMulBatched(const XTensor &a, MATRIX_TRANS_TYPE transposedA, const 
     CheckNTErrors(a.order >= 2 && b.order >= 2, "Input tensors must have a order >= 2!");
     CheckNTErrors(a.order == b.order, "Input tensor and output tensor must have same order!");
 
-    int an = transposedA == X_TRANS ? a.dimSizeRDI[0] : a.dimSizeRDI[1];
-    int am = transposedA == X_TRANS ? a.dimSizeRDI[1] : a.dimSizeRDI[0];
-    int bn = transposedB == X_TRANS ? b.dimSizeRDI[0] : b.dimSizeRDI[1];
-    int bm = transposedB == X_TRANS ? b.dimSizeRDI[1] : b.dimSizeRDI[0];
+    int an = transposedA == X_TRANS ? a.dimSize[a.order - 1] : a.dimSize[a.order - 2];
+    int am = transposedA == X_TRANS ? a.dimSize[a.order - 2] : a.dimSize[a.order - 1];
+    int bn = transposedB == X_TRANS ? b.dimSize[b.order - 1] : b.dimSize[b.order - 2];
+    int bm = transposedB == X_TRANS ? b.dimSize[b.order - 2] : b.dimSize[b.order - 1];
 
     CheckNTErrors(am == bn, "Unmatched tensors in multiplication!");
 
@@ -320,10 +315,12 @@ XTensor MatrixMulBatched(const XTensor &a, MATRIX_TRANS_TYPE transposedA, const 
     _MatrixMulBatched(&a, transposedA, &b, transposedB, &c, alpha, 0, parallelRunner);
 
     /* tensor connections */
-    XLink::MakeLink(&a, &b, &c, MATH_MATRIXMULBATCHED);
-    XLink::AddParamToHeadTrans(&c, transposedA);
-    XLink::AddParamToHeadTrans(&c, transposedB);
-    XLink::AddParamToHead(&c, alpha);
+    if (a.enableGrad && b.enableGrad) {
+        XLink::MakeLink(&a, &b, &c, MATH_MATRIXMULBATCHED);
+        XLink::AddParamToHeadTrans(&c, transposedA);
+        XLink::AddParamToHeadTrans(&c, transposedB);
+        XLink::AddParamToHead(&c, alpha);
+    }
 
     /* destroy variables */
     delete[] dimSize;
@@ -353,10 +350,10 @@ XTensor MatrixMulBatched(const XTensor &a, const XTensor &b,
     CheckNTErrors(a.order >= 2 && b.order >= 2, "Input tensors must have a order >= 2!");
     CheckNTErrors(a.order == b.order, "Input tensor and output tensor must have same order!");
 
-    int an = a.dimSizeRDI[1];
-    int am = a.dimSizeRDI[0];
-    int bn = b.dimSizeRDI[1];
-    int bm = b.dimSizeRDI[0];
+    int an = a.dimSize[a.order - 2];
+    int am = a.dimSize[a.order - 1];
+    int bn = b.dimSize[b.order - 2];
+    int bm = b.dimSize[b.order - 1];
 
     CheckNTErrors(am == bn, "Unmatched tensors in multiplication!");
 
@@ -376,10 +373,12 @@ XTensor MatrixMulBatched(const XTensor &a, const XTensor &b,
     _MatrixMulBatched(&a, X_NOTRANS, &b, X_NOTRANS, &c, alpha, 0, parallelRunner);
 
     /* tensor connections */
-    XLink::MakeLink(&a, &b, &c, MATH_MATRIXMULBATCHED);
-    XLink::AddParamToHeadTrans(&c, X_NOTRANS);
-    XLink::AddParamToHeadTrans(&c, X_NOTRANS);
-    XLink::AddParamToHead(&c, alpha);
+    if (a.enableGrad && b.enableGrad) {
+        XLink::MakeLink(&a, &b, &c, MATH_MATRIXMULBATCHED);
+        XLink::AddParamToHeadTrans(&c, X_NOTRANS);
+        XLink::AddParamToHeadTrans(&c, X_NOTRANS);
+        XLink::AddParamToHead(&c, alpha);
+    }
 
     /* destroy variables */
     delete[] dimSize;

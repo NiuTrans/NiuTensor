@@ -19,9 +19,10 @@
  * $Created by: Xu Chen (email: hello_master1954@163.com) 2018-07-30
  */
 
-#include "TMultiplyDim.h"
 #include "../core/arithmetic/MultiplyDim.h"
+#include "../core/utilities/CheckData.h"
 #include "../XTensor.h"
+#include "TMultiplyDim.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
 /*
@@ -61,10 +62,10 @@ bool TestMultiplyDim1()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * a = NewTensor(aOrder, aDimSize);
-    XTensor * b = NewTensor(bOrder, bDimSize);
-    XTensor * c = NewTensor(aOrder, aDimSize);
-    XTensor * cMe = NewTensor(aOrder, aDimSize);
+    XTensor * a = NewTensorV2(aOrder, aDimSize);
+    XTensor * b = NewTensorV2(bOrder, bDimSize);
+    XTensor * c = NewTensorV2(aOrder, aDimSize);
+    XTensor * cMe = NewTensorV2(aOrder, aDimSize);
     XTensor cUser;
 
     /* initialize variables */
@@ -79,19 +80,19 @@ bool TestMultiplyDim1()
     cUser = MultiplyDim(*a, *b, 0);
 
     /* check results */
-    cpuTest = c->CheckData(answer, aUnitNum) && 
-              cMe->CheckData(answer, aUnitNum) && 
-              cUser.CheckData(answer, aUnitNum);
+    cpuTest = _CheckData(c, answer, aUnitNum) &&
+              _CheckData(cMe, answer, aUnitNum) &&
+              _CheckData(&cUser, answer, aUnitNum);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensor */
-    XTensor * aGPU = NewTensor(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * bGPU = NewTensor(bOrder, bDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * cGPU = NewTensor(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * cMeGPU = NewTensor(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * aGPU = NewTensorV2(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * bGPU = NewTensorV2(bOrder, bDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * cGPU = NewTensorV2(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * cMeGPU = NewTensorV2(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
     XTensor cUserGPU;
 
     /* Initialize variables */
@@ -106,9 +107,9 @@ bool TestMultiplyDim1()
     cUserGPU = MultiplyDim(*aGPU, *bGPU, 0);
 
     /* check results */
-    gpuTest = cGPU->CheckData(answer, aUnitNum) && 
-              cMeGPU->CheckData(answer, aUnitNum) && 
-              cUserGPU.CheckData(answer, aUnitNum);
+    gpuTest = _CheckData(cGPU, answer, aUnitNum) &&
+              _CheckData(cMeGPU, answer, aUnitNum) &&
+              _CheckData(&cUserGPU, answer, aUnitNum);
 
     /* destroy variables */
     delete a;
@@ -173,10 +174,10 @@ bool TestMultiplyDim2()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * a = NewTensor(aOrder, aDimSize);
-    XTensor * b = NewTensor(bOrder, bDimSize);
-    XTensor * c = NewTensor(aOrder, aDimSize);
-    XTensor * cMe = NewTensor(aOrder, aDimSize);
+    XTensor * a = NewTensorV2(aOrder, aDimSize);
+    XTensor * b = NewTensorV2(bOrder, bDimSize);
+    XTensor * c = NewTensorV2(aOrder, aDimSize);
+    XTensor * cMe = NewTensorV2(aOrder, aDimSize);
     XTensor cUser;
 
     /* initialize variables */
@@ -191,19 +192,19 @@ bool TestMultiplyDim2()
     cUser = MultiplyDim(*a, *b, 1);
 
     /* check results */
-    cpuTest = c->CheckData(answer, aUnitNum) && 
-              cMe->CheckData(answer, aUnitNum) && 
-              cUser.CheckData(answer, aUnitNum);
+    cpuTest = _CheckData(c, answer, aUnitNum) &&
+              _CheckData(cMe, answer, aUnitNum) &&
+              _CheckData(&cUser, answer, aUnitNum);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensor */
-    XTensor * aGPU = NewTensor(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * bGPU = NewTensor(bOrder, bDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * cGPU = NewTensor(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * cMeGPU = NewTensor(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * aGPU = NewTensorV2(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * bGPU = NewTensorV2(bOrder, bDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * cGPU = NewTensorV2(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * cMeGPU = NewTensorV2(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
     XTensor cUserGPU;
 
     /* Initialize variables */
@@ -218,9 +219,9 @@ bool TestMultiplyDim2()
     cUserGPU = MultiplyDim(*aGPU, *bGPU, 1);
 
     /* check results */
-    gpuTest = cGPU->CheckData(answer, aUnitNum) && 
-              cMeGPU->CheckData(answer, aUnitNum) && 
-              cUserGPU.CheckData(answer, aUnitNum);
+    gpuTest = _CheckData(cGPU, answer, aUnitNum) &&
+              _CheckData(cMeGPU, answer, aUnitNum) &&
+              _CheckData(&cUserGPU, answer, aUnitNum);
 
     /* destroy variables */
     delete a;

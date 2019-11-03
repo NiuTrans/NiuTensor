@@ -50,8 +50,8 @@ bool TestLoss1()
     DTYPE error;
 
     /* create tensors */
-    XTensor * output = NewTensor(order, dimSize);
-    XTensor * gold = NewTensor(order, dimSize);
+    XTensor * output = NewTensorV2(order, dimSize);
+    XTensor * gold = NewTensorV2(order, dimSize);
 
     /* initialize variables */
     output->SetZeroAll();
@@ -70,8 +70,8 @@ bool TestLoss1()
     bool gpuTest = true;
 
     /* create tensor */
-    XTensor * outputGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * goldGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * outputGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * goldGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
 
     /* Initialize variables */
     outputGPU->SetZeroAll();
@@ -128,8 +128,8 @@ bool TestLoss2()
     DTYPE error;
 
     /* create tensors */
-    XTensor * output = NewTensor(order, dimSize);
-    XTensor * gold = NewTensor(order, dimSize);
+    XTensor * output = NewTensorV2(order, dimSize);
+    XTensor * gold = NewTensorV2(order, dimSize);
 
     /* initialize variables */
     output->SetZeroAll();
@@ -148,8 +148,8 @@ bool TestLoss2()
     bool gpuTest = true;
 
     /* create tensor */
-    XTensor * outputGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * goldGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * outputGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * goldGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
 
     /* Initialize variables */
     outputGPU->SetZeroAll();
@@ -216,8 +216,8 @@ bool TestLoss3()
     DTYPE error;
 
     /* create tensors */
-    XTensor * output = NewTensor(order, dimSize);
-    XTensor * gold = NewTensor(order, dimSize);
+    XTensor * output = NewTensorV2(order, dimSize);
+    XTensor * gold = NewTensorV2(order, dimSize);
 
     /* initialize variables */
     output->SetData(outputData, unitNum);
@@ -234,8 +234,8 @@ bool TestLoss3()
     bool gpuTest = true;
 
     /* create tensor */
-    XTensor * outputGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * goldGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * outputGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * goldGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
 
     /* Initialize variables */
     outputGPU->SetData(outputData, unitNum);

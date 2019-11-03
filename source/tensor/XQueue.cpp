@@ -42,7 +42,7 @@ job item used in queues
 JobQueueNode::JobQueueNode()
 {
     job  = NULL;
-    args = new XList(1);
+    args = new TensorList(1);
 }
 
 /* de-constructor */
@@ -67,7 +67,7 @@ XQueue::XQueue(int mySize)
     head = 0;
     tail = 0;
     isJobQueue = false;
-    jobDequeuerArgs = new XList(1);
+    jobDequeuerArgs = new TensorList(1);
     jobDequeuerBreak = false;
     runningJobCount = 0;
     jobStream = NULL;
@@ -188,8 +188,10 @@ void XQueue::RunJobConsumer(int jobDevID)
 
     isJobQueue = true;
     jobDequeuerArgs->Clear();
-    jobDequeuerArgs->Add(this);
-    jobDequeuerArgs->Add(jobDevID >= 0 ? devids + jobDevID : &cpuid);
+
+    // warning: this may cause unknown error
+    jobDequeuerArgs->Add((XTensor*)this);
+    jobDequeuerArgs->Add(jobDevID >= 0 ? (XTensor*)(devids + jobDevID) : (XTensor*)&cpuid);
 
     jobDequeuer.function = (TFunction)DequeueJobs;
     jobDequeuer.argv = jobDequeuerArgs;
@@ -211,7 +213,7 @@ void XQueue::StopJobConsumer()
 }
 
 /* add a job item to process */
-void XQueue::EnqueueJob(void * job, XList * jobArgs)
+void XQueue::EnqueueJob(void * job, TensorList * jobArgs)
 {
     MUTEX_LOCK(jobQueueMutex);
     runningJobCount++;
@@ -225,7 +227,7 @@ void XQueue::EnqueueJob(void * job, XList * jobArgs)
 }
 
 /* job item consumer */
-void XQueue::DequeueJobs(XList * args)
+void XQueue::DequeueJobs(TensorList * args)
 {
     CheckNTErrors((args->count == 2), "Illegal arguments!");
 

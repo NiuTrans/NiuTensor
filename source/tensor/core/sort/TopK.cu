@@ -22,6 +22,7 @@
 #include "../../XDevice.h"
 #include "../../XUtility.h"
 #include "../../XTensor.h"
+#include "../utilities/SetAscendingOrder.h"
 #include "TopK.h"
 #include "TopK.cuh"
 #include "Sort.cuh"
@@ -377,8 +378,8 @@ get the top-k items
 template<class T> __global__
 void KernelTopK3(T * input, int stride, int strideNum, int blockNum, int k, T minValue, T * output, int * index)
 {
-    __shared__ CudaHeapNode<T> heapData[(SHARED_MEMORY_SIZE - 1024 * sizeof(T)) / sizeof(CudaHeapNode<T>)];
-    __shared__ T eachHeapMaxValue[1024];
+    __shared__ CudaHeapNode<T> heapData[(SHARED_MEMORY_SIZE - 512 * sizeof(T)) / sizeof(CudaHeapNode<T>)];
+    __shared__ T eachHeapMaxValue[512];
     /*optimization k size the parameter must more than half of k*/
     int parameter = 0;
 
@@ -429,7 +430,7 @@ void KernelTopK3(T * input, int stride, int strideNum, int blockNum, int k, T mi
     }
     __syncthreads();
 
-    /*to merge the heap use another way*/
+    /* to merge the heap use another way */
     T minData = minValue;
     int heapLimit = heap.count / 2;
     if (heapLimit % 2 == 0 && heapLimit != 0) heapLimit -= 1;
@@ -438,12 +439,13 @@ void KernelTopK3(T * input, int stride, int strideNum, int blockNum, int k, T mi
             minData = heap.items[counter].value;
     }
     eachHeapMaxValue[threadIdx.y * blockDim.x + threadIdx.x] = minData;
+
     //need more optimation
     if (i == 0) {
-        int threadLimit = (threadIdx.y + 1) * blockDim.x;
+        int threadLimit = threadIdx.y  * blockDim.x + min(blockDim.x,strideNum);
         CudaXHeap<MIN_HEAP, T> chooseHeap(k, heapData + k * ((blockDim.x * blockDim.y) + threadIdx.y));
         int counter = threadIdx.y * blockDim.x;
-        for (; counter < threadIdx.y * blockDim.x + k; ++counter) {
+        for (; counter < threadIdx.y * blockDim.x + min(k, blockDim.x); ++counter) {
             chooseHeap.Push(counter, eachHeapMaxValue[counter]);
         }
         for (; counter < threadLimit; ++counter) {
@@ -451,15 +453,16 @@ void KernelTopK3(T * input, int stride, int strideNum, int blockNum, int k, T mi
                 chooseHeap.ReplaceTop(counter, eachHeapMaxValue[counter]);
             }
         }
+        int heapNum = chooseHeap.count;
         CudaXHeap<MIN_HEAP, T>  ansHeapData(k, k - parameter, heapData + k * chooseHeap.items[0].index);
         int miss = parameter;
-        for (counter = 1; counter < k; ++counter) {
+        for (counter = 1; counter < heapNum; ++counter) {
             chooseHeap.items[0] = chooseHeap.items[chooseHeap.count - 1];
             chooseHeap.count--;
             chooseHeap.Down(0);
             CudaHeapNode<T> * cmpHeapData = heapData + k * (chooseHeap.items[0].index);
             int cmpHeapLimit = 0;
-            if (counter + heapLimit <= k - parameter){
+            if (counter + heapLimit <= k - parameter && heapNum == k){
                 cmpHeapLimit = heapLimit;
             }
             /* take the max data from the minHeap,so start search from the leaf node */
@@ -770,22 +773,22 @@ void KernelTopKRadixSelect(unsigned int * input, int stride, int strideNum,
    /*
    if (idx == 0)
     {
-    	unsigned int* uintOutput = new unsigned int;
-    	int* tmpIndex = new int;
-    	//*******************something worng***************************
-    	cudaMalloc((void **)&uintOutput, sizeof(unsigned int)* k);
-    	cudaMalloc((void **)&tmpIndex, sizeof(unsigned int)*k);
-    	//*************************************************************
-    	collectNumberOld(input, limit, k, desire, uintOutput, tmpIndex, stride, strideNum);
-    	int blockIndex = idy / stride;
-    	int offsetInBlock = idy% stride;
+        unsigned int* uintOutput = new unsigned int;
+        int* tmpIndex = new int;
+        //*******************something worng***************************
+        cudaMalloc((void **)&uintOutput, sizeof(unsigned int)* k);
+        cudaMalloc((void **)&tmpIndex, sizeof(unsigned int)*k);
+        //*************************************************************
+        collectNumberOld(input, limit, k, desire, uintOutput, tmpIndex, stride, strideNum);
+        int blockIndex = idy / stride;
+        int offsetInBlock = idy% stride;
 
-    	for (int i = stride * k * blockIndex + offsetInBlock, j = 0; j < k; j++, i += stride)
-    	{
-    		//for(int i = )
-    		output[i] = deconvert(uintOutput[j]);
-    		index[i] = tmpIndex[j];
-    	}
+        for (int i = stride * k * blockIndex + offsetInBlock, j = 0; j < k; j++, i += stride)
+        {
+            //for(int i = )
+            output[i] = deconvert(uintOutput[j]);
+            index[i] = tmpIndex[j];
+        }
     }
     __syncthreads();
     */
@@ -809,15 +812,14 @@ void _CudaTopK(const XTensor * a, XTensor * b, XTensor * index, int dim, int k)
     CheckNTErrors((index->dataType == X_INT), "Wrong data type!");
     CheckNTErrors((b->dimSize[dim] == k), "A too large K");
 
-    int dimRDI = a->order - dim - 1;
     int stride = 1;
-    int strideNumA = a->dimSizeRDI[dimRDI];
-    for (int i = 0; i < dimRDI; i++)
-        stride *= a->dimSizeRDI[i];
-
     int blockNum = 1;
-    for (int i = dimRDI + 1; i < a->order; i++)
-        blockNum *= a->dimSizeRDI[i];
+    int strideNumA = a->dimSize[dim];
+    for (int i = 0; i < dim; i++)
+        blockNum *= a->dimSize[i];
+
+    for (int i = dim + 1; i < a->order; i++)
+        stride *= a->dimSize[i];
 
     int workerNum = blockNum < 16 ? 64 : 32; 
     /* adjust the thread num according size of k for fitting the share memory size */
@@ -826,7 +828,7 @@ void _CudaTopK(const XTensor * a, XTensor * b, XTensor * index, int dim, int k)
     else if (k < 22) workerNum = 128;
     else if (k < 44) workerNum = 64;
     else workerNum = 32;
-
+ 
     int cudaGrids[3];
     int cudaBlocks[3];
 
@@ -840,7 +842,7 @@ void _CudaTopK(const XTensor * a, XTensor * b, XTensor * index, int dim, int k)
     /* we run the kernel if the heaps can fit into the shared memory */
     cudaGrids[1] *= cudaBlocks[1];
     cudaBlocks[1] = 1;
-    if ((cudaBlocks[0] * cudaBlocks[1] + 1) * k * (a->unitSize + sizeof(int)) < SHARED_MEMORY_SIZE) {
+    if ((cudaBlocks[0] * cudaBlocks[1] + 1) * k * (a->unitSize + sizeof(int)) + (512 * sizeof(int))< SHARED_MEMORY_SIZE) {
         if (a->dataType == DEFAULT_DTYPE) {
             KernelTopK3<DTYPE> <<<dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1]) >>>
                                  ((DTYPE*)a->data, stride, strideNumA, blockNum, k, DTYPE_MIN,
@@ -860,7 +862,7 @@ void _CudaTopK(const XTensor * a, XTensor * b, XTensor * index, int dim, int k)
         //indexA->data = a->mem != NULL ? a->mem->AllocBuf(a->devID, a->unitNum * sizeof(int)) : XMemAlloc(a->devID, a->unitNum * sizeof(int));
 
         /* make the index tensor */
-        //indexA->SetAscendingOrder(dim);
+        //SetAscendingOrder(*indexA, dim);
 
         //_CudaSortBig(a, b, indexA, index, dim, k);
 
@@ -869,7 +871,7 @@ void _CudaTopK(const XTensor * a, XTensor * b, XTensor * index, int dim, int k)
         //delete indexA;
         int workerNum = WORKERSNUM;
 
-        GDevs.GetCudaThread2D(a->mem->devID,
+        GDevs.GetCudaThread2D(a->devID,
             workerNum, stride * blockNum, MAX_INT,
             cudaGrids, cudaBlocks);
         if (a->dataType == DEFAULT_DTYPE) {

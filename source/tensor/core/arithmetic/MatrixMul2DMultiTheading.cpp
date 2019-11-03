@@ -38,17 +38,23 @@ argument5: matrix a
 argument6: matrix b
 argument7: matrix c (c=a*b*\alpha + c*beta)
 */
-void _MatrixMul2DMultiTheading(XList * args)
+void _MatrixMul2DMultiTheading(TensorList * args)
 {
-    int x1 = *(int*)args->GetItem(0);
-    int y1 = *(int*)args->GetItem(1);
-    int x2 = *(int*)args->GetItem(2);
-    int y2 = *(int*)args->GetItem(3);
-    XTensor * a = (XTensor*)args->GetItem(4);
-    XTensor * b = (XTensor*)args->GetItem(5);
-    XTensor * c = (XTensor*)args->GetItem(6);
-    DTYPE alpha = *(DTYPE*)args->GetItem(7);
-    DTYPE beta = *(DTYPE*)args->GetItem(8);
+    CheckNTErrors(args->count == 2, "invalid argument number!");
+    IntList * indexArgs = (IntList*)args->GetItem(0);
+    TensorList * matrixArgs = (TensorList*)args->GetItem(1);
+    CheckNTErrors(indexArgs->count == 4, "invalid argument number!");
+    CheckNTErrors(matrixArgs->count == 5, "invalid argument number!");
+
+    XTensor * a = matrixArgs->GetItem(0);
+    XTensor * b = matrixArgs->GetItem(1);
+    XTensor * c = matrixArgs->GetItem(2);
+    DTYPE alpha = *(DTYPE*)(matrixArgs->GetItem(3));
+    DTYPE beta = *(DTYPE*)(matrixArgs->GetItem(4));
+    int x1 = indexArgs->GetItem(0);
+    int y1 = indexArgs->GetItem(1);
+    int x2 = indexArgs->GetItem(2);
+    int y2 = indexArgs->GetItem(3);
 
 #ifdef FAST_MATRIX
     int am = a->dimSize[1];

@@ -20,7 +20,9 @@
  */
 
 #include "XBackwardLoss.h"
+#include "XNoder.h"
 #include "../tensor/XName.h"
+#include "../tensor/function/FHeader.h"
 #include "../tensor/core/getandset/SetData.h"
 #include "../tensor/function/HardTanH.h"
 #include "../tensor/function/Identity.h"
@@ -30,6 +32,60 @@
 #include "../tensor/function/Softmax.h"
 
 namespace nts{
+
+
+/* compute dE/dx of a node */
+void XLossGrad::MakeGrad(XTensor * node, bool isEfficient)
+{
+    XLink &income = node->income;
+    int operID = income.typeID;
+
+    CheckNTErrors(income.tailNum >= 1, "Wrong number of tensors for loss computation!");
+
+    XTensor * output = income.tails[0];
+    XTensor * gold = NULL;
+    XTensor * weight = NULL;
+    XTensor * padding = NULL;
+    int leadingDim;
+
+    XNoder::MakeGrad(output);
+    XTensor * dedy = output->grad;
+
+    if (income.tailNum == 1) {
+        if(dedy->dataType == X_FLOAT)
+            _SetDataFixedFloat(dedy, 1.0F);
+        else if(dedy->dataType == X_DOUBLE)
+            _SetDataFixedDouble(dedy, 1.0);
+        else if(dedy->dataType == X_INT)
+            _SetDataFixedInt(dedy, 1);
+        else
+            ShowNTErrors("TODO");
+
+        return;
+    }
+
+    gold = income.tails[1];
+
+    if(operID == LOSS_CROSSENTROPY) {
+        if (income.tailNum == 3) 
+            padding = income.tails[2];
+        leadingDim = income.GetParamInt(0);
+        CheckNTErrors(leadingDim >= 0 && leadingDim < output->order, "wrong leading dimension in logsoftmax!");
+        _CrossEntropyBackward(dedy, output, gold, weight, padding, leadingDim);
+    }
+    else{
+        ShowNTErrors("Wrong activation function type!");
+    }
+
+    node->visitMark = NODE_FINISHED;
+}
+
+/* indicates whether the node is for a loss computation */
+bool XLossGrad::IsLossOP(XTensor * node)
+{
+    XLink &income = node->income;
+    return (income.typeID & LOSS_BASE) != 0;
+}
 
 /* 
 compute dE/dx for a given function y = f(x) 
@@ -42,39 +98,39 @@ compute dE/dx for a given function y = f(x)
 >> params - parameters of the function
 >> lossName - name of the loss, e.g., cross entropy
 */
-void XLossGrad::Compute(XTensor * gold, XTensor * y, XTensor * x, 
-                        XTensor * dedy, XTensor * dedx, XTensor * padding,
-                        int funcID, void * params,
-                        LOSS_FUNCTION_NAME lossName)
-{
-    CheckNTErrors(gold && y && x, "Empty input tensors!");
-    CheckNTErrors(dedx, "Empty gradient tensors!");
-    CheckNTErrors((funcID & FUNCTION_BASE) != 0, "Illegal function id");
-
-    if(funcID == FUNC_HARDTANH){
-        _HardTanHBackward(gold, y, x, dedy, dedx, lossName);
-    }
-    else if(funcID == FUNC_IDENTITY){
-        _IdentityBackward(gold, y, x, dedy, dedx, lossName);
-    }
-    else if(funcID == FUNC_LOGSOFTMAX){
-        int leadDim = *(int*)params;
-        _LogSoftmaxBackward(gold, y, x, dedy, dedx, padding, leadDim, lossName);
-    }
-    else if(funcID == FUNC_RECTIFY){
-        _RectifyBackward(gold, y, x, dedy, dedx, lossName);
-    }
-    else if(funcID == FUNC_SIGMOID){
-        _SigmoidBackward(gold, y, x, dedy, dedx, lossName);
-    }else if(funcID == FUNC_SOFTMAX){
-        int leadDim = *(int*)params;
-        _SoftmaxBackward(gold, y, x, dedy, dedx, padding, leadDim, lossName);
-    }
-    else{
-        ShowNTErrors("wrong function found when call the backward process!");
-    }
-
-}
+//void XLossGrad::Compute(XTensor * gold, XTensor * y, XTensor * x, 
+//                        XTensor * dedy, XTensor * dedx, XTensor * padding,
+//                        int funcID, void * params,
+//                        LOSS_FUNCTION_NAME lossName)
+//{
+//    CheckNTErrors(gold && y && x, "Empty input tensors!");
+//    CheckNTErrors(dedx, "Empty gradient tensors!");
+//    CheckNTErrors((funcID & FUNCTION_BASE) != 0, "Illegal function id");
+//
+//    if(funcID == FUNC_HARDTANH){
+//        _HardTanHBackward(gold, y, x, dedy, dedx, lossName);
+//    }
+//    else if(funcID == FUNC_IDENTITY){
+//        _IdentityBackward(gold, y, x, dedy, dedx, lossName);
+//    }
+//    else if(funcID == FUNC_LOGSOFTMAX){
+//        int leadDim = *(int*)params;
+//        _LogSoftmaxBackward(gold, y, x, dedy, dedx, padding, leadDim, lossName);
+//    }
+//    else if(funcID == FUNC_RECTIFY){
+//        _RectifyBackward(gold, y, x, dedy, dedx, lossName);
+//    }
+//    else if(funcID == FUNC_SIGMOID){
+//        _SigmoidBackward(gold, y, x, dedy, dedx, lossName);
+//    }else if(funcID == FUNC_SOFTMAX){
+//        int leadDim = *(int*)params;
+//        _SoftmaxBackward(gold, y, x, dedy, dedx, padding, leadDim, lossName);
+//    }
+//    else{
+//        ShowNTErrors("wrong function found when call the backward process!");
+//    }
+//
+//}
 
 /* 
 compute dE/dy for variable y and error(loss) function E
@@ -83,27 +139,27 @@ compute dE/dy for variable y and error(loss) function E
 >> dedy - dE/dy
 >> lossName - name of the loss, e.g., cross entropy
 */
-void XLossGrad::Compute(XTensor * gold, XTensor * y, 
-                        XTensor * dedy, XTensor * padding,
-                        LOSS_FUNCTION_NAME lossName)
-{
-    if(gold == NULL){
-        if(dedy->dataType == X_FLOAT)
-            _SetDataFixedFloat(dedy, 1.0F);
-        else if(dedy->dataType == X_DOUBLE)
-            _SetDataFixedDouble(dedy, 1.0);
-        else if(dedy->dataType == X_INT)
-            _SetDataFixedInt(dedy, 1);
-        else{
-            ShowNTErrors("TODO");
-        }
-        return;
-    }
-
-    //_LossBackward(dedy, gold, y, lossName);
-    if(lossName == CROSSENTROPY)
-        _CrossEntropyBackward(dedy, y, gold, NULL, padding);
-
-}
+//void XLossGrad::Compute(XTensor * gold, XTensor * y, 
+//                        XTensor * dedy, XTensor * padding,
+//                        LOSS_FUNCTION_NAME lossName)
+//{
+//    if(gold == NULL){
+//        if(dedy->dataType == X_FLOAT)
+//            _SetDataFixedFloat(dedy, 1.0F);
+//        else if(dedy->dataType == X_DOUBLE)
+//            _SetDataFixedDouble(dedy, 1.0);
+//        else if(dedy->dataType == X_INT)
+//            _SetDataFixedInt(dedy, 1);
+//        else{
+//            ShowNTErrors("TODO");
+//        }
+//        return;
+//    }
+//
+//    //_LossBackward(dedy, gold, y, lossName);
+//    if(lossName == CROSSENTROPY)
+//        _CrossEntropyBackward(dedy, y, gold, NULL, padding);
+//
+//}
 
 }

@@ -23,6 +23,7 @@
 #include "Loss.h"
 #include "Loss.cuh"
 #include "../core/getandset/SetData.h"
+#include "../core/shape/IsSameShaped.h"
 
 namespace nts{ // namespace nts(NiuTrans.Tensor)
 
@@ -48,19 +49,18 @@ DTYPE _LossCompute(XTensor * gold, XTensor * output, LOSS_FUNCTION_NAME LFName,
     DTYPE error = 0.0F;
     if (output->devID < 0) {
         CheckNTErrors((gLen >= 0 && gLen <= output->unitNum), "Illegal input length!");
-        CheckNTErrors((XTensor::IsSameShaped(gold, output)), "The input tensors must be of the same size!");
-        CheckNTErrors((gold->dimSizeRDI[0] == 1 && output->dimSizeRDI[0] == 1), "TODO!");
+        CheckNTErrors((_IsSameShaped(gold, output)), "The input tensors must be of the same size!");
+        CheckNTErrors((gold->dimSize[gold->order - 1] == 1 && output->dimSize[output->order - 1] == 1), "TODO!");
         CheckNTErrors((gold->order > leadDim && leadDim >= 0), "Illegal leading dimension!");
         CheckNTErrors((gold->dataType == DEFAULT_DTYPE && output->dataType == DEFAULT_DTYPE), "TODO!");
 
-        int leadDimRDI = output->order - leadDim - 1;
-        int dimensionSize = output->dimSizeRDI[leadDimRDI];
+        int dimensionSize = output->dimSize[leadDim];
         int stride = 1;
         int blockSize = 1;
         int blockNum = 1;
 
-        for(int i = 0; i < leadDimRDI; i++)
-            stride *= output->dimSizeRDI[i];
+        for(int i = leadDim + 1; i < output->order; i++)
+            stride *= output->dimSize[i];
         blockSize = stride * dimensionSize;
         blockNum = output->unitNum / blockSize;
 
@@ -205,19 +205,18 @@ DTYPE _LossComputeForLogScale(XTensor * gold, XTensor * output,
                              int leadDim, int gBeg, int gLen, int oBeg)
 {
     CheckNTErrors(gLen >= 0 && gLen <= output->unitNum, "Illegal input length!");
-    CheckNTErrors(XTensor::IsSameShaped(gold, output), "The input tensors must be of the same size!");
-    CheckNTErrors(gold->dimSizeRDI[0] == 1 && output->dimSizeRDI[0] == 1, "TODO!");
+    CheckNTErrors(_IsSameShaped(gold, output), "The input tensors must be of the same size!");
+    CheckNTErrors(gold->dimSize[gold->order - 1] == 1 && output->dimSize[output->order - 1] == 1, "TODO!");
     CheckNTErrors(gold->order > leadDim && leadDim >= 0, "Illegal leading dimension!");
     CheckNTErrors(gold->dataType == DEFAULT_DTYPE && output->dataType == DEFAULT_DTYPE, "TODO!");
 
-    int leadDimRDI = output->order - leadDim - 1;
-    int dimensionSize = output->dimSizeRDI[leadDimRDI];
+    int dimensionSize = output->dimSize[leadDim];
     int stride = 1;
     int blockSize = 1;
     int blockNum = 1;
 
-    for(int i = 0; i < leadDimRDI; i++)
-        stride *= output->dimSizeRDI[i];
+    for(int i = leadDim + 1; i < output->order; i++)
+        stride *= output->dimSize[i];
     blockSize = stride * dimensionSize;
     blockNum = output->unitNum / blockSize;
 
@@ -401,28 +400,27 @@ void _LossBackward(XTensor * dedy, XTensor * t, XTensor * y,
     
     if (y->devID < 0) {
         CheckNTErrors(tLen <= y->unitNum, "Illegal input length!");
-        CheckNTErrors(XTensor::IsSameShaped(t, y)&& XTensor::IsSameShaped(dedy, y),
+        CheckNTErrors(_IsSameShaped(t, y)&& _IsSameShaped(dedy, y),
                      "The input tensors must be of the same size!");
         CheckNTErrors((dedy->devID == t->devID) && (dedy->devID == y->devID),
                      "Tensor must be on the same device!");
         CheckNTErrors(t->order > leadDim, "Illegal leading dimension!");
         CheckNTErrors(t->dataType == DEFAULT_DTYPE && y->dataType == DEFAULT_DTYPE, "TODO!");
 
-        int leadDimRDI = leadDim >= 0 ? y->order - leadDim - 1 : -1;
-        if(leadDimRDI < 0){
-            leadDimRDI = y->order - 1;
+        if (leadDim < 0) {
+            leadDim = 0;
             tBeg = 0;
             yBeg = 0;
-            tLen = y->dimSizeRDI[leadDimRDI];
+            tLen = y->dimSize[leadDim];
         }
 
-        int dimensionSize = y->dimSizeRDI[leadDimRDI];
+        int dimensionSize = y->dimSize[leadDim];
         int stride = 1;
         int blockSize = 1;
         int blockNum = 1;
 
-        for(int i = 0; i < leadDimRDI; i++)
-            stride *= y->dimSizeRDI[i];
+        for(int i = leadDim + 1; i < y->order; i++)
+            stride *= y->dimSize[i];
         blockSize = stride * dimensionSize;
         blockNum = y->unitNum / blockSize;
 

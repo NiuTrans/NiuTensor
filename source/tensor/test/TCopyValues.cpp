@@ -20,6 +20,7 @@
 */
 
 #include "../XUtility.h"
+#include "../core/utilities/CheckData.h"
 #include "TCopyValues.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
@@ -44,8 +45,8 @@ bool TestCopyValues1()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s = NewTensor(sOrder, sDimSize);
-    XTensor * t = NewTensor(sOrder, sDimSize);
+    XTensor * s = NewTensorV2(sOrder, sDimSize);
+    XTensor * t = NewTensorV2(sOrder, sDimSize);
     XTensor tUser;
 
     /* initialize variables */
@@ -57,15 +58,15 @@ bool TestCopyValues1()
     tUser = CopyValues(*s);
 
     /* check results */
-    cpuTest = t->CheckData(sData, sUnitNum) && tUser.CheckData(sData, sUnitNum);
+    cpuTest = _CheckData(t, sData, sUnitNum) && _CheckData(&tUser, sData, sUnitNum);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensors */
-    XTensor * sGPU = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * tGPU = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
     XTensor tUserGPU;
 
     /* initialize variables */
@@ -77,7 +78,7 @@ bool TestCopyValues1()
     tUserGPU = CopyValues(*sGPU);
 
     /* check results */
-    gpuTest = tGPU->CheckData(sData, sUnitNum) && tUser.CheckData(sData, sUnitNum);
+    gpuTest = _CheckData(tGPU, sData, sUnitNum) && _CheckData(&tUser, sData, sUnitNum);
 
     /* destroy variables */
     delete s;

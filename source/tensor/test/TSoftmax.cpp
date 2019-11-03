@@ -21,6 +21,7 @@
 
 #include "../XTensor.h"
 #include "../XUtility.h"
+#include "../core/utilities/CheckData.h"
 #include "TSoftmax.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
@@ -50,8 +51,8 @@ bool TestSoftmax1()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * x = NewTensor(order, dimSize);
-    XTensor * y = NewTensor(order, dimSize);
+    XTensor * x = NewTensorV2(order, dimSize);
+    XTensor * y = NewTensorV2(order, dimSize);
     XTensor yUser;
 
     /* initialize variables */
@@ -63,15 +64,15 @@ bool TestSoftmax1()
     yUser = Softmax(*x, 1);
     
     /* check result */
-	cpuTest = y->CheckData(answer, unitNum, 1e-4F) && yUser.CheckData(answer, unitNum, 1e-4F);
+    cpuTest = _CheckData(y, answer, unitNum, 1e-4F) && _CheckData(&yUser, answer, unitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensors */
-    XTensor * xGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * yGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * xGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * yGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
     XTensor yUserGPU;
 
     /* initialize variables */
@@ -83,7 +84,7 @@ bool TestSoftmax1()
     yUserGPU = Softmax(*xGPU, 1);
     
     /* check result */
-	gpuTest = yGPU->CheckData(answer, unitNum, 1e-4F) && yUserGPU.CheckData(answer, unitNum, 1e-4F);
+    gpuTest = _CheckData(yGPU, answer, unitNum, 1e-4F) && _CheckData(&yUserGPU, answer, unitNum, 1e-4F);
 
     /* destroy variables */
     delete x;
@@ -129,11 +130,11 @@ bool TestSoftmax2()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * x = NewTensor(order, dimSize);
-    XTensor * y = NewTensor(order, dimSize);
-    XTensor * g = NewTensor(order, dimSize);
-    XTensor * dedy = NewTensor(order, dimSize);
-    XTensor * dedx = NewTensor(order, dimSize);
+    XTensor * x = NewTensorV2(order, dimSize);
+    XTensor * y = NewTensorV2(order, dimSize);
+    XTensor * g = NewTensorV2(order, dimSize);
+    XTensor * dedy = NewTensorV2(order, dimSize);
+    XTensor * dedx = NewTensorV2(order, dimSize);
 
     /* initialize variables */
     x->SetData(xData, unitNum);
@@ -149,19 +150,19 @@ bool TestSoftmax2()
     _SoftmaxBackward(g, y, x, dedy, dedx, NULL, 1, CROSSENTROPY);
     
     /* check result */
-    cpuTest = y->CheckData(yAnswer, unitNum, 1e-4F)
-              && dedx->CheckData(dedxAnswer, unitNum, 1e-4F);
+    cpuTest = _CheckData(y, yAnswer, unitNum, 1e-4F)
+              && _CheckData(dedx, dedxAnswer, unitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
         /* create tensors */
-    XTensor * xGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * yGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * gGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * dedyGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * dedxGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * xGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * yGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * gGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * dedyGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * dedxGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
 
     /* initialize variables */
     xGPU->SetData(xData, unitNum);
@@ -177,8 +178,8 @@ bool TestSoftmax2()
     _SoftmaxBackward(gGPU, yGPU, xGPU, dedyGPU, dedxGPU, NULL, 1, CROSSENTROPY);
     
     /* check result */
-    gpuTest = yGPU->CheckData(yAnswer, unitNum, 1e-4F)
-              && dedxGPU->CheckData(dedxAnswer, unitNum, 1e-4F);
+    gpuTest = _CheckData(yGPU, yAnswer, unitNum, 1e-4F)
+              && _CheckData(dedxGPU, dedxAnswer, unitNum, 1e-4F);
 
     /* destroy variables */
     delete x;

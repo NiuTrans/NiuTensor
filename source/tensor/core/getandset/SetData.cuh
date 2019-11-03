@@ -37,6 +37,14 @@ void _CudaSetDataFixedFloat(XTensor * tensor, float p);
 /* generate data items with a fixed value p (in double) */
 void _CudaSetDataFixedDouble(XTensor * tensor, double p);
 
+/* generate data items with a fixed value p (in float) only 
+   if the condition entry is non-zero */
+void _CudaSetDataFixedCondFloat(XTensor * tensor, XTensor * condition, float p);
+
+/* generate data items with a fixed value p (in int) only 
+   if the condition entry is non-zero */
+void _CudaSetDataFixedCondInt(XTensor * tensor, XTensor * condition, int p);
+
 /* set data items along with a given dimension (and keep the remaining items unchanged) */
 void _CudaSetDataDim(XTensor * tensor, int beg, int len, int dim, DTYPE p);
 

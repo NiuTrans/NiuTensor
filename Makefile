@@ -9,11 +9,11 @@ LIB_DIR = $(ROOT)/lib
 EXE_DIR = $(ROOT)/bin
 
 # whether to generate dll
-dll = 1
+dll = 0
 
 # 0 - use CPU 
 # 1 - use GPU
-USE_CUDA = 0
+USE_CUDA = 1
 # modify this path if neccessary
 CUDA_ROOT = /usr/local/cuda-9.0
 CUDA_LIB_DIR = $(CUDA_ROOT)/lib64
@@ -71,7 +71,7 @@ ifeq ($(USE_MKL), 1)
 	                 $(MKL_LIB_DIR)/libmkl_core.a \
 					 $(MKL_LIB_DIR)/libmkl_intel_thread.a \
 					 $(INTEL_ROOT)/lib/intel64/libiomp5.a                                              
-    #DYNAMIC_DEPLIB += -liomp5 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core
+    DYNAMIC_DEPLIB += -liomp5 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core
 endif
 ifeq ($(USE_OPENBLAS), 1)
     STATIC_DEPLIB += $(OPENBLAS_LIB_DIR)/libopenblas.a
@@ -114,7 +114,7 @@ NIUTRANS_DLL := $(LIB_DIR)/lib$(NIUTRANS_EXE).so
 NIUTRANS_EXE := $(EXE_DIR)/$(NIUTRANS_EXE)
 
 # specify the compiling arguments here
-CFLAGS = -msse4.2 -w -march=native -Wno-enum-compare -Wno-sign-compare -Wno-reorder -Wno-format
+CFLAGS = -std=c++11 -msse4.2 -w -march=native -Wno-enum-compare -Wno-sign-compare -Wno-reorder -Wno-format
 
 # gtx 1080 arch=compute_61,code=sm_61
 # k80 arch=compute_37,code=sm_37
@@ -128,7 +128,7 @@ CUDA_FLAG = -arch=sm_30 \
 			-gencode=arch=compute_62,code=sm_62 \
 			-gencode=arch=compute_70,code=sm_70 \
 			-gencode=arch=compute_70,code=compute_70 \
-			-maxrregcount=0  --machine 64 -DUSE_CUDA --use_fast_math 
+			-maxrregcount=0  --machine 64 -DUSE_CUDA --use_fast_math -std=c++11
 
 CFLAGS += -O3 -flto -DNDEBUG -rdynamic -fkeep-inline-functions
 

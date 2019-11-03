@@ -20,6 +20,7 @@
 */
 
 #include "../XList.h"
+#include "../core/utilities/CheckData.h"
 #include "TConcatenateSolely.h"
 
 namespace nts { // namespace nt(NiuTrans.Tensor)
@@ -30,8 +31,8 @@ In this case, 2 * (2, 1) -> (2, 2), dim=1.
 */
 bool TestConcatenateSolely1()
 {
-	/* create list */
-    XList * sList = new XList();
+    /* create list */
+    TensorList * sList = new TensorList();
 
     /* a source tensor of size (2, 1) */
     int sOrder1 = 2;
@@ -74,53 +75,53 @@ bool TestConcatenateSolely1()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s1 = NewTensor(sOrder1, sDimSize1);
-    XTensor * s2 = NewTensor(sOrder2, sDimSize2);
-    XTensor * t = NewTensor(tOrder, tDimSize);
+    XTensor * s1 = NewTensorV2(sOrder1, sDimSize1);
+    XTensor * s2 = NewTensorV2(sOrder2, sDimSize2);
+    XTensor * t = NewTensorV2(tOrder, tDimSize);
 
     /* initialize variables */
     s1->SetData(sData1, sUnitNum1);
     s2->SetData(sData2, sUnitNum2);
     t->SetZeroAll();
 
-	/* add tensors to list */
+    /* add tensors to list */
     sList->Add(s1);
     sList->Add(s2);
 
-	/* call ConcatenateSolely function */
+    /* call ConcatenateSolely function */
     _ConcatenateSolely(sList, t, 1);
 
     /* check results */
-    cpuTest = t->CheckData(answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum);
 
 #ifdef USE_CUDA
-	/* GPU test */
-	bool gpuTest = true;
+    /* GPU test */
+    bool gpuTest = true;
 
-	/* create tensor */
-	XTensor * sGPU1 = NewTensor(sOrder1, sDimSize1, X_FLOAT, 1.0F, 0);
-	XTensor * sGPU2 = NewTensor(sOrder2, sDimSize2, X_FLOAT, 1.0F, 0);
-	XTensor * tGPU = NewTensor(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    /* create tensor */
+    XTensor * sGPU1 = NewTensorV2(sOrder1, sDimSize1, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU2 = NewTensorV2(sOrder2, sDimSize2, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
 
-	/* Initialize variables */
-	sGPU1->SetData(sData1, sUnitNum1);
-	sGPU2->SetData(sData2, sUnitNum2);
-	tGPU->SetZeroAll();
+    /* Initialize variables */
+    sGPU1->SetData(sData1, sUnitNum1);
+    sGPU2->SetData(sData2, sUnitNum2);
+    tGPU->SetZeroAll();
     
-	/* clear list */
-	sList->Clear();
+    /* clear list */
+    sList->Clear();
 
-	/* add tensors to list*/
-	sList->Add(sGPU1);
-	sList->Add(sGPU2);
+    /* add tensors to list*/
+    sList->Add(sGPU1);
+    sList->Add(sGPU2);
 
-	/* call ConcatenateSolely function */
-	_ConcatenateSolely(sList, tGPU, 1);
+    /* call ConcatenateSolely function */
+    _ConcatenateSolely(sList, tGPU, 1);
 
-	/* check results */
-	gpuTest = tGPU->CheckData(answer, tUnitNum);
+    /* check results */
+    gpuTest = _CheckData(tGPU, answer, tUnitNum);
 
-	/* destroy variables */
+    /* destroy variables */
     delete sList;
     delete s1;
     delete s2;
@@ -132,7 +133,7 @@ bool TestConcatenateSolely1()
     delete[] sDimSize2;
     delete[] tDimSize;
 
-	return cpuTest && gpuTest;
+    return cpuTest && gpuTest;
 #else
     /* destroy variables */
     delete sList;
@@ -143,7 +144,7 @@ bool TestConcatenateSolely1()
     delete[] sDimSize2;
     delete[] tDimSize;
 
-	return cpuTest;
+    return cpuTest;
 #endif // USE_CUDA
     }
 
@@ -153,8 +154,8 @@ In this case, 2 * (2, 1) -> (4, 1), dim=0.
 */
 bool TestConcatenateSolely2()
 {
-	/* create list */
-    XList * sList = new XList();
+    /* create list */
+    TensorList * sList = new TensorList();
 
     /* a source tensor of size (2, 1) */
     int sOrder1 = 2;
@@ -199,16 +200,16 @@ bool TestConcatenateSolely2()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s1 = NewTensor(sOrder1, sDimSize1);
-    XTensor * s2 = NewTensor(sOrder2, sDimSize2);
-    XTensor * t = NewTensor(tOrder, tDimSize);
+    XTensor * s1 = NewTensorV2(sOrder1, sDimSize1);
+    XTensor * s2 = NewTensorV2(sOrder2, sDimSize2);
+    XTensor * t = NewTensorV2(tOrder, tDimSize);
 
     /* initialize variables */
     s1->SetData(sData1, sUnitNum1);
     s2->SetData(sData2, sUnitNum2);
     t->SetZeroAll();
 
-	/* add tensors to list */
+    /* add tensors to list */
     sList->Add(s1);
     sList->Add(s2);
 
@@ -216,36 +217,36 @@ bool TestConcatenateSolely2()
     _ConcatenateSolely(sList, t, 0);
 
     /* check results */
-    cpuTest = t->CheckData(answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum);
 
 #ifdef USE_CUDA
-	/* GPU test */
-	bool gpuTest = true;
+    /* GPU test */
+    bool gpuTest = true;
 
-	/* create tensor */
-	XTensor * sGPU1 = NewTensor(sOrder1, sDimSize1, X_FLOAT, 1.0F, 0);
-	XTensor * sGPU2 = NewTensor(sOrder2, sDimSize2, X_FLOAT, 1.0F, 0);
-	XTensor * tGPU = NewTensor(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    /* create tensor */
+    XTensor * sGPU1 = NewTensorV2(sOrder1, sDimSize1, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU2 = NewTensorV2(sOrder2, sDimSize2, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
 
-	/* Initialize variables */
-	sGPU1->SetData(sData1, sUnitNum1);
-	sGPU2->SetData(sData2, sUnitNum2);
-	tGPU->SetZeroAll();
+    /* Initialize variables */
+    sGPU1->SetData(sData1, sUnitNum1);
+    sGPU2->SetData(sData2, sUnitNum2);
+    tGPU->SetZeroAll();
     
-	/* clear list */
-	sList->Clear();
+    /* clear list */
+    sList->Clear();
 
-	/* add tensors to list*/
-	sList->Add(sGPU1);
-	sList->Add(sGPU2);
+    /* add tensors to list*/
+    sList->Add(sGPU1);
+    sList->Add(sGPU2);
 
-	/* call concatenatesolely function */
-	_ConcatenateSolely(sList, tGPU, 0);
+    /* call concatenatesolely function */
+    _ConcatenateSolely(sList, tGPU, 0);
 
-	/* check results */
-	gpuTest = tGPU->CheckData(answer, tUnitNum);
+    /* check results */
+    gpuTest = _CheckData(tGPU, answer, tUnitNum);
 
-	/* destroy variables */
+    /* destroy variables */
     delete sList;
     delete s1;
     delete s2;
@@ -257,7 +258,7 @@ bool TestConcatenateSolely2()
     delete[] sDimSize2;
     delete[] tDimSize;
 
-	return cpuTest && gpuTest;
+    return cpuTest && gpuTest;
 #else
     /* destroy variables */
     delete sList;
@@ -268,7 +269,7 @@ bool TestConcatenateSolely2()
     delete[] sDimSize2;
     delete[] tDimSize;
 
-	return cpuTest;
+    return cpuTest;
 #endif // USE_CUDA
 }
 
@@ -278,8 +279,8 @@ In this case, (2, 1) + (2, 2) -> (2, 3), dim=1.
 */
 bool TestConcatenateSolely3()
 {
-	/* create list */
-    XList * sList = new XList();
+    /* create list */
+    TensorList * sList = new TensorList();
 
     /* a source tensor of size (2, 1) */
     int sOrder1 = 2;
@@ -322,53 +323,53 @@ bool TestConcatenateSolely3()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s1 = NewTensor(sOrder1, sDimSize1);
-    XTensor * s2 = NewTensor(sOrder2, sDimSize2);
-    XTensor * t = NewTensor(tOrder, tDimSize);
+    XTensor * s1 = NewTensorV2(sOrder1, sDimSize1);
+    XTensor * s2 = NewTensorV2(sOrder2, sDimSize2);
+    XTensor * t = NewTensorV2(tOrder, tDimSize);
 
     /* initialize variables */
     s1->SetData(sData1, sUnitNum1);
     s2->SetData(sData2, sUnitNum2);
     t->SetZeroAll();
 
-	/* add tensors to list */
+    /* add tensors to list */
     sList->Add(s1);
     sList->Add(s2);
 
-	/* call ConcatenateSolely function */
+    /* call ConcatenateSolely function */
     _ConcatenateSolely(sList, t, 1);
 
     /* check results */
-    cpuTest = t->CheckData(answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum);
 
 #ifdef USE_CUDA
-	/* GPU test */
-	bool gpuTest = true;
+    /* GPU test */
+    bool gpuTest = true;
 
-	/* create tensor */
-	XTensor * sGPU1 = NewTensor(sOrder1, sDimSize1, X_FLOAT, 1.0F, 0);
-	XTensor * sGPU2 = NewTensor(sOrder2, sDimSize2, X_FLOAT, 1.0F, 0);
-	XTensor * tGPU = NewTensor(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    /* create tensor */
+    XTensor * sGPU1 = NewTensorV2(sOrder1, sDimSize1, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU2 = NewTensorV2(sOrder2, sDimSize2, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
 
-	/* Initialize variables */
-	sGPU1->SetData(sData1, sUnitNum1);
-	sGPU2->SetData(sData2, sUnitNum2);
-	tGPU->SetZeroAll();
+    /* Initialize variables */
+    sGPU1->SetData(sData1, sUnitNum1);
+    sGPU2->SetData(sData2, sUnitNum2);
+    tGPU->SetZeroAll();
     
-	/* clear list */
-	sList->Clear();
+    /* clear list */
+    sList->Clear();
 
-	/* add tensors to list*/
-	sList->Add(sGPU1);
-	sList->Add(sGPU2);
+    /* add tensors to list*/
+    sList->Add(sGPU1);
+    sList->Add(sGPU2);
 
-	/* call ConcatenateSolely function */
-	_ConcatenateSolely(sList, tGPU, 1);
+    /* call ConcatenateSolely function */
+    _ConcatenateSolely(sList, tGPU, 1);
 
-	/* check results */
-	gpuTest = tGPU->CheckData(answer, tUnitNum);
+    /* check results */
+    gpuTest = _CheckData(tGPU, answer, tUnitNum);
 
-	/* destroy variables */
+    /* destroy variables */
     delete sList;
     delete s1;
     delete s2;
@@ -380,7 +381,7 @@ bool TestConcatenateSolely3()
     delete[] sDimSize2;
     delete[] tDimSize;
 
-	return cpuTest && gpuTest;
+    return cpuTest && gpuTest;
 #else
     /* destroy variables */
     delete sList;
@@ -391,7 +392,7 @@ bool TestConcatenateSolely3()
     delete[] sDimSize2;
     delete[] tDimSize;
 
-	return cpuTest;
+    return cpuTest;
 #endif // USE_CUDA
 }
 

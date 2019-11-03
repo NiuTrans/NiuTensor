@@ -32,7 +32,6 @@ namespace transformer
 T2TLN::T2TLN()
 {
     devID = -1;
-    mem = NULL;
     d = 0;
 }
 
@@ -46,18 +45,16 @@ initialize the model
 >> argc - number of arguments
 >> argv - list of pointers to the arguments
 >> myDevID - device id
->> myMem - the memory pool
 */
-void T2TLN::InitModel(int argc, char ** argv, int myDevID, XMem * myMem)
+void T2TLN::InitModel(int argc, char ** argv, int myDevID)
 {
     devID = myDevID;
-    mem = myMem;
 
     d = 0;
     LoadParamInt(argc, argv, "d", &d, DEFAULT_EMBEDDING_SIZE);
 
-    InitTensor1D(&w, d, X_FLOAT, devID, mem);
-    InitTensor1D(&b, d, X_FLOAT, devID, mem);
+    InitTensor1D(&w, d, X_FLOAT, devID);
+    InitTensor1D(&b, d, X_FLOAT, devID);
 
     w.SetDataRand(1.0F, 1.0F);
     b.SetZeroAll();

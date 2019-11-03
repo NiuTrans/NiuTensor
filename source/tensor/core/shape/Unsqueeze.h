@@ -35,6 +35,8 @@ void _Unsqueeze(const XTensor * a, XTensor * b, int dim, int dSize);
    make a new tensor to keep the result and return it */
 XTensor Unsqueeze(const XTensor &a, int dim, int dSize);
 
+void Unsqueeze(const XTensor &a, XTensor &b, int dim, int dSize);
+
 } // namespace nts(NiuTrans.Tensor)
 
 #endif // __UNSQUEEZE_H__

@@ -300,9 +300,12 @@ void XLink::MakeLink(const XTensor * t1, const XTensor * t2, XTensor * h, int id
     if(h == NULL)
         return;
     
-    XList list(2);
-    list.Add(t1);
-    list.Add(t2);
+    if (!t1->enableGrad)
+        return;
+
+    TensorList list(2);
+    list.Add((XTensor*)t1);
+    list.Add((XTensor*)t2);
 
     MakeLink(&list, h, id);
 }
@@ -320,10 +323,13 @@ void XLink::MakeLink(const XTensor * t1, const XTensor * t2, const XTensor * t3,
     if (h == NULL)
         return;
 
-    XList list(3);
-    list.Add(t1);
-    list.Add(t2);
-    list.Add(t3);
+    if (!t1->enableGrad || !t2->enableGrad)
+        return;
+    
+    TensorList list(3);
+    list.Add((XTensor*)t1);
+    list.Add((XTensor*)t2);
+    list.Add((XTensor*)t3);
 
     MakeLink(&list, h, id);
 }
@@ -334,7 +340,7 @@ create a hyper edge with a list of tensors and a output tensor
 >> h - head tensor
 >> id - id of the edge type
 */
-void XLink::MakeLink(const XList * list, XTensor * h, int id)
+void XLink::MakeLink(const TensorList * list, XTensor * h, int id)
 {
     /* forward */
     XLink &income = h->income;
@@ -368,8 +374,11 @@ create a hyper edge with a input tensors and a list of output tensors
 >> list - a list of output tensors
 >> id - id of the edge type
 */
-void XLink::MakeLink(XTensor * t, XList * list, int id)
+void XLink::MakeLink(XTensor * t, TensorList * list, int id)
 {
+    if (!t->enableGrad)
+        return;
+
     /* forward */
     for(int i = 0; i < list->count; i++){
         XTensor * h = (XTensor*)list->GetItem(i);
@@ -530,6 +539,88 @@ void XLink::Replace(const XTensor * oldOne, XTensor * newOne)
     }
 }
 
+
+/*
+copy a node with another, i.e., we add the links to the new node
+>> src - the node to be copied
+>> tgt - the new node
+*/
+void XLink::Copy(const XTensor * reference, XTensor * target)
+{
+    if (reference == NULL || target == NULL)
+        return;
+
+    XLink &newIncome = target->income;
+    XLink &newOutgo = target->outgo;
+
+    XLink::ClearOutgoing(target);
+    XLink::ClearIncoming(target);
+
+    /* incoming nodes */
+    if (reference->income.typeID != 0) {
+        if (newIncome.tailNum < reference->income.tailNum) {
+            delete[] newIncome.tails;
+            newIncome.tails = new XTensor*[reference->income.tailNum];
+        }
+
+        newIncome.SetType(reference->income.typeID);
+        newIncome.head = target;
+        newIncome.tailNum = reference->income.tailNum;
+        memcpy(newIncome.tails, reference->income.tails, sizeof(XTensor*) * newIncome.tailNum);
+
+        int paraArraySize = reference->income.paramNum * reference->income.paramSize;
+        newIncome.params = new char[paraArraySize];
+        memcpy(newIncome.params, reference->income.params, paraArraySize);
+        newIncome.paramNum = reference->income.paramNum;
+
+        /* update the link to each child node */
+        for (int i = 0; i < newIncome.tailNum; i++) {
+            XTensor * child = newIncome.tails[i];
+            XLink &childOutgo = child->outgo;
+            bool hit = false;
+            for (int j = 0; j < childOutgo.tailNum; j++) {
+                if (childOutgo.tails[j] == reference) {
+                    //childOutgo.tails[j] = target;
+                    childOutgo.AddTail(target);
+                    hit = true;
+                    break;
+                }
+            }
+
+            if (childOutgo.tailNum > 0) {
+                CheckNTErrors(hit, "No proper node found in child.outgo edge!");
+            }
+        }
+    }
+
+    if (newOutgo.tailNum < reference->outgo.tailNum) {
+        delete[] newOutgo.tails;
+        newOutgo.tails = new XTensor*[reference->outgo.tailNum];
+    }
+
+    /* outgoing nodes */
+    newOutgo.head = target;
+    newOutgo.tailNum = reference->outgo.tailNum;
+    memcpy(newOutgo.tails, reference->outgo.tails, sizeof(XTensor*) * newOutgo.tailNum);
+
+    /* update the link to each parent node */
+    for (int i = 0; i < newOutgo.tailNum; i++) {
+        XTensor * parent = newOutgo.tails[i];
+        XLink &parentIncome = parent->income;
+        bool hit = false;
+        for (int j = 0; j < parentIncome.tailNum; j++) {
+            if (parentIncome.tails[j] == reference) {
+                //parentIncome.tails[j] = target;
+                parentIncome.AddTail(target);
+                hit = true;
+            }
+        }
+
+        if (parentIncome.tailNum > 0) {
+            CheckNTErrors(hit, "No proper node found in parent.income edge!");
+        }
+    }
+}
 /* 
 copy incoming edges of a given node
 >> reference - the node we copy from
@@ -542,7 +633,7 @@ void XLink::CopyIncoming(const XTensor * reference, XTensor * target)
     ClearIncoming(target);
 
     int tailNum = reference->income.tailNum;
-    XList tails(tailNum);
+    TensorList tails(tailNum);
     for(int i = 0; i < tailNum; i++){
         XTensor * tail = (XTensor*)reference->income.tails[i];
         tails.Add(tail);
@@ -655,6 +746,29 @@ void XLink::ShowNode(FILE * file, XTensor * node)
 
     fprintf(stderr, "\n");
 }
+
+/* 
+search for a node in a top-down manner by its name 
+>> top - the top most node
+<< return - the node we found
+*/
+XTensor * XLink::SearchNode(XTensor * top, const char * name)
+{
+    if(!strcmp(top->name, name))
+        return top;
+
+    XLink &incoming = top->income;
+
+    for(int i = 0; i < incoming.tailNum; i++){
+        XTensor * child = incoming.tails[i];
+        XTensor * hit = SearchNode(child, name);
+        if(hit != NULL)
+            return hit;
+    }
+
+    return NULL;
+}
+
     
 } // namespace nts(NiuTrans.Tensor)
 

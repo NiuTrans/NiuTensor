@@ -28,6 +28,7 @@
 
 #include "arithmetic/Div.h"
 #include "arithmetic/DivDim.h"
+#include "arithmetic/Mask.h"
 #include "arithmetic/MatrixMul.h"
 #include "arithmetic/MatrixMul2D.h"
 #include "arithmetic/MatrixMul2DMultiTheading.h"
@@ -35,13 +36,9 @@
 #include "arithmetic/MatrixMulBatched.h"
 #include "arithmetic/Multiply.h"
 #include "arithmetic/MultiplyDim.h"
-#include "arithmetic/Negate.h"
-#include "arithmetic/Sign.h"
 #include "arithmetic/Sub.h"
 #include "arithmetic/SubDim.h"
 #include "arithmetic/Sum.h"
-#include "arithmetic/SumByColumnTV.h"
-#include "arithmetic/SumByColumnVT.h"
 #include "arithmetic/SumDim.h"
 #include "arithmetic/XTensorBLAS.h"
 #include "arithmetic/MulAndShift.h"
@@ -51,10 +48,10 @@
 #include "getandset/Select.h"
 #include "getandset/SetData.h"
 
+#include "math/Binary.h"
 #include "math/Clip.h"
 #include "math/Compare.h"
 #include "math/Normalize.h"
-#include "math/Power.h"
 #include "math/ScaleAndShift.h"
 #include "math/Unary.h"
 
@@ -86,13 +83,17 @@
 #include "shape/Permute.h"
 #include "shape/Split.h"
 #include "shape/Squeeze.h"
+#include "shape/Stack.h"
 #include "shape/Transpose.h"
 #include "shape/Unsqueeze.h"
+#include "shape/IsSameShaped.h"
 
 #include "sort/Sort.h"
 #include "sort/TopK.h"
 
 #include "utilities/XMatrixSegment.h"
 #include "utilities/FlushToMem.h"
+#include "utilities/CheckData.h"
+#include "utilities/SetAscendingOrder.h"
 
 #endif // __CHEADER_H__

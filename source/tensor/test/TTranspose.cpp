@@ -19,8 +19,9 @@
 * $Created by: Xu Chen (email: hello_master1954@163.com) 2018-07-12
 */
 
-#include "TTranspose.h"
+#include "../core/utilities/CheckData.h"
 #include "../core/movement/CopyValues.h"
+#include "TTranspose.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
@@ -30,88 +31,88 @@ tensor transposition of dimensions i and j
 */
 bool TestTranspose1()
 {
-	/* a tensor of size (3, 2) */
-	int aOrder = 2;
-	int * aDimSize = new int[aOrder];
-	aDimSize[0] = 3;
-	aDimSize[1] = 2;
+    /* a tensor of size (3, 2) */
+    int aOrder = 2;
+    int * aDimSize = new int[aOrder];
+    aDimSize[0] = 3;
+    aDimSize[1] = 2;
 
-	int aUnitNum = 1;
-	for (int i = 0; i < aOrder; i++)
-		aUnitNum *= aDimSize[i];
+    int aUnitNum = 1;
+    for (int i = 0; i < aOrder; i++)
+        aUnitNum *= aDimSize[i];
 
     /* a tensor of size (2, 3) */
-	int bOrder = 2;
-	int * bDimSize = new int[bOrder];
-	bDimSize[0] = 2;
-	bDimSize[1] = 3;
+    int bOrder = 2;
+    int * bDimSize = new int[bOrder];
+    bDimSize[0] = 2;
+    bDimSize[1] = 3;
 
-	int bUnitNum = 1;
-	for (int i = 0; i < bOrder; i++)
-		bUnitNum *= bDimSize[i];
+    int bUnitNum = 1;
+    for (int i = 0; i < bOrder; i++)
+        bUnitNum *= bDimSize[i];
 
-	DTYPE aData[3][2] = { {1.0F, 2.0F}, 
-	                      {3.0F, 4.0F},
-	                      {5.0F, 6.0F} };
-	DTYPE answer[2][3] = { {1.0F, 3.0F, 5.0F},
-	                       {2.0F, 4.0F, 6.0F} };
+    DTYPE aData[3][2] = { {1.0F, 2.0F}, 
+                          {3.0F, 4.0F},
+                          {5.0F, 6.0F} };
+    DTYPE answer[2][3] = { {1.0F, 3.0F, 5.0F},
+                           {2.0F, 4.0F, 6.0F} };
 
-	/* CPU test */
-	bool cpuTest = true;
+    /* CPU test */
+    bool cpuTest = true;
 
-	/* create tensors */
-	XTensor * a = NewTensor(aOrder, aDimSize);
-	XTensor * b = NewTensor(bOrder, bDimSize);
+    /* create tensors */
+    XTensor * a = NewTensorV2(aOrder, aDimSize);
+    XTensor * b = NewTensorV2(bOrder, bDimSize);
     XTensor bUser;
 
-	/* initialize variables */
-	a->SetData(aData, aUnitNum);
+    /* initialize variables */
+    a->SetData(aData, aUnitNum);
 
-	/* call Transpose function */
+    /* call Transpose function */
     _Transpose(a, b, 0, 1);
     bUser = Transpose(*a, 0, 1);
 
-	/* check results */
-	cpuTest = b->CheckData(answer, aUnitNum, 1e-4F)
-              && bUser.CheckData(answer, aUnitNum, 1e-4F);
+    /* check results */
+    cpuTest = _CheckData(b, answer, aUnitNum, 1e-4F)
+              && _CheckData(&bUser, answer, aUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
-	/* GPU test */
-	bool gpuTest = true;
+    /* GPU test */
+    bool gpuTest = true;
 
-	/* create tensor */
-	XTensor * aGPU = NewTensor(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
-	XTensor * bGPU = NewTensor(bOrder, bDimSize, X_FLOAT, 1.0F, 0);
+    /* create tensor */
+    XTensor * aGPU = NewTensorV2(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * bGPU = NewTensorV2(bOrder, bDimSize, X_FLOAT, 1.0F, 0);
     XTensor bUserGPU;
 
-	/* Initialize variables */
-	aGPU->SetData(aData, aUnitNum);
+    /* Initialize variables */
+    aGPU->SetData(aData, aUnitNum);
 
-	/* call Transpose function */
+    /* call Transpose function */
     _Transpose(aGPU, bGPU, 0, 1);
     bUserGPU = Transpose(*aGPU, 0, 1);
 
-	/* check results */
-	gpuTest = bGPU->CheckData(answer, aUnitNum, 1e-4F)
-              && bUserGPU.CheckData(answer, aUnitNum, 1e-4F);
+    /* check results */
+    gpuTest = _CheckData(bGPU, answer, aUnitNum, 1e-4F)
+              && _CheckData(&bUserGPU, answer, aUnitNum, 1e-4F);
 
-	/* destroy variables */
-	delete a;
-	delete b;
+    /* destroy variables */
+    delete a;
+    delete b;
     delete aGPU;
     delete bGPU;
-	delete[] aDimSize;
-	delete[] bDimSize;
+    delete[] aDimSize;
+    delete[] bDimSize;
 
-	return cpuTest && gpuTest;
+    return cpuTest && gpuTest;
 #else
-	/* destroy variables */
-	delete a;
-	delete b;
-	delete[] aDimSize;
-	delete[] bDimSize;
+    /* destroy variables */
+    delete a;
+    delete b;
+    delete[] aDimSize;
+    delete[] bDimSize;
 
-	return cpuTest;
+    return cpuTest;
 #endif // USE_CUDA
 }
 
@@ -121,103 +122,103 @@ tensor transposition of dimensions i and j
 */
 bool TestTranspose2()
 {
-	/* a tensor of size (4, 3, 2) */
-	int aOrder = 3;
-	int * aDimSize = new int[aOrder];
-	aDimSize[0] = 4;
-	aDimSize[1] = 3;
-	aDimSize[2] = 2;
+    /* a tensor of size (4, 3, 2) */
+    int aOrder = 3;
+    int * aDimSize = new int[aOrder];
+    aDimSize[0] = 4;
+    aDimSize[1] = 3;
+    aDimSize[2] = 2;
 
-	int aUnitNum = 1;
-	for (int i = 0; i < aOrder; i++)
-		aUnitNum *= aDimSize[i];
+    int aUnitNum = 1;
+    for (int i = 0; i < aOrder; i++)
+        aUnitNum *= aDimSize[i];
 
     /* a tensor of size (2, 3, 4) */
-	int bOrder = 3;
-	int * bDimSize = new int[bOrder];
-	bDimSize[0] = 2;
-	bDimSize[1] = 3;
-	bDimSize[2] = 4;
+    int bOrder = 3;
+    int * bDimSize = new int[bOrder];
+    bDimSize[0] = 2;
+    bDimSize[1] = 3;
+    bDimSize[2] = 4;
 
-	int bUnitNum = 1;
-	for (int i = 0; i < bOrder; i++)
-		bUnitNum *= bDimSize[i];
+    int bUnitNum = 1;
+    for (int i = 0; i < bOrder; i++)
+        bUnitNum *= bDimSize[i];
 
-	DTYPE aData[4][3][2] = { { {1.0F, 2.0F}, 
-	                           {3.0F, 4.0F},
-	                           {5.0F, 6.0F} },
+    DTYPE aData[4][3][2] = { { {1.0F, 2.0F}, 
+                               {3.0F, 4.0F},
+                               {5.0F, 6.0F} },
                              { {2.0F, 4.0F}, 
-	                           {4.0F, 7.0F},
-	                           {6.0F, 8.0F} },
+                               {4.0F, 7.0F},
+                               {6.0F, 8.0F} },
                              { {1.0F, 2.0F}, 
-	                           {3.0F, 4.0F},
-	                           {5.0F, 6.0F} },
+                               {3.0F, 4.0F},
+                               {5.0F, 6.0F} },
                              { {2.0F, 4.0F}, 
-	                           {4.0F, 7.0F},
-	                           {6.0F, 8.0F} },};
-	DTYPE answer[2][3][4] = { { {1.0F, 2.0F, 1.0F, 2.0F},
+                               {4.0F, 7.0F},
+                               {6.0F, 8.0F} },};
+    DTYPE answer[2][3][4] = { { {1.0F, 2.0F, 1.0F, 2.0F},
                                 {2.0F, 4.0F, 2.0F, 4.0F},
                                 {3.0F, 4.0F, 3.0F, 4.0F} },
                               { {4.0F, 7.0F, 4.0F, 7.0F},
                                 {5.0F, 6.0F, 5.0F, 6.0F},
                                 {6.0F, 8.0F, 6.0F, 8.0F} } };
 
-	/* CPU test */
-	bool cpuTest = true;
+    /* CPU test */
+    bool cpuTest = true;
 
-	/* create tensors */
-	XTensor * a = NewTensor(aOrder, aDimSize);
-	XTensor * b = NewTensor(bOrder, bDimSize);
+    /* create tensors */
+    XTensor * a = NewTensorV2(aOrder, aDimSize);
+    XTensor * b = NewTensorV2(bOrder, bDimSize);
     XTensor bUser;
 
-	/* initialize variables */
-	a->SetData(aData, aUnitNum);
+    /* initialize variables */
+    a->SetData(aData, aUnitNum);
 
-	/* call Transpose function */
+    /* call Transpose function */
     _Transpose(a, b, 0, 2);
     bUser = Transpose(*a, 0, 2);
 
-	/* check results */
-	cpuTest = b->CheckData(answer, aUnitNum, 1e-4F)
-              && bUser.CheckData(answer, aUnitNum, 1e-4F);
+    /* check results */
+    cpuTest = _CheckData(b, answer, aUnitNum, 1e-4F)
+              && _CheckData(&bUser, answer, aUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
-	/* GPU test */
-	bool gpuTest = true;
+    /* GPU test */
+    bool gpuTest = true;
 
-	/* create tensor */
-	XTensor * aGPU = NewTensor(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
-	XTensor * bGPU = NewTensor(bOrder, bDimSize, X_FLOAT, 1.0F, 0);
+    /* create tensor */
+    XTensor * aGPU = NewTensorV2(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * bGPU = NewTensorV2(bOrder, bDimSize, X_FLOAT, 1.0F, 0);
     XTensor bUserGPU;
 
-	/* Initialize variables */
-	aGPU->SetData(aData, aUnitNum);
+    /* Initialize variables */
+    aGPU->SetData(aData, aUnitNum);
 
-	/* call Transpose function */
+    /* call Transpose function */
     _Transpose(aGPU, bGPU, 0, 2);
     bUserGPU = Transpose(*aGPU, 0, 2);
 
-	/* check results */
-	gpuTest = bGPU->CheckData(answer, aUnitNum, 1e-4F)
-              && bUserGPU.CheckData(answer, aUnitNum, 1e-4F);
+    /* check results */
+    gpuTest = _CheckData(bGPU, answer, aUnitNum, 1e-4F)
+              && _CheckData(&bUserGPU, answer, aUnitNum, 1e-4F);
 
-	/* destroy variables */
-	delete a;
-	delete b;
+    /* destroy variables */
+    delete a;
+    delete b;
     delete aGPU;
     delete bGPU;
-	delete[] aDimSize;
-	delete[] bDimSize;
+    delete[] aDimSize;
+    delete[] bDimSize;
 
-	return cpuTest && gpuTest;
+    return cpuTest && gpuTest;
 #else
-	/* destroy variables */
-	delete a;
-	delete b;
-	delete[] aDimSize;
-	delete[] bDimSize;
+    /* destroy variables */
+    delete a;
+    delete b;
+    delete[] aDimSize;
+    delete[] bDimSize;
 
-	return cpuTest;
+    return cpuTest;
 #endif // USE_CUDA
 }
 
@@ -229,43 +230,43 @@ TODO!!
 /* test for Transpose Function */
 bool TestTranspose()
 {
-	XPRINT(0, stdout, "[TEST TRANSPOSE] tensor transposition with specified dimensions \n");
-	bool returnFlag = true, caseFlag = true;
+    XPRINT(0, stdout, "[TEST TRANSPOSE] tensor transposition with specified dimensions \n");
+    bool returnFlag = true, caseFlag = true;
 
-	/* case 1 test */
-	caseFlag = TestTranspose1();
+    /* case 1 test */
+    caseFlag = TestTranspose1();
 
-	if (!caseFlag) {
-		returnFlag = false;
-		XPRINT(0, stdout, ">> case 1 failed!\n");
-	}
-	else
-		XPRINT(0, stdout, ">> case 1 passed!\n");
+    if (!caseFlag) {
+        returnFlag = false;
+        XPRINT(0, stdout, ">> case 1 failed!\n");
+    }
+    else
+        XPRINT(0, stdout, ">> case 1 passed!\n");
     
-	/* case 2 test */
-	caseFlag = TestTranspose2();
+    /* case 2 test */
+    caseFlag = TestTranspose2();
 
-	if (!caseFlag) {
-		returnFlag = false;
-		XPRINT(0, stdout, ">> case 2 failed!\n");
-	}
-	else
-		XPRINT(0, stdout, ">> case 2 passed!\n");
+    if (!caseFlag) {
+        returnFlag = false;
+        XPRINT(0, stdout, ">> case 2 failed!\n");
+    }
+    else
+        XPRINT(0, stdout, ">> case 2 passed!\n");
 
-	/* other cases test */
-	/*
-	TODO!!
-	*/
+    /* other cases test */
+    /*
+    TODO!!
+    */
 
-	if (returnFlag) {
-		XPRINT(0, stdout, ">> All Passed!\n");
-	}
-	else
-		XPRINT(0, stdout, ">> Failed!\n");
+    if (returnFlag) {
+        XPRINT(0, stdout, ">> All Passed!\n");
+    }
+    else
+        XPRINT(0, stdout, ">> Failed!\n");
 
-	XPRINT(0, stdout, "\n");
+    XPRINT(0, stdout, "\n");
 
-	return returnFlag;
+    return returnFlag;
 }
 
 } // namespace nts(NiuTrans.Tensor)

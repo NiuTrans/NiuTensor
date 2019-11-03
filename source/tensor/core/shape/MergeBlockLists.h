@@ -27,7 +27,7 @@
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
 /* merge data by blocks */
-void _MergeBlockLists(const XList * sourceList, int * blockSizes, int blockNum, void * target, XMem * myMem);
+void _MergeBlockLists(const StrList* sourceList, int * blockSizes, int blockNum, void * target, XMem * myMem);
 
 } // namespace nts(NiuTrans.Tensor)
 

@@ -59,6 +59,8 @@ const char * GetOPName(int type)
             return "M_DIV";
         else if (type == MATH_DIVDIM)
             return "M_DIVDIM";
+        else if (type == MATH_MASK)
+            return "M_MASK";
         else if (type == MATH_MATRIXMUL)
             return "M_MATRIXMUL";
         else if (type == MATH_MATRIXMULBATCHED)
@@ -77,6 +79,12 @@ const char * GetOPName(int type)
             return "M_POWER";
         else if (type == MATH_SCALEANDSHIFT)
             return "M_SCALEANDSHIFT";
+        else if (type == MATH_SCALE)
+            return "M_SCALE";
+        else if (type == MATH_DESCALE)
+            return "M_DESCALE";
+        else if (type == MATH_SHIFT)
+            return "M_SHIFT";
         else if (type == MATH_MULANDSHIFT)
             return "M_OPERATION";
         else if (type == MATH_SIGN)
@@ -111,6 +119,8 @@ const char * GetOPName(int type)
             return "M_COPYVALUES";
         else if (type == MOVEMENT_GATHER)
             return "M_GATHER";
+        else if (type == MOVEMENT_DROPOUTWITHINDEX)
+            return "M_DROPOUTWITHINDEX";
         else if (type == SHAPE_CONCATENATE)
             return "S_CONCATENATE";
         else if (type == SHAPE_MERGE)
@@ -125,6 +135,8 @@ const char * GetOPName(int type)
             return "S_SPLIT";
         else if (type == SHAPE_SPLIT_LIST)
             return "S_SPLIT_LIST";
+        else if (type == SHAPE_STACK)
+            return "S_SHAPE_STACK";
         else if (type == SHAPE_SQUEEZE)
             return "S_SQUEEZE";
         else if (type == SHAPE_TRANSPOSE)
@@ -151,6 +163,10 @@ const char * GetOPName(int type)
             return "F_SIGMOID";
         else if (type == FUNC_SOFTMAX)
             return "F_SOFTMAX";
+    }
+    else if ((type & LOSS_BASE) != 0) {
+        if (type == LOSS_CROSSENTROPY)
+            return "L_CROSSENTROPY";
     }
     
     return "NULL";

@@ -35,7 +35,7 @@ bool Test()
     wrong = !TestConcatenate() || wrong;
     wrong = !TestConcatenateSolely() || wrong;
     wrong = !TestCos() || wrong;
-    wrong = !TestConvertDataType() || wrong;
+    //wrong = !TestConvertDataType() || wrong;
     wrong = !TestCopyIndexed() || wrong;
     wrong = !TestCopyValues() || wrong;
     wrong = !TestDiv() || wrong;
@@ -68,19 +68,18 @@ bool Test()
     wrong = !TestSin() || wrong;
     wrong = !TestSort() || wrong;
     wrong = !TestSplit() || wrong;
+    wrong = !TestSpread() || wrong;
     wrong = !TestSub() || wrong;
     wrong = !TestSum() || wrong;
-    wrong = !TestSumByColumnTV() || wrong;
-    wrong = !TestSumByColumnVT() || wrong;
     wrong = !TestSumDim() || wrong;
     wrong = !TestTan() || wrong;
     wrong = !TestTranspose() || wrong;
-    //wrong = !TestTopK() || wrong;
+    wrong = !TestTopK() || wrong;
     wrong = !TestUnsqueeze() || wrong;
     wrong = !TestXMem() || wrong;
     
     wrong = !TestCrossEntropy() || wrong;
-	wrong = !TestDropout() || wrong;
+    wrong = !TestDropout() || wrong;
     wrong = !TestHardTanH() || wrong;
     wrong = !TestIdentity() || wrong;
     wrong = !TestLogSoftmax() || wrong;

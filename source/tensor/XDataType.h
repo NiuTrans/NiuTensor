@@ -49,15 +49,6 @@ extern TENSOR_DATA_TYPE GetDataType(const char * typeName);
 /* data conversion (for lower precision computation) */
 unsigned short FloatToFloat16(float f);
 float Float16ToFloat(unsigned short h);
-void ConvertDataType(int devID, 
-                     void * s, TENSOR_DATA_TYPE typeS, 
-                     void * t, TENSOR_DATA_TYPE typeT, int size);
-
-#ifdef USE_CUDA
-void CudaConvertDataType(int devID, 
-                         void * s, TENSOR_DATA_TYPE typeS, 
-                         void * t, TENSOR_DATA_TYPE typeT, int size);
-#endif
 
 } /* end of the nts (NiuTrans.Tensor) namespace */
 

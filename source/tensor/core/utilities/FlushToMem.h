@@ -27,7 +27,7 @@
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
 /* flush a list of XTensor to GPU memory */
-void CPUToGPUFlush(XList * mList, int devID, XMem * GPUMem);
+void CPUToGPUFlush(TensorList * mList, int devID, XMem * GPUMem);
 
 /* copy the data from GPU memory to CPU memory */
 void GPUToCPUFlush(XTensor * tensor);

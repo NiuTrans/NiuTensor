@@ -31,14 +31,14 @@
 namespace transformer
 {
 
+/* a transformer model that keeps parameters of the encoder,
+   the decoder and the output layer (softmax). Also, it creates
+   the network used in transformer. */
 class T2TModel
 {
 public:
     /* device id */
     int devID;
-
-    /* memory pool */
-    XMem * mem;
 
     /* the encoder */
     AttEncoder * encoder;
@@ -78,10 +78,24 @@ public:
     void MakeLM(XTensor &input, XTensor &output, XTensor &padding, bool isTraining);
 
     /* make the network for machine translation (with the output softmax layer) */
-    void MakeMT(XTensor &inputEnc, XTensor &inputDec, XTensor &output, XTensor &paddingEnc, XTensor &paddingDec, bool isTraining);
+    void MakeMT(XTensor &inputEnc, XTensor &inputDec, XTensor &output, 
+                XTensor &paddingEnc, XTensor &paddingDec, bool isTraining);
+
+    /* make the mask for training MT models */
+    void MakeMTMask(XTensor &inputEnc, XTensor &inputDec, 
+                    XTensor &paddingEnc, XTensor &paddingDec, 
+                    XTensor &maskEnc, XTensor &maskDec, XTensor &maskEncDec);
+    
+    /* make the mask of the encoder */
+    void MakeMTMaskEnc(XTensor &inputEnc, XTensor &paddingEnc, XTensor &maskEnc);
+    
+    /* make the mask of the decoder */
+    void MakeMTMaskDec(XTensor &inputEnc, XTensor &inputDec,
+                       XTensor &paddingEnc, XTensor &paddingDec,
+                       XTensor &maskDec, XTensor &maskEncDec);
 
     /* get parameter matrics */
-    void GetParams(XList &list);
+    void GetParams(TensorList &list);
 
     /* dump the parameters */
     void Dump(const char * fn);

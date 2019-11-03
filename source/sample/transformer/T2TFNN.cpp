@@ -47,12 +47,10 @@ initialize the model
 >> argc - number of arguments
 >> argv - list of pointers to the arguments
 >> myDevID - device id
->> myMem - the memory pool
 */
-void T2TFNN::InitModel(int argc, char ** argv, int myDevID, XMem * myMem)
+void T2TFNN::InitModel(int argc, char ** argv, int myDevID)
 {
     devID = myDevID;
-    mem = myMem;
     
     float minmax = 0;
 
@@ -62,19 +60,17 @@ void T2TFNN::InitModel(int argc, char ** argv, int myDevID, XMem * myMem)
     LoadParamFloat(argc, argv, "fnnminmax", &minmax, 0.1F);
     LoadParamFloat(argc, argv, "dropoutfnn", &dropoutP, 0);
 
-    InitTensor2D(&w1, inSize, hSize, X_FLOAT, devID, mem);
-    InitTensor1D(&b1, hSize, X_FLOAT, devID, mem);
+    InitTensor2D(&w1, inSize, hSize, X_FLOAT, devID);
+    InitTensor1D(&b1, hSize, X_FLOAT, devID);
 
-    InitTensor2D(&w2, hSize, outSize, X_FLOAT, devID, mem);
-    InitTensor1D(&b2, outSize, X_FLOAT, devID, mem);
+    InitTensor2D(&w2, hSize, outSize, X_FLOAT, devID);
+    InitTensor1D(&b2, outSize, X_FLOAT, devID);
 
     float scale = 1.0F;
-    float finfout1 = (float)sqrt(6.0F * scale/(inSize + hSize));
-    float finfout2 = (float)sqrt(6.0F * scale/(hSize + outSize));
-    
-    w1.SetDataRand(-finfout1, finfout1);
+    _SetDataFanInOut(&w1, scale);
+    _SetDataFanInOut(&w2, scale);
+
     b1.SetZeroAll();
-    w2.SetDataRand(-finfout2, finfout2);
     b2.SetZeroAll();
 }
 

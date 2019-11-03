@@ -27,10 +27,11 @@
 namespace nts{ // namespace nts(NiuTrans.Tensor)
 
 /* convert onehot tensor to index tensor (cuda version) */
-void _CudaOnehotToIndex(XTensor * onehot, XTensor * index, int size);
+void _CudaOnehotToIndex(const XTensor * onehot, XTensor * index, int size);
 
 /* convert index tensor to onehot tensor (cuda version) */
-void _CudaIndexToOnehot(XTensor * index, XTensor * onehot, int size, float confidence, float lowconfidence);
+void _CudaIndexToOnehot(const XTensor * index, XTensor * onehot, 
+                        int size, float confidence, float lowconfidence);
 
 } // namespace nts(NiuTrans.Tensor)
 

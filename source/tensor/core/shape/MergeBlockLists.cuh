@@ -33,7 +33,7 @@ __global__
 void KernelCopyBlockLists(DTYPE ** sourceList, int * sourceBlockSizes, int sourceBlockNum, DTYPE ** targetList);
 
 /* merge data by blocks (cuda version) */
-void _CudaMergeBlockLists(const XList * sourceList, int * blockSizes, int blockNum, void * target, XMem * myMem);
+void _CudaMergeBlockLists(const StrList* sourceList, int * blockSizes, int blockNum, void * target, XMem * myMem);
 
 #endif // USE_CUDA
 

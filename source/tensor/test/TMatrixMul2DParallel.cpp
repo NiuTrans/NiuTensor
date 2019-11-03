@@ -19,6 +19,7 @@
 * $Created by: Xu Chen (email: hello_master1954@163.com) 2018-07-06
 */
 
+#include "../core/utilities/CheckData.h"
 #include "TMatrixMul2DParallel.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
@@ -72,9 +73,9 @@ bool TestMatrixMul2DParallel1()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s1 = NewTensor(sOrder1, sDimSize1);
-    XTensor * s2 = NewTensor(sOrder2, sDimSize2);
-    XTensor * t = NewTensor(tOrder, tDimSize);
+    XTensor * s1 = NewTensorV2(sOrder1, sDimSize1);
+    XTensor * s2 = NewTensorV2(sOrder2, sDimSize2);
+    XTensor * t = NewTensorV2(tOrder, tDimSize);
 
     /* initialize variables */
     s1->SetData(sData1, sUnitNum1);
@@ -85,7 +86,7 @@ bool TestMatrixMul2DParallel1()
     _MatrixMul2DParallel(s1, X_NOTRANS, s2, X_NOTRANS, t);
 
     /* check results */
-    cpuTest = t->CheckData(answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum);
 
     /* destroy variables */
     delete s1;
@@ -148,9 +149,9 @@ bool TestMatrixMul2DParallel2()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s1 = NewTensor(sOrder1, sDimSize1);
-    XTensor * s2 = NewTensor(sOrder2, sDimSize2);
-    XTensor * t = NewTensor(tOrder, tDimSize);
+    XTensor * s1 = NewTensorV2(sOrder1, sDimSize1);
+    XTensor * s2 = NewTensorV2(sOrder2, sDimSize2);
+    XTensor * t = NewTensorV2(tOrder, tDimSize);
 
     /* initialize variables */
     s1->SetData(sData1, sUnitNum1);
@@ -161,7 +162,7 @@ bool TestMatrixMul2DParallel2()
     _MatrixMul2DParallel(s1, X_TRANS, s2, X_NOTRANS, t);
 
     /* check results */
-    cpuTest = t->CheckData(answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum);
 
     /* destroy variables */
     delete s1;

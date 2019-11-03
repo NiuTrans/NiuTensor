@@ -30,7 +30,7 @@ namespace nts { // namespace nts(NiuTrans.Tensor)
 
 /* 
 tensor summation of a tensor and a row vector
-c = a + b * \beta
+c = a + b * \beta 
 where a is a tensor and b is a row vector
 >> a - pointer to the data array of a
 >> b - pointer to the data array of b

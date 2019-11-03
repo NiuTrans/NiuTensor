@@ -22,14 +22,14 @@
 #include "Loss.h"
 #include "Loss.cuh"
 #include "../XDevice.h"
-#include "../core/math/Power.h"
 #include "../core/math/ScaleAndShift.h"
 #include "../core/math/Unary.h"
-#include "../core/arithmetic/Negate.h"
+#include "../core/math/Binary.h"
 #include "../core/arithmetic/Sum.h"
 #include "../core/arithmetic/Multiply.h"
 #include "../core/reduce/ReduceSum.h"
 #include "../core/movement/CopyValues.h"
+#include "../core/shape/IsSameShaped.h"
 
 namespace nts{ // namespace nts(NiuTrans.Tensor)
 
@@ -55,8 +55,8 @@ DTYPE _CudaLossCompute(XTensor * gold, XTensor * y, LOSS_FUNCTION_NAME LFName,
                       bool isLogOutput, int leadDim, int gBeg, int gLen, int yBeg)
 {
     CheckNTErrors((gLen >= 0 && gLen <= y->unitNum), "Illegal input length!");
-    CheckNTErrors((XTensor::IsSameShaped(gold, y)), "The input tensors must be of the same size!");
-    CheckNTErrors((gold->dimSizeRDI[0] == 1 && y->dimSizeRDI[0] == 1), "TODO!");
+    CheckNTErrors((_IsSameShaped(gold, y)), "The input tensors must be of the same size!");
+    CheckNTErrors((gold->dimSize[gold->order - 1] == 1 && y->dimSize[y->order - 1] == 1), "TODO!");
     CheckNTErrors((gold->order > leadDim && leadDim >= 0), "Illegal leading dimension!");
     CheckNTErrors((gold->dataType == DEFAULT_DTYPE && y->dataType == DEFAULT_DTYPE), "TODO!");
     CheckNTErrors((gold->devID == y->devID), "Tensors must be on the same device!");
@@ -74,7 +74,7 @@ DTYPE _CudaLossCompute(XTensor * gold, XTensor * y, LOSS_FUNCTION_NAME LFName,
     where gold_i is the gold standard and output_i is the model prediction
     */
     if(LFName == SQUAREDERROR){
-        XTensor * diff = NewTensor(gold->order, gold->dimSize, gold->dataType, gold->denseRatio, gold->devID, gold->mem);
+        XTensor * diff = NewTensorV2(gold->order, gold->dimSize, gold->dataType, gold->denseRatio, gold->devID, gold->mem);
         _Sum(gold, y, diff, -1.0F);
         _PowerMe(diff, 2.0F);
         _ScaleAndShiftMe(diff, 0.5F, 0.0F);
@@ -84,14 +84,14 @@ DTYPE _CudaLossCompute(XTensor * gold, XTensor * y, LOSS_FUNCTION_NAME LFName,
             int diffOrder = diff->order - 1;
             int * diffDimSize = new int[diffOrder];
             memcpy(diffDimSize, diff->dimSize + 1, diffOrder * sizeof(int));
-            XTensor * diffNew = NewTensor(diffOrder, diffDimSize, X_FLOAT, 1.0F, diff->devID, diff->mem);
+            XTensor * diffNew = NewTensorV2(diffOrder, diffDimSize, X_FLOAT, 1.0F, diff->devID, diff->mem);
             int reducePlace = diff->dimSize[0] == 1 ? 1 : 0;
             _ReduceSum(diff, diffNew, reducePlace);
             if (diffNew->order == 1) {
                 diffNew->order = 2;
                 diffNew->dimSize[1] = diffNew->dimSize[0];
                 diffNew->dimSize[0] = 1;
-                diffNew->dimSizeRDI[1] = 1;
+                diffNew->dimSize[diffNew->order - 2] = 1;
             }
             delete diff;
             diff = diffNew;
@@ -107,7 +107,7 @@ DTYPE _CudaLossCompute(XTensor * gold, XTensor * y, LOSS_FUNCTION_NAME LFName,
     where gold and output are distributions 
     */
     if(LFName == CROSSENTROPY){
-        XTensor * diff = NewTensor(y->order, y->dimSize, y->dataType, y->denseRatio, y->devID, y->mem);
+        XTensor * diff = NewTensorV2(y->order, y->dimSize, y->dataType, y->denseRatio, y->devID, y->mem);
         _CopyValues(y, diff);
         _LogMe(diff);
         _Multiply(gold, diff, diff);
@@ -118,14 +118,14 @@ DTYPE _CudaLossCompute(XTensor * gold, XTensor * y, LOSS_FUNCTION_NAME LFName,
             int diffOrder = diff->order - 1;
             int * diffDimSize = new int[diffOrder];
             memcpy(diffDimSize, diff->dimSize + 1, diffOrder * sizeof(int));
-            XTensor * diffNew = NewTensor(diffOrder, diffDimSize, X_FLOAT, 1.0F, diff->devID, diff->mem);
+            XTensor * diffNew = NewTensorV2(diffOrder, diffDimSize, X_FLOAT, 1.0F, diff->devID, diff->mem);
             int reducePlace = diff->dimSize[0] == 1 ? 1 : 0;
             _ReduceSum(diff, diffNew, reducePlace);
             if (diffNew->order == 1) {
                 diffNew->order = 2;
                 diffNew->dimSize[1] = diffNew->dimSize[0];
                 diffNew->dimSize[0] = 1;
-                diffNew->dimSizeRDI[1] = 1;
+                diffNew->dimSize[diffNew->order - 2] = 1;
             }
             delete diff;
             diff = diffNew;
@@ -142,8 +142,8 @@ DTYPE _CudaLossCompute(XTensor * gold, XTensor * y, LOSS_FUNCTION_NAME LFName,
           e_i = 0 otherwise
     */
     if(LFName == ONEHOTERROR){
-        XTensor * diff = NewTensor(gold->order, gold->dimSize, gold->dataType, gold->denseRatio, gold->devID, gold->mem);
-        XTensor * yOnehot = NewTensor(y->order, y->dimSize, y->dataType, y->denseRatio, y->devID, y->mem);
+        XTensor * diff = NewTensorV2(gold->order, gold->dimSize, gold->dataType, gold->denseRatio, gold->devID, gold->mem);
+        XTensor * yOnehot = NewTensorV2(y->order, y->dimSize, y->dataType, y->denseRatio, y->devID, y->mem);
         _CopyValues(y, yOnehot);
         _Multiply(gold, y, yOnehot);
         _Sum(gold, yOnehot, diff, -1.0F);
@@ -155,14 +155,14 @@ DTYPE _CudaLossCompute(XTensor * gold, XTensor * y, LOSS_FUNCTION_NAME LFName,
             int diffOrder = diff->order - 1;
             int * diffDimSize = new int[diffOrder];
             memcpy(diffDimSize, diff->dimSize + 1, diffOrder * sizeof(int));
-            XTensor * diffNew = NewTensor(diffOrder, diffDimSize, X_FLOAT, 1.0F, diff->devID, diff->mem);
+            XTensor * diffNew = NewTensorV2(diffOrder, diffDimSize, X_FLOAT, 1.0F, diff->devID, diff->mem);
             int reducePlace = diff->dimSize[0] == 1 ? 1 : 0;
             _ReduceSum(diff, diffNew, reducePlace);
             if (diffNew->order == 1) {
                 diffNew->order = 2;
                 diffNew->dimSize[1] = diffNew->dimSize[0];
                 diffNew->dimSize[0] = 1;
-                diffNew->dimSizeRDI[1] = 1;
+                diffNew->dimSize[diffNew->order - 2] = 1;
             }
             delete diff;
             diff = diffNew;
@@ -332,7 +332,7 @@ void _CudaLossBackward(XTensor * dedy, XTensor * t, XTensor * y,
                       int leadDim, int tBeg, int tLen, int yBeg)
 {
     CheckNTErrors((tLen <= y->unitNum), "Illegal input length!");
-    CheckNTErrors((XTensor::IsSameShaped(t, y)&& XTensor::IsSameShaped(dedy, y)), 
+    CheckNTErrors((_IsSameShaped(t, y)&& _IsSameShaped(dedy, y)), 
                   "The input tensors must be of the same size!");
     CheckNTErrors(((dedy->devID == t->devID) && (dedy->devID == y->devID)), 
                   "Tensor must be on the same device!");
@@ -349,22 +349,21 @@ void _CudaLossBackward(XTensor * dedy, XTensor * t, XTensor * y,
                   "The vectors must be on the same GPU.");
     CheckNTErrors((tBeg == yBeg), "TODO!");
 
-    int leadDimRDI = leadDim >= 0 ? y->order - leadDim - 1 : -1;
-    if(leadDimRDI < 0){
-        leadDimRDI = y->order - 1;
+    if (leadDim < 0) {
+        leadDim = 0;
         tBeg = 0;
         yBeg = 0;
-        tLen = y->dimSizeRDI[leadDimRDI];
+        tLen = y->dimSize[leadDim];
     }
 
-    int dimensionSize = y->dimSizeRDI[leadDimRDI];
+    int dimensionSize = y->dimSize[leadDim];
     int stride = 1;
     int blockSize = 1;
     int blockNum = 1;
     int size = 1;
 
-    for(int i = 0; i < leadDimRDI; i++)
-        stride *= y->dimSizeRDI[i];
+    for(int i = leadDim + 1; i < y->order; i++)
+        stride *= y->dimSize[i];
     size = tLen * stride;
     blockSize = stride * dimensionSize;
     blockNum = y->unitNum / blockSize;

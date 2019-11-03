@@ -19,8 +19,8 @@
  * $Created by: Xu Chen (email: hello_master1954@163.com) 2018-09-27
  */
 
-#include "TReduceSumAll.h"
 #include <math.h>
+#include "TReduceSumAll.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
@@ -49,7 +49,7 @@ bool TestReduceSumAll1()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s = NewTensor(sOrder, sDimSize);
+    XTensor * s = NewTensorV2(sOrder, sDimSize);
 
     /* initialize variables */
     s->SetData(sData, sUnitNum);
@@ -65,7 +65,7 @@ bool TestReduceSumAll1()
     bool gpuTest = true;
 
     /* create tensors */
-    XTensor * sGPU = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
 
     /* initialize variables */
     sGPU->SetData(sData, sUnitNum);

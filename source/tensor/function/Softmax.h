@@ -16,8 +16,8 @@
  */
 
 /*
-* $Created by: XIAO Tong (email: xiaotong@mail.neu.edu.cn) 2018-04-27
-*/
+ * $Created by: XIAO Tong (email: xiaotong@mail.neu.edu.cn) 2018-04-27
+ */
 
 #ifndef __SOFTMAX_H__
 #define __SOFTMAX_H__
@@ -32,6 +32,8 @@ void _Softmax(const XTensor * x, XTensor * y, int leadDim);
 
 /* softmax y = e^x / \sum_{i} e^{x_i} (return an XTensor structure) */
 XTensor Softmax(const XTensor &x, int leadDim);
+
+void Softmax(const XTensor &x, XTensor &y, int leadDim);
 
 /* de/dx */
 void _SoftmaxBackward(XTensor * gold, XTensor * y, XTensor * x, 

@@ -30,6 +30,8 @@
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
+#ifdef USE_CUDA
+
 /* 
 set an integer data array with a fixed value p (in int) 
 >> d - pointer to the data array
@@ -146,6 +148,100 @@ void _CudaSetDataFixedDouble(XTensor * tensor, double p)
     ProtectCudaDev(tensor->devID, devIDBackup);
 
     KernelSetDataFixedDouble <<<blocks, threads >>>((double*)tensor->data, tensor->unitNum, p);
+
+    BacktoCudaDev(tensor->devID, devIDBackup);
+}
+
+/* 
+set a float data array with a fixed value p (in int) only 
+if the condition entry is non-zero 
+>> d - pointer to the data array
+>> c - pointer to the condition array
+>> size - size of the array
+>> p - the initial value
+*/
+__global__ 
+void KernelSetDataFixedCondFloat(float * d, float * c, int size, float p)
+{
+    int i = blockDim.x * blockIdx.x + threadIdx.x;
+
+    if (i < size && c[i] != 0)
+        d[i] = p;
+}
+
+/* 
+generate data items with a fixed value p (in float) only 
+if the condition entry is non-zero 
+>> tensor - the tensor for initialization
+>> condition - the condition tensor whose entry would be check to
+               set the corresponding entry in "tensor"
+>> p - the initial value   
+*/
+void _CudaSetDataFixedCondFloat(XTensor * tensor, XTensor * condition, float p)
+{
+    CheckNTErrors(tensor->dataType == X_FLOAT, "the tensor must be in X_FLOAT!");
+    CheckNTErrors(condition->unitSize == sizeof(float), "TODO!");
+
+    int gridSize[3];
+    int blockSize[3];
+
+    GDevs.GetCudaThread(tensor->devID, tensor->unitNum, gridSize, blockSize);
+
+    dim3 blocks(gridSize[0]);
+    dim3 threads(blockSize[0]);
+
+    int devIDBackup;
+    ProtectCudaDev(tensor->devID, devIDBackup);
+
+    KernelSetDataFixedCondFloat <<<blocks, threads >>>((float*)tensor->data, (float*)condition->data, 
+                                                               tensor->unitNum, p);
+
+    BacktoCudaDev(tensor->devID, devIDBackup);
+}
+
+/* 
+set a float data array with a fixed value p (in int) only 
+if the condition entry is non-zero 
+>> d - pointer to the data array
+>> c - pointer to the condition array
+>> size - size of the array
+>> p - the initial value
+*/
+__global__ 
+void KernelSetDataFixedCondInt(int * d, float * c, int size, int p)
+{
+    int i = blockDim.x * blockIdx.x + threadIdx.x;
+
+    if (i < size && c[i] != 0)
+        d[i] = p;
+}
+
+/* 
+generate data items with a fixed value p (in int) only 
+if the condition entry is non-zero 
+>> tensor - the tensor for initialization
+>> condition - the condition tensor whose entry would be check to
+               set the corresponding entry in "tensor"
+>> p - the initial value   
+*/
+void _CudaSetDataFixedCondInt(XTensor * tensor, XTensor * condition, int p)
+{
+    CheckNTErrors(tensor->dataType == X_FLOAT, "the tensor must be in X_FLOAT!");
+    CheckNTErrors(condition->unitSize == sizeof(float), "TODO!");
+
+    int gridSize[3];
+    int blockSize[3];
+
+    GDevs.GetCudaThread(tensor->devID, tensor->unitNum, gridSize, blockSize);
+
+    dim3 blocks(gridSize[0]);
+    dim3 threads(blockSize[0]);
+
+    int devIDBackup;
+    ProtectCudaDev(tensor->devID, devIDBackup);
+
+    KernelSetDataFixedCondInt <<<blocks, threads >>>((int*)tensor->data, (float*)condition->data, 
+                                                           tensor->unitNum, p);
 
     BacktoCudaDev(tensor->devID, devIDBackup);
 }
@@ -473,15 +569,17 @@ void _CudaSetDataRand(const XTensor * tensor, DTYPE lower, DTYPE upper)
     ProtectCudaDev(tensor->devID, devIDBackup);
     
     curandGenerator_t & gen = GDevs.GPUs[tensor->devID].gen;
-    curandGenerateUniform(gen , (float*)tensor->data , tensor->unitNum);
+    curandGenerateUniform(gen, (float*)tensor->data, tensor->unitNum);
     
     DTYPE variance = upper - lower;
 
     if(variance != 1.0F || lower != 0){
         if (tensor->dataType == X_FLOAT)
-            KernelSetDataRandFloat  <<<blocks, threads >>>((float*) tensor->data, tensor->unitNum, lower, variance);
+            KernelSetDataRandFloat  <<<blocks, threads >>>
+                                     ((float*) tensor->data, tensor->unitNum, lower, variance);
         else if (tensor->dataType == X_DOUBLE)
-            KernelSetDataRandDouble <<<blocks, threads >>>((double*)tensor->data, tensor->unitNum, lower, variance);
+            KernelSetDataRandDouble <<<blocks, threads >>>
+                                     ((double*)tensor->data, tensor->unitNum, lower, variance);
     }
 
     BacktoCudaDev(tensor->devID, devIDBackup);
@@ -644,4 +742,5 @@ void _CudaSetDataWithOffsetAndValue(XTensor * tensor, MTYPE * offsets, void * va
     BacktoCudaDev(tensor->devID, devIDBackup);
 }
 
+#endif // USE_CUDA
 } // namespace nts(NiuTrans.Tensor)

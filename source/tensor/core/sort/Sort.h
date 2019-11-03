@@ -35,6 +35,12 @@ keep the result in the input tensor a and return nothing
 */
 void _SortMe(XTensor * a, XTensor * index, int dim);
 
+/*
+sort the data along a given dimension (do it on site)
+keep the result in the input tensor a and return nothing
+*/
+void SortMe(XTensor & a, XTensor & index, int dim);
+
 /* 
 sort the data along a given dimension (return an XTensor structure)
 make a new tensor to keep the result and return it

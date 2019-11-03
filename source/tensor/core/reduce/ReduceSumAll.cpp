@@ -49,8 +49,8 @@ DTYPE _ReduceSumAll(const XTensor * source)
     int dims[2] = {1, source->unitNum};
     int one = 1;
 
-    XTensor * all = NewTensorBuf(2, dims, source->dataType, source->denseRatio, source->devID, source->mem);
-    XTensor * result = NewTensorBuf(1, &one, source->dataType, 1.0F, source->devID, source->mem);
+    XTensor * all = NewTensorBufV2(2, dims, source->dataType, source->denseRatio, source->devID, source->mem);
+    XTensor * result = NewTensorBufV2(1, &one, source->dataType, 1.0F, source->devID, source->mem);
     
     _CopyValues(source, all);
     _ReduceSum(all, result, 1);
@@ -62,7 +62,7 @@ DTYPE _ReduceSumAll(const XTensor * source)
     
     return r;
 
-    int order = source->order;
+    /*int order = source->order;
     DTYPE summation;
 
     XTensor * big = NewTensor(source);
@@ -74,7 +74,7 @@ DTYPE _ReduceSumAll(const XTensor * source)
         int leadingDim = big->order - 1;
         int * dimSize;
         dimSize = getDimSize(big, leadingDim);
-        XTensor * little = NewTensor(big->order - 1, dimSize, source->dataType, source->denseRatio, 
+        XTensor * little = NewTensorV2(big->order - 1, dimSize, source->dataType, source->denseRatio, 
                                      source->devID, source->mem);
         
         _ReduceSum(big, little, leadingDim);
@@ -90,7 +90,7 @@ DTYPE _ReduceSumAll(const XTensor * source)
     summation = big->Get1D(0);
     delete big;
 
-    return summation;
+    return summation;*/
 }
 
 /*

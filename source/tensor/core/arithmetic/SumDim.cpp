@@ -21,10 +21,12 @@
  * Add summation by broadcasting.
  */
 
+#include <math.h>
 #include "Sum.h"
 #include "SumDim.h"
 #include "SumDim.cuh"
 #include "../shape/Unsqueeze.h"
+#include "../shape/IsSameShaped.h"
 #include "../../XName.h"
 #include "../../XUtility.h"
 #include "../movement/CopyValues.h"
@@ -46,6 +48,8 @@ i.e., a is summed with b by broadcasting
 */
 void _SumDim(const XTensor * a, const XTensor * b, XTensor * c, int n, DTYPE beta)
 {
+    n = MODX(n, a->order);
+
     CheckNTErrors(a && b && c, "Empty tensor input!");
     CheckNTErrors(a->unitNum == c->unitNum, "Unmatched tensors in addition!");
     CheckNTErrors(a->dataType == b->dataType && a->dataType == c->dataType,
@@ -54,29 +58,17 @@ void _SumDim(const XTensor * a, const XTensor * b, XTensor * c, int n, DTYPE bet
     CheckNTErrors(!a->isSparse && !b->isSparse && !c->isSparse, "Dense tensors are required!");
     CheckNTErrors(a->dimSize[n] == b->unitNum, "Wrong tensor size!");
 
+    CheckDev(a->devID, b->devID);
+
     if(beta == 0){
         _CopyValues(a, c);
         return;
     }
 
-    if(XTensor::IsSameShaped(a, b)){
+    if(_IsSameShaped(a, b)){
         _Sum(a, b, c, beta);
         return;
     }
-
-    /*int dims[MAX_TENSOR_DIM_NUM];
-    for(int i = 0; i < a->order; i++)
-        dims[i] = 1;
-    dims[n] = a->GetDim(n);
-
-    XTensor * b2 = NewTensor(a->order, dims, b->dataType, b->denseRatio, b->devID, b->mem);
-    _CopyValues(b, b2);
-
-    _SumBroadcast(a, b2, c, beta);
-
-    DelTensor(b2);
-
-    return;*/
 
     if(a->devID >= 0 || b->devID >= 0 || c->devID >= 0){
 #ifdef USE_CUDA
@@ -169,16 +161,50 @@ XTensor SumDim(const XTensor &a, const XTensor &b, int n, DTYPE beta)
 {
     XTensor c(&a);
     c.SetTMPFlag();
+
+    n = MODX(n, a.order);
     
     /* call _SumDim function */
     _SumDim(&a, &b, &c, n, beta);
     
     /* tensor connections */
-    XLink::MakeLink(&a, &b, &c, MATH_SUMDIM);
-    XLink::AddParamToHeadInt(&c, n);
-    XLink::AddParamToHead(&c, beta);
+    if (a.enableGrad && b.enableGrad) {
+        XLink::MakeLink(&a, &b, &c, MATH_SUMDIM);
+        XLink::AddParamToHeadInt(&c, n);
+        XLink::AddParamToHead(&c, beta);
+    }
     
     return c;
+}
+
+/*
+tensor summation 
+
+c = a + b * \beta 
+where the size of b is equal to the n-th dimension of a, 
+i.e., a is summed with b by broadcasting
+
+>> a - a tensor
+>> b - another tensor whose size is equal to that of dimension n of a
+>> c - where we put a+b*\beta. we save it in a if c is NULL
+>> n - the dimension index
+>> beta - the scaling factor
+*/
+void SumDim(const XTensor &a, const XTensor &b, XTensor &c, int n, DTYPE beta)
+{
+    if (!c.isInit || !IsSameShaped(a, c)) {
+        InitTensorV2(&c, &a);
+    }
+
+    /* call _SumDim function */
+    _SumDim(&a, &b, &c, n, beta);
+
+    if (a.enableGrad && b.enableGrad) {
+        /* tensor connections */
+        XLink::MakeLink(&a, &b, &c, MATH_SUMDIM);
+        XLink::AddParamToHeadInt(&c, n);
+        XLink::AddParamToHead(&c, beta);
+    }
 }
 
 /* 
@@ -242,8 +268,8 @@ void _SumBroadcast(const XTensor * a, const XTensor * b, XTensor * c, DTYPE beta
             dimsS[0] = -dimsS[0];
             dimsT[0] = -dimsT[0];
             
-            XTensor * s = NewTensor(order - (j - i), dimsS, a->dataType, a->denseRatio, a->devID, a->mem);
-            XTensor * t = NewTensor(order - (j - i) + 1, dimsT, b->dataType, b->denseRatio, b->devID, b->mem);
+            XTensor * s = NewTensorV2(order - (j - i), dimsS, a->dataType, a->denseRatio, a->devID, a->mem);
+            XTensor * t = NewTensorV2(order - (j - i) + 1, dimsT, b->dataType, b->denseRatio, b->devID, b->mem);
             
             if(count == 0)
                 source = b->data;
@@ -316,10 +342,37 @@ XTensor SumBroadcast(const XTensor &a, const XTensor &b, DTYPE beta)
     _SumBroadcast(&a, &b, &c, beta);
     
     /* tensor connections */
-    XLink::MakeLink(&a, &b, &c, MATH_SUMBROADCAST);
-    XLink::AddParamToHead(&c, beta);
-    
+    if (a.enableGrad && b.enableGrad) {
+        XLink::MakeLink(&a, &b, &c, MATH_SUMBROADCAST);
+        XLink::AddParamToHead(&c, beta);
+    }
+
     return c;
+}
+
+/* 
+tensor broadcast summation c = a + b * \beta where some of dimensions of b can be of size 1
+c = a + b * \beta
+
+>> a - a tensor
+>> b - another tensor that would be broadcasted
+>> c - the resulting tensor
+>> beta - the scaling factor
+*/
+void SumBroadcast(const XTensor &a, const XTensor &b, XTensor &c, DTYPE beta)
+{
+    if (!c.isInit || !IsSameShaped(a, c)) {
+        InitTensorV2(&c, &a);
+    }
+
+    /* call _SumBroadcast function */
+    _SumBroadcast(&a, &b, &c, beta);
+
+    if (a.enableGrad && b.enableGrad) {
+        /* tensor connections */
+        XLink::MakeLink(&a, &b, &c, MATH_SUMBROADCAST);
+        XLink::AddParamToHead(&c, beta);
+    }
 }
     
 }

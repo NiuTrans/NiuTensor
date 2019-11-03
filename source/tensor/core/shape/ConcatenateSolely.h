@@ -27,7 +27,7 @@
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
 /* concatenate a list of tensors along a given dimension */
-void _ConcatenateSolely(const XList * smalls, XTensor * big, int dim);
+void _ConcatenateSolely(const TensorList * smalls, XTensor * big, int dim);
 
 } // namespace nts(NiuTrans.Tensor)
 

@@ -22,7 +22,9 @@
 #include "../../XTensor.h"
 #include "../../XName.h"
 #include "../../XUtility.h"
+#include "../../XBLAS.h"
 #include "../movement/CopyValues.h"
+#include "../shape/IsSameShaped.h"
 #include "Sum.h"
 #include "Sum.cuh"
 #include "SumDim.h"
@@ -44,6 +46,8 @@ void _Sum(const XTensor * a, const XTensor * b, XTensor * c, DTYPE beta)
                   "Unmatched tensors in addition!");
     CheckNTErrors(a->dataType == b->dataType && a->dataType == c->dataType,
                   "Unmatched tensors in addition!");
+
+    CheckDev(a->devID, b->devID);
 
     if(beta == 0){
         _CopyValues(a, c);
@@ -74,7 +78,7 @@ void _Sum(const XTensor * a, const XTensor * b, XTensor * c, DTYPE beta)
     else {
         if (!a->isSparse && !b->isSparse) {
             CheckNTErrors(!c->isSparse, "Illegal use of sparse tensor in addition!");
-    
+
             if (a->dataType == DEFAULT_DTYPE &&
                 b->dataType == DEFAULT_DTYPE &&
                 c->dataType == DEFAULT_DTYPE)
@@ -82,29 +86,57 @@ void _Sum(const XTensor * a, const XTensor * b, XTensor * c, DTYPE beta)
                 DTYPE * ap = (DTYPE*)a->data;
                 DTYPE * bp = (DTYPE*)b->data;
                 DTYPE * cp = (DTYPE*)c->data;
-    
-                /* unrolling */
-                int num = a->unitNum;
-                if (num % 4 == 0) {
-                    for (int i = 0; i < num; i += 4) {
-                        cp[i] = ap[i] + bp[i] * beta;
-                        cp[i + 1] = ap[i + 1] + bp[i + 1] * beta;
-                        cp[i + 2] = ap[i + 2] + bp[i + 2] * beta;
-                        cp[i + 3] = ap[i + 3] + bp[i + 3] * beta;
-                    }
+                /* when c != a, OpenBLAS needs to copy a to c first. This operation
+                 slow down the speed, so just use OpenBLAS when c == a */
+#if defined(USE_BLAS)
+                if( c == a){
+                    AXPY(a->unitNum,beta,bp,1,cp,1);
+                } else{
+                     int num = a->unitNum;
+                        if (num % 4 == 0) {
+                            for (int i = 0; i < num; i += 4) {
+                                cp[i] = ap[i] + bp[i] * beta;
+                                cp[i + 1] = ap[i + 1] + bp[i + 1] * beta;
+                                cp[i + 2] = ap[i + 2] + bp[i + 2] * beta;
+                                cp[i + 3] = ap[i + 3] + bp[i + 3] * beta;
+                            }
+                        }
+                        else if (num % 2 == 0) {
+                            for (int i = 0; i < num; i += 2) {
+                                cp[i] = ap[i] + bp[i] * beta;
+                                cp[i + 1] = ap[i + 1] + bp[i + 1] * beta;
+                            }
+                        }
+                        else {
+                            for (int i = 0; i < num; i++) {
+                                cp[i] = ap[i] + bp[i] * beta;
+                            }
+                        }
                 }
-                else if (num % 2 == 0) {
-                    for (int i = 0; i < num; i += 2) {
-                        cp[i] = ap[i] + bp[i] * beta;
-                        cp[i + 1] = ap[i + 1] + bp[i + 1] * beta;
+#else
+                    /* unrolling */
+                    int num = a->unitNum;
+                    if (num % 4 == 0) {
+                        for (int i = 0; i < num; i += 4) {
+                            cp[i] = ap[i] + bp[i] * beta;
+                            cp[i + 1] = ap[i + 1] + bp[i + 1] * beta;
+                            cp[i + 2] = ap[i + 2] + bp[i + 2] * beta;
+                            cp[i + 3] = ap[i + 3] + bp[i + 3] * beta;
+                        }
                     }
-                }
-                else {
-                    for (int i = 0; i < num; i++) {
-                        cp[i] = ap[i] + bp[i] * beta;
+                    else if (num % 2 == 0) {
+                        for (int i = 0; i < num; i += 2) {
+                            cp[i] = ap[i] + bp[i] * beta;
+                            cp[i + 1] = ap[i + 1] + bp[i + 1] * beta;
+                        }
                     }
+                    else {
+                        for (int i = 0; i < num; i++) {
+                            cp[i] = ap[i] + bp[i] * beta;
+                        }
+                    }
+#endif
                 }
-            }
             else {
                 // TODO!!
                 ShowNTErrors("TODO!");
@@ -130,6 +162,19 @@ void _SumMe(XTensor * a, const XTensor * b, DTYPE beta)
     _Sum(a, b, a, beta);
 }
 
+/*
+tensor summation a = a + b * \beta (do it on site)
+keep the result in the tensor a and return nothing
+
+>> a - a tensor
+>> b - another tensor
+>> beta - the scaling factor
+*/
+void SumMe(XTensor& a, const XTensor& b, DTYPE beta)
+{
+    _Sum(&a, &b, &a, beta);
+}
+
 /* 
 return a dimension if the sum is performed as SumDim (in more details in SumDim.h)
 >> a - a tensor
@@ -139,7 +184,7 @@ int GetSumDimIndex(const XTensor &a, const XTensor &b)
 {
     if(a.order < b.order)
         return -1;
-    if(XTensor::IsSameShaped(&a, &b))
+    if(IsSameShaped(a, b))
         return -1;
 
     int hitCount = 0;
@@ -180,23 +225,68 @@ XTensor Sum(const XTensor &a, const XTensor &b, DTYPE beta)
         _Sum(&a, &b, &c, beta);
     
         /* tensor connections */
-        XLink::MakeLink(&a, &b, &c, MATH_SUM);
-        XLink::AddParamToHead(&c, beta);
+        if (a.enableGrad && b.enableGrad) {
+            XLink::MakeLink(&a, &b, &c, MATH_SUM);
+            XLink::AddParamToHead(&c, beta);
+        }
     }
     else if(n >= 0 && n < a.order){
         /* call _SumDim function */
         _SumDim(&a, &b, &c, n, beta);
     
         /* tensor connections */
-        XLink::MakeLink(&a, &b, &c, MATH_SUMDIM);
-        XLink::AddParamToHeadInt(&c, n);
-        XLink::AddParamToHead(&c, beta);
+        if (a.enableGrad && b.enableGrad) {
+            XLink::MakeLink(&a, &b, &c, MATH_SUMDIM);
+            XLink::AddParamToHeadInt(&c, n);
+            XLink::AddParamToHead(&c, beta);
+        }
     }
     else{
         ShowNTErrors("Something is wrong!");
     }
     
     return c;
+}
+
+/*
+tensor summation c = a + b * \beta
+
+>> a - a tensor
+>> b - another tensor
+>> beta - the scaling factor
+*/
+void Sum(const XTensor &a, const XTensor &b, XTensor &c, DTYPE beta)
+{
+    if (!c.isInit || !IsSameShaped(a, c)) {
+        InitTensorV2(&c, &a);
+    }
+
+    int n = GetSumDimIndex(a, b);
+
+    if (n == -1) {
+        /* call _Sum function */
+        _Sum(&a, &b, &c, beta);
+		
+		/* tensor connections */
+        if (a.enableGrad && b.enableGrad) {    
+            XLink::MakeLink(&a, &b, &c, MATH_SUM);
+            XLink::AddParamToHead(&c, beta);
+        }
+    }
+    else if (n >= 0 && n < a.order) {
+        /* call _SumDim function */
+        _SumDim(&a, &b, &c, n, beta);
+    
+        /* tensor connections */
+        if (a.enableGrad && b.enableGrad) {
+            XLink::MakeLink(&a, &b, &c, MATH_SUMDIM);
+            XLink::AddParamToHeadInt(&c, n);
+            XLink::AddParamToHead(&c, beta);
+        }
+    }
+    else {
+        ShowNTErrors("Something is wrong!");
+    }
 }
 
 } // namespace nts(NiuTrans.Tensor)

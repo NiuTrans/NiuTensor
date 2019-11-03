@@ -28,6 +28,8 @@ using namespace nts;
 
 namespace transformer
 {
+    
+#define OUTPUT_NAME "output"
 
 /* output layer */
 class T2TOutput
@@ -35,9 +37,6 @@ class T2TOutput
 public:
     /* device id */
     int devID;
-
-    /* memory pool */
-    XMem * mem;
 
     /* vocabulary size */
     int vSize;
@@ -59,7 +58,7 @@ public:
     ~T2TOutput();
 
     /* initialize the model */
-    void InitModel(int argc, char ** argv, int myDevID = -1, XMem * myMem = NULL);
+    void InitModel(int argc, char ** argv, int myDevID = -1);
 
     /* make the network */
     XTensor Make(XTensor &input);

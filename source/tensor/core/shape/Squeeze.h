@@ -33,9 +33,15 @@ void _Squeeze(XTensor * source, XTensor * target, int leadingDim = -1);
    keep the result in the input tensor a and return nothing */
 void _SqueezeMe(XTensor * source, int leadingDim = -1);
 
+/* squeeze the tensor along the specified dimension (do it on site)
+   keep the result in the input tensor a and return nothing */
+void SqueezeMe(XTensor & source, int leadingDim = -1);
+
 /* squeeze the tensor along the specified dimension  (return an XTensor structure)
    make a new tensor to keep the result and return it */
 XTensor Squeeze(XTensor & source, int leadingDim = -1);
+
+void Squeeze(XTensor & source, XTensor & target, int leadingDim = -1);
 
 } // namespace nts(NiuTrans.Tensor)
 

@@ -20,7 +20,7 @@
  * $Created by: XIAO Tong (xiaotong@mail.neu.edu.cn) 2018-07-18
  */
 
-#include "../tensor/XTensor.h"
+#include "../tensor/core/CHeader.h"
 
 #ifndef __XNODER_H__
 #define __XNODER_H__

@@ -19,217 +19,17 @@
  * $Created by: Xu Chen (email: hello_master1954@163.com) 2018-09-18
  */
 
+#include "../core/utilities/CheckData.h"
 #include "TGather.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
 /* 
 case 1: gather indexed sub-tensors 
-In this case, (3, 2, 3) -> (3, 2, 2), dim = 2, 
-srcIndex = [0, 2], indexSize = 2
-*/
-bool TestGather1()
-{
-    /* a input tensor of size (3, 2, 3) */
-    int sOrder = 3;
-    int * sDimSize = new int[sOrder];
-    sDimSize[0] = 3;
-    sDimSize[1] = 2;
-    sDimSize[2] = 3;
-
-    int sUnitNum = 1;
-    for (int i = 0; i < sOrder; i++)
-        sUnitNum *= sDimSize[i];
-
-    /* a output tensor of size (3, 2, 2) */
-    int tOrder = 3;
-    int * tDimSize = new int[tOrder];
-    tDimSize[0] = 3;
-    tDimSize[1] = 2;
-    tDimSize[2] = 2;
-
-    int tUnitNum = 1;
-    for (int i = 0; i < tOrder; i++)
-        tUnitNum *= tDimSize[i];
-
-    DTYPE sData[3][2][3] = { { {0.0F, -1.0F, 2.0F},
-                               {2.0F, 1.0F, 3.0F} },
-                             { {1.0F, 2.0F, 4.0F}, 
-                               {3.0F, 1.0F, 2.0F}},
-                             { {-1.0F, 3.0F, 2.0F}, 
-                               {1.0F, -1.0F, 0.0F} } };
-
-    DTYPE answer[3][2][2] = { { {0.0F, 2.0F},
-                                {2.0F, 3.0F} },
-                              { {1.0F, 4.0F}, 
-                                {3.0F, 2.0F}},
-                              { {-1.0F, 2.0F}, 
-                                {1.0F, 0.0F} } };
-    int dim = 2;
-    int indexSize = 2;
-    int srcIndex[2] = {0, 2};
-
-    /* CPU test */
-    bool cpuTest = true;
-
-    /* create tensors */
-    XTensor * s = NewTensor(sOrder, sDimSize);
-    XTensor * t = NewTensor(tOrder, tDimSize);
-
-    /* initialize variables */
-    s->SetData(sData, sUnitNum);
-    t->SetZeroAll();
-
-    /* call Gather function */
-    _Gather(s, t, dim, srcIndex, indexSize);
-
-    /* check results */
-    cpuTest = t->CheckData(answer, tUnitNum);
-    
-#ifdef USE_CUDA
-    /* GPU test */
-    bool gpuTest = true;
-
-    /* create tensors */
-    XTensor * sGPU = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * tGPU = NewTensor(sOrder, tDimSize, X_FLOAT, 1.0F, 0);
-    XTensor tUserGPU;
-
-    /* initialize variables */
-    sGPU->SetData(sData, sUnitNum);
-    tGPU->SetZeroAll();
-
-    /* call Gather function */
-    _Gather(sGPU, tGPU, dim, srcIndex, indexSize);
-
-    /* check results */
-    gpuTest = tGPU->CheckData(answer, tUnitNum);
-
-    /* destroy variables */
-    delete s;
-    delete t;
-    delete sGPU;
-    delete tGPU;
-    delete[] sDimSize;
-    delete[] tDimSize;
-
-    return cpuTest && gpuTest;
-#else
-    /* destroy variables */
-    delete s;
-    delete t;
-    delete[] sDimSize;
-    delete[] tDimSize;
-
-    return cpuTest;
-#endif // USE_CUDA
-}
-
-/* 
-case 2: gather indexed sub-tensors 
-In this case, (3, 2, 3) -> (3, 1, 3), dim = 1, 
-srcIndex = [0], indexSize = 1
-*/
-bool TestGather2()
-{
-    /* a input tensor of size (3, 2, 3) */
-    int sOrder = 3;
-    int * sDimSize = new int[sOrder];
-    sDimSize[0] = 3;
-    sDimSize[1] = 2;
-    sDimSize[2] = 3;
-
-    int sUnitNum = 1;
-    for (int i = 0; i < sOrder; i++)
-        sUnitNum *= sDimSize[i];
-
-    /* a output tensor of size (3, 1, 3) */
-    int tOrder = 3;
-    int * tDimSize = new int[tOrder];
-    tDimSize[0] = 3;
-    tDimSize[1] = 1;
-    tDimSize[2] = 3;
-
-    int tUnitNum = 1;
-    for (int i = 0; i < tOrder; i++)
-        tUnitNum *= tDimSize[i];
-
-    DTYPE sData[3][2][3] = { { {0.0F, -1.0F, 2.0F},
-                               {2.0F, 1.0F, 3.0F} },
-                             { {1.0F, 2.0F, 4.0F}, 
-                               {3.0F, 1.0F, 2.0F}},
-                             { {-1.0F, 3.0F, 2.0F}, 
-                               {1.0F, -1.0F, 0.0F} } };
-
-    DTYPE answer[3][1][3] = { { {0.0F, -1.0F, 2.0F} },
-                              { {1.0F, 2.0F, 4.0F} } , 
-                              { {-1.0F, 3.0F, 2.0F} } };
-    int dim = 1;
-    int indexSize = 1;
-    int srcIndex[2] = {0};
-
-    /* CPU test */
-    bool cpuTest = true;
-
-    /* create tensors */
-    XTensor * s = NewTensor(sOrder, sDimSize);
-    XTensor * t = NewTensor(tOrder, tDimSize);
-
-    /* initialize variables */
-    s->SetData(sData, sUnitNum);
-    t->SetZeroAll();
-
-    /* call Gather function */
-    _Gather(s, t, dim, srcIndex, indexSize);
-    
-    /* check results */
-    cpuTest = t->CheckData(answer, tUnitNum);
-    
-#ifdef USE_CUDA
-    /* GPU test */
-    bool gpuTest = true;
-
-    /* create tensors */
-    XTensor * sGPU = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * tGPU = NewTensor(sOrder, tDimSize, X_FLOAT, 1.0F, 0);
-    XTensor tUserGPU;
-
-    /* initialize variables */
-    sGPU->SetData(sData, sUnitNum);
-    tGPU->SetZeroAll();
-
-    /* call Gather function */
-    _Gather(sGPU, tGPU, dim, srcIndex, indexSize);
-
-    /* check results */
-    gpuTest = tGPU->CheckData(answer, tUnitNum);
-
-    /* destroy variables */
-    delete s;
-    delete t;
-    delete sGPU;
-    delete tGPU;
-    delete[] sDimSize;
-    delete[] tDimSize;
-
-    return cpuTest && gpuTest;
-#else
-    /* destroy variables */
-    delete s;
-    delete t;
-    delete[] sDimSize;
-    delete[] tDimSize;
-
-    return cpuTest;
-#endif // USE_CUDA
-}
-
-/* 
-case 3: gather indexed sub-tensors 
 In this case, (3, 3) -> (2, 3), dim = 0, 
 srcIndex = [0, 2]
 */
-bool TestGather3()
+bool TestGather1()
 {
     /* a input tensor of size (3, 3) */
     int sOrder = 2;
@@ -275,9 +75,9 @@ bool TestGather3()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s = NewTensor(sOrder, sDimSize);
-    XTensor * t = NewTensor(tOrder, tDimSize);
-    XTensor * index = NewTensor(indexOrder, indexDimSize, X_INT);
+    XTensor * s = NewTensorV2(sOrder, sDimSize);
+    XTensor * t = NewTensorV2(tOrder, tDimSize);
+    XTensor * index = NewTensorV2(indexOrder, indexDimSize, X_INT);
     XTensor tUser;
 
     /* initialize variables */
@@ -286,21 +86,21 @@ bool TestGather3()
     index->SetData(srcIndex, indexSize);
 
     /* call Gather function */
-    _Gather(s, t, dim, srcIndex, indexSize);
+    _Gather(s, t, index);
     tUser = Gather(*s, *index);
 
     /* check results */
-    cpuTest = t->CheckData(answer, tUnitNum) &&
-              tUser.CheckData(answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum) &&
+              _CheckData(&tUser, answer, tUnitNum);
     
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensors */
-    XTensor * sGPU = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * tGPU = NewTensor(sOrder, tDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * indexGPU = NewTensor(indexOrder, indexDimSize, X_INT, 1.0F, 0);
+    XTensor * sGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(sOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * indexGPU = NewTensorV2(indexOrder, indexDimSize, X_INT, 1.0F, 0);
     XTensor tUserGPU;
 
     /* initialize variables */
@@ -309,12 +109,12 @@ bool TestGather3()
     indexGPU->SetData(srcIndex, indexSize);
 
     /* call Gather function */
-    _Gather(sGPU, tGPU, dim, srcIndex, indexSize);
+    _Gather(sGPU, tGPU, indexGPU);
     tUserGPU = Gather(*sGPU, *indexGPU);
 
     /* check results */
-    gpuTest = tGPU->CheckData(answer, tUnitNum) && 
-              tUserGPU.CheckData(answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum) &&
+              _CheckData(&tUserGPU, answer, tUnitNum);
 
     /* destroy variables */
     delete s;
@@ -360,24 +160,6 @@ bool TestGather()
     }
     else
         XPRINT(0, stdout, ">> case 1 passed!\n");
-    
-    /* case 2 test */
-    caseFlag = TestGather2();
-    if (!caseFlag) {
-        returnFlag = false;
-        XPRINT(0, stdout, ">> case 2 failed!\n");
-    }
-    else
-        XPRINT(0, stdout, ">> case 2 passed!\n");
-         
-    /* case 2 test */
-    caseFlag = TestGather3();
-    if (!caseFlag) {
-        returnFlag = false;
-        XPRINT(0, stdout, ">> case 3 failed!\n");
-    }
-    else
-        XPRINT(0, stdout, ">> case 3 passed!\n");
 
     /* other cases test */
     /*

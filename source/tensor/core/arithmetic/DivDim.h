@@ -52,6 +52,14 @@ i.e., a is divided with b by broadcasting
 we make a new tensor c to keep the result and return it
 */
 XTensor DivDim(const XTensor &a, const XTensor &b, int n, DTYPE alpha = (DTYPE)0.0);
+
+/* 
+tensor division of two tensors:
+c(i) = a/b + \alpha * c
+where the size of b is equal to the n-th dimension of a, 
+i.e., a is divided with b by broadcasting 
+*/
+void DivDim(const XTensor &a, const XTensor &b, XTensor &c, int n, DTYPE alpha = (DTYPE)0.0);
     
 } // namespace nts(NiuTrans.Tensor)
 

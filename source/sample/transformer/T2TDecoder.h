@@ -26,6 +26,9 @@
 
 namespace transformer
 {
+    
+#define DECODING_NAME "decoding"
+#define DECODING_INPUT_NAME "decoding_input"
 
 class AttDecoder
 {
@@ -33,9 +36,6 @@ public:
 
     /* device id */
     int devID;
-
-    /* memory pool */
-    XMem * mem;
 
     /* layer number */
     int nlayer;
@@ -92,7 +92,7 @@ public:
     /* initialize the model */
     void InitModel(int argc, char ** argv, 
                    bool myIsMasked, int myIgnored, 
-                   int myDevID = -1, XMem * myMem = NULL);
+                   int myDevID = -1);
 
     /* make the decoding network */
     XTensor Make(XTensor &inputDec, XTensor &outputEnc, XTensor &mask, XTensor &maskEncDec, bool isTraining);

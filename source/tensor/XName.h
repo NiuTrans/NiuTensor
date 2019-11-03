@@ -48,9 +48,12 @@ namespace nts { // namespace nts(NiuTrans.Tensor)
 #define MATH_CLIP               MATH_ROUND + 1
 #define MATH_DIV                MATH_CLIP + 1
 #define MATH_DIVDIM             MATH_DIV + 1
-#define MATH_MATRIXMUL          MATH_DIVDIM + 1
+#define MATH_MASK               MATH_DIVDIM + 1
+#define MATH_MATRIXMUL          MATH_MASK + 1
 #define MATH_MATRIXMULBATCHED   MATH_MATRIXMUL + 1
-#define MATH_MULTIPLY           MATH_MATRIXMULBATCHED + 1
+#define MATH_MAX                MATH_MATRIXMULBATCHED + 1
+#define MATH_MIN                MATH_MAX + 1
+#define MATH_MULTIPLY           MATH_MIN + 1
 #define MATH_MULTIPLYDIM        MATH_MULTIPLY + 1
 #define MATH_MULTIPLYBROADCAST  MATH_MULTIPLYDIM + 1
 #define MATH_NEGATE             MATH_MULTIPLYBROADCAST + 1
@@ -58,7 +61,11 @@ namespace nts { // namespace nts(NiuTrans.Tensor)
 #define MATH_POWER              MATH_NORMALIZE + 1
 #define MATH_SCALEANDSHIFT      MATH_POWER + 1
 #define MATH_MULANDSHIFT        MATH_SCALEANDSHIFT + 1
-#define MATH_SIGN               MATH_MULANDSHIFT + 1
+#define MATH_SCALE              MATH_MULANDSHIFT + 1
+#define MATH_DESCALE            MATH_SCALE + 1
+#define MATH_SHIFT              MATH_DESCALE + 1
+#define MATH_MOD                MATH_SHIFT + 1
+#define MATH_SIGN               MATH_MOD + 1
 #define MATH_SUB                MATH_SIGN + 1
 #define MATH_SUBDIM             MATH_SUB + 1
 #define MATH_SUM                MATH_SUBDIM + 1
@@ -75,14 +82,16 @@ namespace nts { // namespace nts(NiuTrans.Tensor)
 /* data and shape related operations */
 #define DATA_BASE               MATH_BASE * 2
 #define GETANDSET               DATA_BASE + 1
-#define GETANDSET_SELECT        GETANDSET + 1
+#define GETANDSET_CONVERTDATATYPE GETANDSET + 1
+#define GETANDSET_SELECT        GETANDSET_CONVERTDATATYPE + 1
 
 #define MOVEMENT                GETANDSET_SELECT + 1
 #define MOVEMENT_COPYINDEXED    MOVEMENT + 1
 #define MOVEMENT_COPYVALUES     MOVEMENT_COPYINDEXED + 1
 #define MOVEMENT_GATHER         MOVEMENT_COPYVALUES + 1
+#define MOVEMENT_DROPOUTWITHINDEX         MOVEMENT_GATHER + 1
 
-#define SHAPE                   MOVEMENT_GATHER + 1
+#define SHAPE                   MOVEMENT_DROPOUTWITHINDEX + 1
 #define SHAPE_CONCATENATE       SHAPE + 1
 #define SHAPE_MERGE             SHAPE_CONCATENATE + 1
 #define SHAPE_MERGE_LIST        SHAPE_MERGE + 1
@@ -90,7 +99,8 @@ namespace nts { // namespace nts(NiuTrans.Tensor)
 #define SHAPE_RESHAPE           SHAPE_PERMUTE + 1
 #define SHAPE_SPLIT             SHAPE_RESHAPE + 1
 #define SHAPE_SPLIT_LIST        SHAPE_SPLIT + 1
-#define SHAPE_SQUEEZE           SHAPE_SPLIT_LIST + 1
+#define SHAPE_STACK             SHAPE_SPLIT_LIST + 1
+#define SHAPE_SQUEEZE           SHAPE_STACK + 1
 #define SHAPE_TRANSPOSE         SHAPE_SQUEEZE + 1
 #define SHAPE_UNSQUEEZE         SHAPE_TRANSPOSE + 1
 
@@ -107,6 +117,9 @@ namespace nts { // namespace nts(NiuTrans.Tensor)
 #define FUNC_RECTIFY            FUNC_LOGSOFTMAX + 1
 #define FUNC_SIGMOID            FUNC_RECTIFY + 1
 #define FUNC_SOFTMAX            FUNC_SIGMOID + 1
+
+#define LOSS_BASE               FUNCTION_BASE * 2
+#define LOSS_CROSSENTROPY       LOSS_BASE + 1
 
 /* get operator name */
 const char * GetOPName(int type);

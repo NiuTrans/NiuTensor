@@ -19,6 +19,8 @@
 * $Created by: Xu Chen (email: hello_master1954@163.com) 2018-07-06
 */
 
+#include "../core/utilities/CheckData.h"
+#include "../core/utilities/SetAscendingOrder.h"
 #include "TSetAscendingOrder.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
@@ -43,32 +45,32 @@ bool TestSetAscendingOrder1()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s = NewTensor(sOrder, sDimSize, X_INT);
+    XTensor * s = NewTensorV2(sOrder, sDimSize, X_INT);
 
     /* initialize variables */
     s->SetZeroAll();
 
     /* call SetAscendingOrder function */
-    s->SetAscendingOrder(1);
+    SetAscendingOrder(*s, 1);
     
     /* check results */
-    cpuTest = s->CheckData(answer, sUnitNum);
+    cpuTest = _CheckData(s, answer, sUnitNum);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensors */
-    XTensor * sGPU = NewTensor(sOrder, sDimSize, X_INT, 1.0F, 0);
+    XTensor * sGPU = NewTensorV2(sOrder, sDimSize, X_INT, 1.0F, 0);
 
     /* initialize variables */
     sGPU->SetZeroAll();
 
     /* call SetAscendingOrder function */
-    sGPU->SetAscendingOrder(1);
+    SetAscendingOrder(*sGPU, 1);
 
     /* check results */
-    gpuTest = sGPU->CheckData(answer, sUnitNum);
+    gpuTest = _CheckData(sGPU, answer, sUnitNum);
 
     /* destroy variables */
     delete s;

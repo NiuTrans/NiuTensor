@@ -19,8 +19,9 @@
  * $Created by: Xu Chen (email: hello_master1954@163.com) 2018-07-12
  */
 
-#include "TConvertDataType.h"
 #include "../core/arithmetic/MatrixMul.h"
+#include "../core/utilities/CheckData.h"
+#include "TConvertDataType.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
@@ -31,72 +32,72 @@ In this case, the flaot32 data type is converted to int32 data type.
 */
 bool TestConvertDataType1()
 {
-	/* a tensor of size (3, 2) */
-	int aOrder = 2;
-	int * aDimSize = new int[aOrder];
-	aDimSize[0] = 3;
-	aDimSize[1] = 2;
+    /* a tensor of size (3, 2) */
+    int aOrder = 2;
+    int * aDimSize = new int[aOrder];
+    aDimSize[0] = 3;
+    aDimSize[1] = 2;
 
-	int aUnitNum = 1;
-	for (int i = 0; i < aOrder; i++)
-		aUnitNum *= aDimSize[i];
+    int aUnitNum = 1;
+    for (int i = 0; i < aOrder; i++)
+        aUnitNum *= aDimSize[i];
 
-	DTYPE aData[3][2] = { {1.0F, 2.0F}, 
-	                      {0.5F, 4.0F},
-	                      {5.0F, 6.0F} };
-	int answer[3][2] = { {1, 2},
-	                     {0, 4},
+    DTYPE aData[3][2] = { {1.0F, 2.0F}, 
+                          {0.5F, 4.0F},
+                          {5.0F, 6.0F} };
+    int answer[3][2] = { {1, 2},
+                         {0, 4},
                          {5, 6} };
 
-	/* CPU test */
-	bool cpuTest = true;
+    /* CPU test */
+    bool cpuTest = true;
 
-	/* create tensors */
-	XTensor * a = NewTensor(aOrder, aDimSize);
-	XTensor * b = NewTensor(aOrder, aDimSize, X_INT);
+    /* create tensors */
+    XTensor * a = NewTensorV2(aOrder, aDimSize);
+    XTensor * b = NewTensorV2(aOrder, aDimSize, X_INT);
 
-	/* initialize variables */
-	a->SetData(aData, aUnitNum);
-	b->SetZeroAll();
+    /* initialize variables */
+    a->SetData(aData, aUnitNum);
+    b->SetZeroAll();
 
-	/* call ConvertDataType function */
-	_ConvertDataType(a, b);
+    /* call ConvertDataType function */
+    _ConvertDataType(a, b);
 
-	/* check results */
-	cpuTest = b->CheckData(answer, aUnitNum);
+    /* check results */
+    cpuTest = _CheckData(b, answer, aUnitNum);
     
 #ifdef USE_CUDA
-	/* GPU test */
-	bool gpuTest = true;
+    /* GPU test */
+    bool gpuTest = true;
 
-	/* create tensor */
-	XTensor * aGPU = NewTensor(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
-	XTensor * bGPU = NewTensor(aOrder, aDimSize, X_INT, 1.0F, 0);
+    /* create tensor */
+    XTensor * aGPU = NewTensorV2(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * bGPU = NewTensorV2(aOrder, aDimSize, X_INT, 1.0F, 0);
 
-	/* Initialize variables */
-	aGPU->SetData(aData, aUnitNum);
+    /* Initialize variables */
+    aGPU->SetData(aData, aUnitNum);
 
-	/* call ConvertDataType function */
-	_ConvertDataType(aGPU, bGPU);
+    /* call ConvertDataType function */
+    _ConvertDataType(aGPU, bGPU);
 
-	/* check results */
-	gpuTest = bGPU->CheckData(answer, aUnitNum);
+    /* check results */
+    gpuTest = _CheckData(bGPU, answer, aUnitNum);
 
-	/* destroy variables */
-	delete a;
-	delete b;
+    /* destroy variables */
+    delete a;
+    delete b;
     delete aGPU;
     delete bGPU;
-	delete[] aDimSize;
+    delete[] aDimSize;
 
-	return cpuTest && gpuTest;
+    return cpuTest && gpuTest;
 #else
-	/* destroy variables */
-	delete a;
-	delete b;
-	delete[] aDimSize;
+    /* destroy variables */
+    delete a;
+    delete b;
+    delete[] aDimSize;
 
-	return cpuTest;
+    return cpuTest;
 #endif // USE_CUDA
 }
 
@@ -106,72 +107,72 @@ In this case, the int32 data type is converted to float32 data type.
 */
 bool TestConvertDataType2()
 {
-	/* a tensor of size (3, 2) */
-	int aOrder = 2;
-	int * aDimSize = new int[aOrder];
-	aDimSize[0] = 3;
-	aDimSize[1] = 2;
+    /* a tensor of size (3, 2) */
+    int aOrder = 2;
+    int * aDimSize = new int[aOrder];
+    aDimSize[0] = 3;
+    aDimSize[1] = 2;
 
-	int aUnitNum = 1;
-	for (int i = 0; i < aOrder; i++)
-		aUnitNum *= aDimSize[i];
+    int aUnitNum = 1;
+    for (int i = 0; i < aOrder; i++)
+        aUnitNum *= aDimSize[i];
 
-	int aData[3][2] = { {1, 2}, 
-	                    {0, 4},
-	                    {5, 6} };
-	DTYPE answer[3][2] = { {1.0F, 2.0F}, 
-	                       {0.0F, 4.0F},
-	                       {5.0F, 6.0F} };
+    int aData[3][2] = { {1, 2}, 
+                        {0, 4},
+                        {5, 6} };
+    DTYPE answer[3][2] = { {1.0F, 2.0F}, 
+                           {0.0F, 4.0F},
+                           {5.0F, 6.0F} };
 
-	/* CPU test */
-	bool cpuTest = true;
+    /* CPU test */
+    bool cpuTest = true;
 
-	/* create tensors */
-	XTensor * a = NewTensor(aOrder, aDimSize, X_INT);
-	XTensor * b = NewTensor(aOrder, aDimSize);
+    /* create tensors */
+    XTensor * a = NewTensorV2(aOrder, aDimSize, X_INT);
+    XTensor * b = NewTensorV2(aOrder, aDimSize);
 
-	/* initialize variables */
-	a->SetData(aData, aUnitNum);
-	b->SetZeroAll();
+    /* initialize variables */
+    a->SetData(aData, aUnitNum);
+    b->SetZeroAll();
 
-	/* call ConvertDataType function */
-	_ConvertDataType(a, b);
+    /* call ConvertDataType function */
+    _ConvertDataType(a, b);
 
-	/* check results */
-	cpuTest = b->CheckData(answer, aUnitNum, 1e-4F);
+    /* check results */
+    cpuTest = _CheckData(b, answer, aUnitNum, 1e-4F);
     
 #ifdef USE_CUDA
-	/* GPU test */
-	bool gpuTest = true;
+    /* GPU test */
+    bool gpuTest = true;
 
-	/* create tensor */
-	XTensor * aGPU = NewTensor(aOrder, aDimSize, X_INT, 1.0F, 0);
-	XTensor * bGPU = NewTensor(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
+    /* create tensor */
+    XTensor * aGPU = NewTensorV2(aOrder, aDimSize, X_INT, 1.0F, 0);
+    XTensor * bGPU = NewTensorV2(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
 
-	/* Initialize variables */
-	aGPU->SetData(aData, aUnitNum);
+    /* Initialize variables */
+    aGPU->SetData(aData, aUnitNum);
 
-	/* call ConvertDataType function */
-	_ConvertDataType(aGPU, bGPU);
+    /* call ConvertDataType function */
+    _ConvertDataType(aGPU, bGPU);
 
-	/* check results */
-	gpuTest = bGPU->CheckData(answer, aUnitNum, 1e-4F);
+    /* check results */
+    gpuTest = _CheckData(bGPU, answer, aUnitNum, 1e-4F);
 
-	/* destroy variables */
-	delete a;
-	delete b;
+    /* destroy variables */
+    delete a;
+    delete b;
     delete aGPU;
     delete bGPU;
-	delete[] aDimSize;
+    delete[] aDimSize;
 
-	return cpuTest && gpuTest;
+    return cpuTest && gpuTest;
 #else
-	/* destroy variables */
-	delete a;
-	delete b;
-	delete[] aDimSize;
+    /* destroy variables */
+    delete a;
+    delete b;
+    delete[] aDimSize;
 
-	return cpuTest;
+    return cpuTest;
 #endif // USE_CUDA
 }
 
@@ -225,9 +226,9 @@ bool TestConvertDataType3()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * a = NewTensor(order, dimSize1, X_FLOAT, 1.0F, -1);
-    XTensor * b = NewTensor(order, dimSize1, X_FLOAT16, 1.0F, -1);
-    XTensor * c = NewTensor(order, dimSize1, X_FLOAT, 1.0F, -1);
+    XTensor * a = NewTensorV2(order, dimSize1, X_FLOAT, 1.0F, -1);
+    XTensor * b = NewTensorV2(order, dimSize1, X_FLOAT16, 1.0F, -1);
+    XTensor * c = NewTensorV2(order, dimSize1, X_FLOAT, 1.0F, -1);
 
     /* initialize variables */
     a->SetData(data1, unitNum1);
@@ -237,19 +238,19 @@ bool TestConvertDataType3()
     //_ConvertDataType(b, c);
     
     /* check results */
-    //cpuTest = a->CheckData(data1, unitNum1, 1e-4F);
+    //cpuTest = _CheckData(a, data1, unitNum1, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensor */
-    XTensor * aGPU = NewTensor(order, dimSize1, X_FLOAT, 1.0F, 0);
-    XTensor * bGPU = NewTensor(order, dimSize2, X_FLOAT, 1.0F, 0);
-    XTensor * cGPU = NewTensor(order, dimSize1, X_FLOAT16, 1.0F, 0);
-    XTensor * dGPU = NewTensor(order, dimSize2, X_FLOAT16, 1.0F, 0);
-    XTensor * eGPU = NewTensor(order, dimSize3, X_FLOAT16, 1.0F, 0);
-    XTensor * fGPU = NewTensor(order, dimSize3, X_FLOAT, 1.0F, 0);
+    XTensor * aGPU = NewTensorV2(order, dimSize1, X_FLOAT, 1.0F, 0);
+    XTensor * bGPU = NewTensorV2(order, dimSize2, X_FLOAT, 1.0F, 0);
+    XTensor * cGPU = NewTensorV2(order, dimSize1, X_FLOAT16, 1.0F, 0);
+    XTensor * dGPU = NewTensorV2(order, dimSize2, X_FLOAT16, 1.0F, 0);
+    XTensor * eGPU = NewTensorV2(order, dimSize3, X_FLOAT16, 1.0F, 0);
+    XTensor * fGPU = NewTensorV2(order, dimSize3, X_FLOAT, 1.0F, 0);
 
     /* Initialize variables */
     aGPU->SetData(data1, unitNum1);
@@ -263,7 +264,7 @@ bool TestConvertDataType3()
     _ConvertDataType(eGPU, fGPU);
 
     /* check results */
-    gpuTest = fGPU->CheckData(answer, unitNum3, 1e-4F);
+    gpuTest = _CheckData(fGPU, answer, unitNum3, 1e-4F);
 
     /* destroy variables */
     delete a;
@@ -298,53 +299,53 @@ TODO!!
 /* test for ConvertDataType Function */
 bool TestConvertDataType()
 {
-	XPRINT(0, stdout, "[TEST ConvertDataType] convert data type \n");
-	bool returnFlag = true, caseFlag = true;
+    XPRINT(0, stdout, "[TEST ConvertDataType] convert data type \n");
+    bool returnFlag = true, caseFlag = true;
 
-	/* case 1 test */
-	caseFlag = TestConvertDataType1();
+    /* case 1 test */
+    caseFlag = TestConvertDataType1();
 
-	if (!caseFlag) {
-		returnFlag = false;
-		XPRINT(0, stdout, ">> case 1 failed!\n");
-	}
-	else
-		XPRINT(0, stdout, ">> case 1 passed!\n");
+    if (!caseFlag) {
+        returnFlag = false;
+        XPRINT(0, stdout, ">> case 1 failed!\n");
+    }
+    else
+        XPRINT(0, stdout, ">> case 1 passed!\n");
 
-	/* case 2 test */
-	caseFlag = TestConvertDataType2();
+    /* case 2 test */
+    caseFlag = TestConvertDataType2();
 
-	if (!caseFlag) {
-		returnFlag = false;
-		XPRINT(0, stdout, ">> case 2 failed!\n");
-	}
-	else
-		XPRINT(0, stdout, ">> case 2 passed!\n");
+    if (!caseFlag) {
+        returnFlag = false;
+        XPRINT(0, stdout, ">> case 2 failed!\n");
+    }
+    else
+        XPRINT(0, stdout, ">> case 2 passed!\n");
     
     /* case 3 test */
-	caseFlag = TestConvertDataType3();
+    caseFlag = TestConvertDataType3();
 
-	if (!caseFlag) {
-		returnFlag = false;
-		XPRINT(0, stdout, ">> case 3 failed!\n");
-	}
-	else
-		XPRINT(0, stdout, ">> case 3 passed!\n");
+    if (!caseFlag) {
+        returnFlag = false;
+        XPRINT(0, stdout, ">> case 3 failed!\n");
+    }
+    else
+        XPRINT(0, stdout, ">> case 3 passed!\n");
 
-	/* other cases test */
-	/*
-	TODO!!
-	*/
+    /* other cases test */
+    /*
+    TODO!!
+    */
 
-	if (returnFlag) {
-		XPRINT(0, stdout, ">> All Passed!\n");
-	}
-	else
-		XPRINT(0, stdout, ">> Failed!\n");
+    if (returnFlag) {
+        XPRINT(0, stdout, ">> All Passed!\n");
+    }
+    else
+        XPRINT(0, stdout, ">> Failed!\n");
 
-	XPRINT(0, stdout, "\n");
+    XPRINT(0, stdout, "\n");
 
-	return returnFlag;
+    return returnFlag;
 }
 
 } // namespace nts(NiuTrans.Tensor)

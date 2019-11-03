@@ -23,6 +23,7 @@
 #include "../../XUtility.h"
 #include "CopyValues.h"
 #include "CopyValues.cuh"
+#include "../getandset/ConvertDataType.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
@@ -35,16 +36,20 @@ copy s to t
 */
 void _CopyValues(const XTensor * s, XTensor * t, XStream * stream)
 {
-    CheckNTErrors((s != NULL && t != NULL), "The input tensor and output tensor must be nonempty!");
-    CheckNTErrors((s->data != NULL), "Cannot copy an empty data array!");
-    CheckNTErrors((t->data != NULL), "Cannot copy to an empty data array!");
-    CheckNTErrors((s->unitNum == t->unitNum), "Unmatched data item number!");
+    if(s->data == NULL && t->data == NULL)
+        return;
+
+    CheckNTErrors(s != NULL && t != NULL, "The input tensor and output tensor must be nonempty!");
+    CheckNTErrors(s->data != NULL, "Cannot copy an empty data array!");
+    CheckNTErrors(t->data != NULL, "Cannot copy to an empty data array!");
+    CheckNTErrors(s->unitSize == t->unitSize, "Incompatible data types in value copy.");
+    CheckNTErrors(s->unitNum == t->unitNum, "The data items are be the same.");
 
     if ((s->dataType == X_FLOAT16 && t->dataType == X_FLOAT) ||
         (s->dataType == X_FLOAT && t->dataType == X_FLOAT16)) {
-        CheckNTErrors(((s->devID < 0 && t->devID < 0) || s->devID == t->devID),
+        CheckNTErrors((s->devID < 0 && t->devID < 0) || s->devID == t->devID,
                        "The code must be run on the same device!");
-        CheckNTErrors((s->isSparse || t->isSparse), "TODO!");
+        CheckNTErrors(s->isSparse || t->isSparse, "TODO!");
         ConvertDataType(s->devID, s->data, s->dataType, t->data, t->dataType, s->unitNum);
     }
 
@@ -81,11 +86,15 @@ copy s to t
 */
 void _CopyValues(const XTensor * s, const int sBeg, const int sLen, XTensor * t, const int tBeg, XStream * stream)
 {
+    if(s->data == NULL && t->data == NULL)
+        return;
+
     CheckNTErrors(s != NULL && t != NULL, "The input tensor and output tensor must be nonempty!");
-    CheckNTErrors(s->data != NULL && t->data != NULL, "Cannot copy an empty data array!");
-    CheckNTErrors(s->unitSize == t->unitSize, "The input tensors must be of the same unit size!");
-    CheckNTErrors(s->order > sBeg && sBeg >= 0 && sLen <= s->unitNum, "Wrong segment on the source side");
-    CheckNTErrors(t->order > tBeg && tBeg >= 0, "Wrong segment on the target side");
+    CheckNTErrors(s->data != NULL, "Cannot copy an empty data array!");
+    CheckNTErrors(t->data != NULL, "Cannot copy to an empty data array!");
+    CheckNTErrors(s->unitSize == t->unitSize, "Incompatible data types in value copy.");
+    CheckNTErrors(sBeg >= 0 && sBeg + sLen <= s->unitNum, "Wrong segment of the source data array");
+    CheckNTErrors(tBeg >= 0 && tBeg + sLen <= t->unitNum, "Wrong segment of the target data array");
 
     if (!s->isSparse && !t->isSparse) {
         XMemCopy((char*)t->data + tBeg * t->unitSize, t->devID,
@@ -95,6 +104,17 @@ void _CopyValues(const XTensor * s, const int sBeg, const int sLen, XTensor * t,
     else {
         ShowNTErrors("TODO!");
     }
+}
+    
+/*
+copy s to t (rename _CopyValues)
+ >> s - source
+ >> t - target
+ >> stream - the stream for creating the job pipeline
+*/
+void CopyValues(const XTensor &s, XTensor &t, XStream * stream)
+{
+    _CopyValues(&s, &t, stream);
 }
 
 /*
@@ -114,7 +134,9 @@ XTensor CopyValues(const XTensor &s, XStream * stream)
     _CopyValues(&s, &t, stream);
         
     /* tensor connection */
-    XLink::MakeLink(&s, NULL, &t, MOVEMENT_COPYVALUES);
+    if (s.enableGrad) {
+        XLink::MakeLink(&s, NULL, &t, MOVEMENT_COPYVALUES);
+    }
 
     return t;
 }

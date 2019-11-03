@@ -16,13 +16,10 @@
  */
 
 /*
-* $Created by: XIAO Tong (email: xiaotong@mail.neu.edu.cn) 2018-04-24
-*/
+ * $Created by: XIAO Tong (email: xiaotong@mail.neu.edu.cn) 2018-04-24
+ */
 
-#include "Rectify.h"
 #include "Rectify.cuh"
-#include "Loss.cuh"
-#include "CrossEntropy.cuh"
 #include "../XDevice.h"
 
 namespace nts{ // namespace nts(NiuTrans.Tensor)
@@ -57,24 +54,17 @@ rectify function y = max(0, x)
 */
 void _CudaRectify(const XTensor * x, XTensor * y)
 {
-    if(x->dataType == DEFAULT_DTYPE && y->dataType == DEFAULT_DTYPE){
+    int gridSize[3], blockSize[3];
 
-        CheckNTErrors(!x->isSparse && !y->isSparse, "The Rectify function does not support sparse matrices.");
-        CheckNTErrors(x->unitNum && y->unitNum, "The input vectors must be of the same length.");
+    GDevs.GetCudaThread(x->devID, x->unitNum, gridSize, blockSize);
 
-        int gridSize[3], blockSize[3];
+    int devIDBackup;
+    ProtectCudaDev(x->devID, devIDBackup);
 
-        GDevs.GetCudaThread(x->devID, x->unitNum, gridSize, blockSize);
+    KernelRectify<<<dim3(gridSize[0]), dim3(blockSize[0])>>>
+                  ((DTYPE*)x->data, (DTYPE*)y->data, x->unitNum);
 
-        int devIDBackup;
-        ProtectCudaDev(x->devID, devIDBackup);
-
-        KernelRectify<<<dim3(gridSize[0]), dim3(blockSize[0])>>>((DTYPE*)x->data, (DTYPE*)y->data, x->unitNum);
-
-        BacktoCudaDev(x->devID, devIDBackup);
-    }
-    else
-        ShowNTErrors("TODO!");
+    BacktoCudaDev(x->devID, devIDBackup);
 }
 
 /* 
@@ -85,13 +75,11 @@ dy/dx =  1    if x >= 0
 
 >> dedy - dE/dy
 >> dedx - dE/dx
->> gold - gold standard
->> y - output of the function
 >> x - input of the function
 >> size - size of output/input
 */
 __global__ 
-void KernelRectifyBackward(DTYPE * dedy, DTYPE * dedx, DTYPE * gold, DTYPE * y, DTYPE * x, int size)
+void KernelRectifyBackward(DTYPE * dedy, DTYPE * dedx, DTYPE * x, int size)
 {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
 
@@ -104,11 +92,10 @@ void KernelRectifyBackward(DTYPE * dedy, DTYPE * dedx, DTYPE * gold, DTYPE * y, 
     }
 }
 
-
 /*
 backward computation (Cuda version)
 
-dE/ds = dE/dy * dy/ds
+dE/dx = dE/dy * dy/dx
 
 rectify  : y =  s    if s >= 0
                 0    if s < 0
@@ -116,48 +103,29 @@ rectify  : y =  s    if s >= 0
    and dy/ds =  1    if s >= 0
                 0    otherwise
 
->> gold - gold standard to measure error (or loss)
->> output - output of the activation function, i.e., y
->> input - input of the activation function , i.e., s
->> dEdY - dE/dy
->> dEdS - dE/ds
->> lossName - type of loss function, e.g., cross entropy
->> gBeg - where to start in the gold standard (along the leading dimension)
->> gLen - segment length from gBeg (along the leading dimension)
->> oBeg - where to start in the model output (along the leading dimension)
->> parallelRunner - parallel processing module
+>> y - output of the rectify function
+>> x - input of the rectify function
+>> dedy - dE/dy
+>> dedx - dE/dx
 */
-void _CudaRectifyBackward(XTensor * gold, XTensor * y, XTensor * x, 
-                          XTensor * dedy, XTensor * dedx,
-                          LOSS_FUNCTION_NAME lossName)
+void _CudaRectifyBackward(XTensor * y, XTensor * x, 
+                          XTensor * dedy, XTensor * dedx)
 {
-    if(x->dataType == DEFAULT_DTYPE && y->dataType == DEFAULT_DTYPE){
+    int gridSize[3], blockSize[3];
 
-        /* calculate dE/dy */
-        if(lossName == CROSSENTROPY)
-            _CudaCrossEntropyBackward(dedy, y, gold);
-        else if(lossName != NOLOSS)
-            _CudaLossBackward(dedy, gold, y, lossName);
-        
-        int gridSize[3], blockSize[3];
+    GDevs.GetCudaThread(x->devID, x->unitNum, gridSize, blockSize);
 
-        GDevs.GetCudaThread(x->devID, x->unitNum, gridSize, blockSize);
+    int devIDBackup;
+    ProtectCudaDev(x->devID, devIDBackup);
 
-        int devIDBackup;
-        ProtectCudaDev(x->devID, devIDBackup);
+    /* dE/ds = dE/dy * dy/ds */
+    KernelRectifyBackward<<<dim3(gridSize[0]),dim3(blockSize[0])>>>
+                          ((DTYPE*)dedy->data, 
+                           (DTYPE*)dedx->data,
+                           (DTYPE*)x->data, 
+                            x->unitNum);
 
-        /* dE/ds = dE/dy * dy/ds */
-        KernelRectifyBackward<<<dim3(gridSize[0]),dim3(blockSize[0])>>>
-                              ((DTYPE*)dedy->data, 
-                               (DTYPE*)dedx->data,
-                                gold == NULL ? NULL : (DTYPE*)gold->data, 
-                               (DTYPE*)y->data, (DTYPE*)x->data, 
-                                x->unitNum);
-
-        BacktoCudaDev(x->devID, devIDBackup);
-    }
-    else
-        ShowNTErrors("TODO!");
+    BacktoCudaDev(x->devID, devIDBackup);
 }
 
 #endif

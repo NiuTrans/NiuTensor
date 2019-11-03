@@ -48,12 +48,12 @@ void _MatrixMULCPU(const XTensor * a, MATRIX_TRANS_TYPE transposedA,
     CheckNTErrors((c->dataType == DEFAULT_DTYPE), "TODO!");
 
 #if defined(USE_BLAS)
-	int an = a->dimSize[0];
+    int an = a->dimSize[0];
     int am = a->dimSize[1];
-	int bn = b->dimSize[0];
-	int bm = b->dimSize[1];
-	int cn = c->dimSize[0];
-	int cm = c->dimSize[1];
+    int bn = b->dimSize[0];
+    int bm = b->dimSize[1];
+    int cn = c->dimSize[0];
+    int cm = c->dimSize[1];
 
     if (transposedA == X_NOTRANS && transposedB == X_NOTRANS)
         GEMM(CblasRowMajor, CblasNoTrans, CblasNoTrans, cn, cm, am, alpha, (DTYPE*)a->data, am, (DTYPE*)b->data, bm, beta, (DTYPE*)c->data, cm);

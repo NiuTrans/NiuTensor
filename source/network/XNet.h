@@ -23,6 +23,7 @@
 
 #include "../tensor/XTensor.h"
 #include "../tensor/function/FHeader.h"
+#include "../tensor/loss/LHeader.h"
 
 #ifndef __XNET_H__
 #define __XNET_H__
@@ -36,16 +37,16 @@ struct XNet
     unsigned int id;
 
     /* tensor nodes of the network (in order) */
-    XList nodes;
+    TensorList nodes;
 
     /* tensor nodes to keep gradient for output (e.g., SGD)*/
-    XList gradNodes;
+    TensorList gradNodes;
 
     /* output nodes of the network */
-    XList outputs;
+    TensorList outputs;
 
     /* input nodes of the network */
-    XList inputs;
+    TensorList inputs;
 
     /* indicates whether the network just keeps the gradient for parameter tensors */
     bool isGradEfficient;
@@ -60,25 +61,11 @@ struct XNet
     void Clear();
 
     /* backward propagation to obtain gradient */
-    void Backward(XTensor &root, LOSS_FUNCTION_NAME loss = NOLOSS);
-
-    /* backward propagation to obtain gradient wrt. the loss/error function */
-    void Backward(XTensor &root, XTensor &gold, LOSS_FUNCTION_NAME loss = NOLOSS);
-
-    /* backward propagation to obtain gradient wrt. the loss/error function */
-    void Backward(XTensor &root, XTensor &gold, XTensor &padding, LOSS_FUNCTION_NAME loss = NOLOSS);
-
-    /* backward propagation to obtain gradient
-       with a number of root nodes */
-    void Backward(XList &roots, LOSS_FUNCTION_NAME loss = NOLOSS);
-
-    /* backward propagation to obtain gradient
-       with a number of root nodes */
-    void Backward(XList &roots, XList &golds, LOSS_FUNCTION_NAME loss = NOLOSS);
+    void Backward(XTensor &root);
 
     /* backward propagation to obtain gradient wrt. the loss/error function
        with a number of root nodes */
-    void Backward(XList &roots, XList &golds, XList &paddings, LOSS_FUNCTION_NAME loss = NOLOSS);
+    void Backward(TensorList &roots);
 
     /* backward computation for a given node */
     void BackwardNode(XTensor * node, bool isEfficent = false);
@@ -92,10 +79,10 @@ struct XNet
 
     /* traverse the net and find the topological order by 
        depth-first search (Tarjan's algorithm) */
-    void Traverse(XList &roots);
+    void Traverse(TensorList &roots);
 
     /* depth-first search given a node (Tarjan's algorithm for topological ordering) */
-    void TarjanVisit(XTensor * node, XList &orders, const unsigned int code);
+    void TarjanVisit(XTensor * node, TensorList &orders, const unsigned int code);
 
     /* dump network information */
     void Dump(FILE * file);
@@ -111,6 +98,10 @@ struct XNet
 
     /* show network topology */
     void ShowNetwork(FILE * file, XTensor * node);
+
+    /* search a node in a top-down manner by its name */
+    //static
+    //XTensor * SearchNode(XTensor * top, const char * name);
 };
 
 /* we make a unique id for every tensor */

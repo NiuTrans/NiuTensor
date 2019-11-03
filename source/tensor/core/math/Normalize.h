@@ -31,7 +31,9 @@ normalized the data with normal distribution.
 For an input x, y = a * (x-mean)/sqrt(variance+\epsilon) + b
 where a and b are the scalar and bias respectively, and \epsilon is the adjustment parameter.
 */
-void _Normalize(const XTensor * input, XTensor * output, int dim, const XTensor * mean, const XTensor * var, const XTensor * a, const XTensor * b, DTYPE epsilon);
+void _Normalize(const XTensor * input, XTensor * output, int dim, 
+                const XTensor * mean, const XTensor * var, 
+                const XTensor * a, const XTensor * b, DTYPE epsilon);
 
 /*
 normalized the data with normal distribution (do it on site)
@@ -39,7 +41,19 @@ keep the result in the input tenosr and return nothing
 For an input x, x = a * (x-mean)/sqrt(variance+\epsilon) + b
 where a and b are the scalar and bias respectively, and \epsilon is the adjustment parameter.
 */
-void _NormalizeMe(XTensor * input, int dim, const XTensor * mean, const XTensor * var, const XTensor * a, const XTensor * b, DTYPE epsilon);
+void _NormalizeMe(XTensor * input, int dim, 
+                  const XTensor * mean, const XTensor * var, 
+                  const XTensor * a, const XTensor * b, DTYPE epsilon);
+
+/*
+normalized the data with normal distribution (do it on site)
+keep the result in the input tenosr and return nothing
+For an input x, x = a * (x-mean)/sqrt(variance+\epsilon) + b
+where a and b are the scalar and bias respectively, and \epsilon is the adjustment parameter.
+*/
+void NormalizeMe(XTensor & input, int dim, 
+                 const XTensor & mean, const XTensor & var, 
+                 const XTensor & a, const XTensor & b, DTYPE epsilon);
 
 /*
 normalized the data with normal distribution (return an XTensor structure)
@@ -47,7 +61,19 @@ make a new tensor to keep the result and return it
 For an input x, y = a * (x-mean)/sqrt(variance+\epsilon) + b
 where a and b are the scalar and bias respectively, and \epsilon is the adjustment parameter.
 */
-XTensor Normalize(const XTensor &input, int dim, const XTensor &mean, const XTensor &var, const XTensor &a, const XTensor &b, DTYPE epsilon);
+XTensor Normalize(const XTensor &input, int dim, 
+                  const XTensor &mean, const XTensor &var, 
+                  const XTensor &a, const XTensor &b, DTYPE epsilon);
+
+/*
+normalized the data with normal distribution (return an XTensor structure)
+make a new tensor to keep the result and return it 
+For an input x, y = a * (x-mean)/sqrt(variance+\epsilon) + b
+where a and b are the scalar and bias respectively, and \epsilon is the adjustment parameter.
+*/
+void Normalize(const XTensor &input, XTensor &output, int dim, 
+               const XTensor &mean, const XTensor &var, 
+               const XTensor &a, const XTensor &b, DTYPE epsilon);
 
 } // namespace nts(NiuTrans.Tensor)
 

@@ -37,15 +37,15 @@ float shflDownReduceSum(float input)
     asm volatile(
         "{"
         ".reg .f32 r0;"
-        "shfl.down.b32  r0, %1, 0x10, 0x1f;"
+        "shfl.sync.down.b32  r0, %1, 0x10, 0x1f,0xffffffff;"
         "add.f32        %1, r0, %1;"
-        "shfl.down.b32  r0, %1, 0x8, 0xf;"
+        "shfl.sync.down.b32  r0, %1, 0x8, 0xf,0xffffffff;"
         "add.f32        %1, r0, %1;"
-        "shfl.down.b32  r0, %1, 0x4, 0x7;"
+        "shfl.sync.down.b32  r0, %1, 0x4, 0x7,0xffffffff;"
         "add.f32        %1, r0, %1;"
-        "shfl.down.b32  r0, %1, 0x2, 0x3;"
+        "shfl.sync.down.b32  r0, %1, 0x2, 0x3,0xffffffff;"
         "add.f32        %1, r0, %1;"
-        "shfl.down.b32  r0, %1, 0x1, 0x1;"
+        "shfl.sync.down.b32  r0, %1, 0x1, 0x1,0xffffffff;"
         "add.f32        %0, r0, %1;"
         "}"
         : "=f"(output) : "f"(input));
@@ -62,15 +62,15 @@ int shflDownReduceSum(int input)
     asm volatile(
         "{"
         ".reg .s32 r0;"
-        "shfl.down.b32  r0, %1, 0x10, 0x1f;"
+        "shfl.sync.down.b32  r0, %1, 0x10, 0x1f,0xffffffff;"
         "add.s32        %1, r0, %1;"
-        "shfl.down.b32  r0, %1, 0x8, 0xf;"
+        "shfl.sync.down.b32  r0, %1, 0x8, 0xf,0xffffffff;"
         "add.s32        %1, r0, %1;"
-        "shfl.down.b32  r0, %1, 0x4, 0x7;"
+        "shfl.sync.down.b32  r0, %1, 0x4, 0x7,0xffffffff;"
         "add.s32        %1, r0, %1;"
-        "shfl.down.b32  r0, %1, 0x2, 0x3;"
+        "shfl.sync.down.b32  r0, %1, 0x2, 0x3,0xffffffff;"
         "add.s32        %1, r0, %1;"
-        "shfl.down.b32  r0, %1, 0x1, 0x1;"
+        "shfl.sync.down.b32  r0, %1, 0x1, 0x1,0xffffffff;"
         "add.s32        %0, r0, %1;"
         "}"
         : "=r"(output) : "r"(input));
@@ -341,7 +341,7 @@ void KernelReduceSumFast(DTYPE * input, DTYPE * output,
         if (tid < blockDim.x / 32)
             value = data[tid];
         else
-	        value = 0;
+            value = 0;
         value = shflDownReduceSum(value);
 
         if (tid == 0 && blockIdx.x < reducedStrideNum) {
@@ -692,13 +692,12 @@ void _CudaReduceSum(const XTensor * input, XTensor * output, int dim, const XTen
     CheckNTErrors(input->dataType == output->dataType, "Unmatched data types!");
     CheckNTErrors(shift == NULL || output->unitNum == shift->unitNum, "Incorrect shift tensor size!");
 
-	int dimRDI = input->order - dim - 1;
     for(int i = 0; i < input->order; i++){
-        if(i < dimRDI){
-            CheckNTErrors(input->dimSizeRDI[i] == output->dimSizeRDI[i], "Unmatched tensors!");
+        if(i < dim){
+            CheckNTErrors(input->dimSize[i] == output->dimSize[i], "Unmatched tensors!");
         }
-        else if(i > dimRDI){
-            CheckNTErrors(input->dimSizeRDI[i] == output->dimSizeRDI[i - 1], "Unmatched tensors!");
+        else if(i > dim){
+            CheckNTErrors(input->dimSize[i] == output->dimSize[i - 1], "Unmatched tensors!");
         }
     }
 
@@ -709,31 +708,23 @@ void _CudaReduceSum(const XTensor * input, XTensor * output, int dim, const XTen
     int cudaBlockSize[3];
     int iter = 0;
     int stride = 1;
-    int strideNum = input->dimSizeRDI[dimRDI];
+    int strideNum = input->dimSize[dim];
     int blockSize = 1;
     int blockNum = 1;
 
     for (int i = 0; i < input->order; i++) {
-        if (i < dimRDI)
-            stride *= input->dimSizeRDI[i];
-        else if (i > dimRDI)
-            blockNum *= input->dimSizeRDI[i];
+        if (i < dim)
+            blockNum *= input->dimSize[i];
+        else if (i > dim)
+            stride *= input->dimSize[i];
     }
     blockSize = stride * strideNum;
 
     int devID = input->devID;
-    XMem * mem = input->mem;
-
-    GDevs.GetCudaThread2D(devID, strideNum, stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);
-
-    int bufSize = input->unitSize * cudaGridSize[0] * stride * blockNum * 2;
-    DTYPE * buf  = mem != NULL ? (DTYPE*)mem->AllocBuf(mem->devID, bufSize) : (DTYPE*)XMemAlloc(input->devID, bufSize);
-    DTYPE * buf1 = buf;
-    DTYPE * buf2 = buf + cudaGridSize[0] * stride * blockNum;
-    DTYPE * sp = shift != NULL ? (DTYPE*)shift->data : NULL;
-    
     int devIDBackup;
-    ProtectCudaDev(input->devID, devIDBackup);
+    ProtectCudaDev(devID, devIDBackup);
+
+    DTYPE * sp = shift != NULL ? (DTYPE*)shift->data : NULL;
 
     if (stride == 1 && blockNum >= 10) {
         dim3 grids;
@@ -751,7 +742,7 @@ void _CudaReduceSum(const XTensor * input, XTensor * output, int dim, const XTen
                                                               strideNum, blockNum, sp, power, isExp);
         }
     }
-    else if (stride != 1 && stride * blockNum > 4096){
+    else if (stride != 1 && stride * blockNum > 4096) {
         //GDevs->GetGridAndBlockSize2D(devID, stride * blockNum, strideNum,MAX_INT, cudaGridSize, cudaBlockSize);
         //unsigned int* goutput = (unsigned int *)input->data;
         //convert2uintV2 << <dim3(cudaGridSize[0], cudaGridSize[1]), dim3(cudaBlockSize[0], cudaBlockSize[1]) >> > ((float*)input->data, goutput, stride, strideNum, blockNum, strideNum*blockNum*stride);
@@ -761,6 +752,14 @@ void _CudaReduceSum(const XTensor * input, XTensor * output, int dim, const XTen
                                                                 strideNum, blockNum,sp, power, isExp);
     }
     else {
+        XMem * mem = input->mem;
+
+        GDevs.GetCudaThread2D(devID, strideNum, stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);
+
+        int bufSize = input->unitSize * cudaGridSize[0] * stride * blockNum * 2;
+        DTYPE * buf  = mem != NULL ? (DTYPE*)mem->AllocBuf(mem->devID, bufSize) : (DTYPE*)XMemAlloc(devID, bufSize);
+        DTYPE * buf1 = buf;
+        DTYPE * buf2 = buf + cudaGridSize[0] * stride * blockNum;
         do {
             if (input->dataType == DEFAULT_DTYPE) {
                 DTYPE * iData = NULL;
@@ -904,13 +903,15 @@ void _CudaReduceSum(const XTensor * input, XTensor * output, int dim, const XTen
             iter++;
 
         } while (strideNum > 1);
-    }
-    ProtectCudaDev(input->devID, devIDBackup);
+        
 
-    if (mem != NULL)
-        mem->ReleaseBuf(mem->devID, bufSize);
-    else
-        XMemFree(input->devID, buf);
+        if (mem != NULL)
+            mem->ReleaseBuf(mem->devID, bufSize);
+        else
+            XMemFree(devID, buf);
+    }
+
+    BacktoCudaDev(devID, devIDBackup);
 }
 
 #endif // USE_CUDA

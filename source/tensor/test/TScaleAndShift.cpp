@@ -19,6 +19,7 @@
 * $Created by: Xu Chen (email: hello_master1954@163.com) 2018-06-27
 */
 
+#include "../core/utilities/CheckData.h"
 #include "TScaleAndShift.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
@@ -51,9 +52,9 @@ bool TestScaleAndShift1()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s = NewTensor(sOrder, sDimSize);
-    XTensor * t = NewTensor(sOrder, sDimSize);
-    XTensor * tMe = NewTensor(sOrder, sDimSize);
+    XTensor * s = NewTensorV2(sOrder, sDimSize);
+    XTensor * t = NewTensorV2(sOrder, sDimSize);
+    XTensor * tMe = NewTensorV2(sOrder, sDimSize);
     XTensor tUser;
 
     /* initialize variables */
@@ -66,17 +67,17 @@ bool TestScaleAndShift1()
     tUser = ScaleAndShift(*s, scaleFactor, shiftFactor);
 
     /* check results */
-    cpuTest = t->CheckData(answer, sUnitNum) && 
-        tMe->CheckData(answer, sUnitNum) && tUser.CheckData(answer, sUnitNum);
+    cpuTest = _CheckData(t, answer, sUnitNum) &&
+              _CheckData(tMe, answer, sUnitNum) && _CheckData(&tUser, answer, sUnitNum);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensors */
-    XTensor * sGPU = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * tGPU = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * tMeGPU = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tMeGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
     XTensor tUserGPU;
 
     /* initialize variables */
@@ -89,8 +90,8 @@ bool TestScaleAndShift1()
     tUserGPU = ScaleAndShift(*sGPU, scaleFactor, shiftFactor);
 
     /* check results */
-    gpuTest = tGPU->CheckData(answer, sUnitNum) && 
-        tMeGPU->CheckData(answer, sUnitNum) && tUserGPU.CheckData(answer, sUnitNum);
+    gpuTest = _CheckData(tGPU, answer, sUnitNum) &&
+              _CheckData(tMeGPU, answer, sUnitNum) && _CheckData(&tUserGPU, answer, sUnitNum);
 
     /* destroy variables */
     delete s;

@@ -29,8 +29,11 @@ namespace nts { // namespace nts(NiuTrans.Tensor)
 
 
 XTensor MulAndShift(const XTensor &x, const XTensor &w, const XTensor &b,
-                  DTYPE alpha = (DTYPE)1.0, XPRunner * parallelRunner = NULL);
+                    DTYPE alpha = (DTYPE)1.0, XPRunner * parallelRunner = NULL);
 
+XTensor MulAndShift(const XTensor &x, MATRIX_TRANS_TYPE transposedA, 
+                    const XTensor &w, MATRIX_TRANS_TYPE transposedB, 
+                    const XTensor &b, DTYPE alpha = (DTYPE)1.0, XPRunner * parallelRunner = NULL);
 
 } // namespace nts(NiuTrans.Tensor)
 

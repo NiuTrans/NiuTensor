@@ -42,11 +42,12 @@ using namespace transformer;
 
 int main( int argc, const char ** argv )
 {
-    //_CrtSetBreakAlloc(896);
-    //BackwardTest();
-    //return 0;
+    //_CrtSetDbgFlag(_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG) | _CRTDBG_LEAK_CHECK_DF);
+    //_CrtSetBreakAlloc(2708);
 
-    if(argc > 1 && !strcmp(argv[1], "-fnnlm"))
+    if(argc > 1 && !strcmp(argv[1], "-test"))
+        Test();
+    else if(argc > 1 && !strcmp(argv[1], "-fnnlm"))
         FNNLMMain(argc - 1, argv + 1);
     else if(argc > 1 && !strcmp(argv[1], "-t2t"))
         TransformerMain(argc - 1, argv + 1);
@@ -55,6 +56,7 @@ int main( int argc, const char ** argv )
         fprintf(stderr, "neural networks in an easy way. \n\n");
         fprintf(stderr, "Run this program with \"-test\" for unit test!\n");
         fprintf(stderr, "Or run this program with \"-fnnlm\" for sample FNNLM!\n");
+        fprintf(stderr, "Or run this program with \"-t2t\" for sample Transformer!\n");
     }
 
     //_CrtDumpMemoryLeaks();
@@ -69,10 +71,13 @@ void BackwardTest()
     XTensor a;
     XTensor b;
     XTensor c;
+    a.enableGrad = true;
+    b.enableGrad = false;
+    c.enableGrad = false;
     XTensor mean;
     XTensor origin;
-    InitTensor2D(&a, 2, 3);
-    InitTensor1D(&b, 2);
+    InitTensor2DV2(&a, 2, 3);
+    InitTensor1DV2(&b, 2);
 
     a.SetZeroAll();
     b.SetZeroAll();
@@ -86,14 +91,15 @@ void BackwardTest()
     b.Set1D(2.0F, 0);
     b.Set1D(1.0F, 1);
 
-    c = DivDim(a, b, 0);
+    DivDim(a, b, c, 0);
     c.Dump(stderr, "c:");
+    auto loss = CrossEntropy(c, a);
 
     //XLink::ShowNetwork(stderr, &c);
 
-    net.Backward(c);
+    net.Backward(loss);
 
-    net.Dump(stderr);
+    a.grad->Dump(stderr);
 
 }
 
@@ -115,9 +121,9 @@ void TransposeTest()
 
     int nnn = GDevs.nGPU;
 
-    InitTensor3D(&x, B, N, H, X_FLOAT, 0);
-    InitTensor4D(&y, K, B, N, H/K, X_FLOAT, 0);
-    InitTensor3D(&z, B, N, H, X_FLOAT, 0);
+    InitTensor3DV2(&x, B, N, H, X_FLOAT, 0);
+    InitTensor4DV2(&y, K, B, N, H/K, X_FLOAT, 0);
+    InitTensor3DV2(&z, B, N, H, X_FLOAT, 0);
 
     cudaEvent_t ctime0;
     cudaEvent_t ctime1;
@@ -185,9 +191,9 @@ void SumDimTest()
     int b = 7;
     int c = 3;
 
-    InitTensor3D(&x, a, b, c, X_FLOAT, -1);
-    InitTensor1D(&y, c, X_FLOAT, -1);
-    InitTensor3D(&z, a, b, c, X_FLOAT, -1);
+    InitTensor3DV2(&x, a, b, c, X_FLOAT, -1);
+    InitTensor1DV2(&y, c, X_FLOAT, -1);
+    InitTensor3DV2(&z, a, b, c, X_FLOAT, -1);
 
     x.SetZeroAll();
     y.SetZeroAll();

@@ -34,7 +34,7 @@ merge data by blocks
 >> target - target data array
 >> myMem - memory pool
 */
-void _MergeBlockLists(const XList * sourceList, int * blockSizes, int blockNum, void * target, XMem * myMem)
+void _MergeBlockLists(const StrList* sourceList, int * blockSizes, int blockNum, void * target, XMem * myMem)
 {
     if (myMem != NULL && myMem->devID >= 0) {
 #ifdef USE_CUDA

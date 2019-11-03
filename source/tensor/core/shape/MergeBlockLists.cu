@@ -71,7 +71,7 @@ merge data by blocks (cuda version)
 >> target - target data array
 >> myMem - the memory pool
 */
-void _CudaMergeBlockLists(const XList * sourceList, int * blockSizes, int blockNum, void * target, XMem * myMem)
+void _CudaMergeBlockLists(const StrList* sourceList, int * blockSizes, int blockNum, void * target, XMem * myMem)
 {
     CheckNTErrors((myMem != NULL), "No memory pool!");
     CheckNTErrors((myMem->devID >= 0), "Wrong device to run!");

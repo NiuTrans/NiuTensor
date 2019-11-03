@@ -20,7 +20,7 @@
  * This is a simple impelementation of the feed-forward network-baesd language
  * model (FNNLM). See more details about FNNLM in
  * "A Neural Probabilistic Language Model" by Bengio et al.
- * Journal of Machine Learning Research 3 (2003) 1137¨C1155
+ * Journal of Machine Learning Research 3 (2003) 1137-1155
  *
  * $Created by: XIAO Tong (xiaotong@mail.neu.edu.cn) 2018-06-22
  */
@@ -68,8 +68,8 @@ void Read(const char * fn, FNNModel &model);
 void Test(const char * test, const char * result, FNNModel &model);
 int  LoadNGrams(FILE * file, int n, NGram * ngrams, int sentNum, int wordNum);
 void InitZeroOneTensor2D(XTensor &tensor, int rowNum, int colNum, int * rows, int * cols, 
-                         int itemNum, int devID, XMem * mem);
-void MakeWordBatch(XTensor &batch, NGram * ngrams, int ngramNum, int n, int vSize, int devID, XMem * mem);
+                         int itemNum, int devID);
+void MakeWordBatch(XTensor &batch, NGram * ngrams, int ngramNum, int n, int vSize, int devID);
 void Forward(XTensor inputs[], XTensor &output, FNNModel &model, FNNNet &net);
 void Backward(XTensor inputs[], XTensor &output, XTensor &gold, LOSS_FUNCTION_NAME loss, 
               FNNModel &model, FNNModel &grad, FNNNet &net);
@@ -229,11 +229,6 @@ void LoadArgs(int argc, const char ** argv, FNNModel &model)
             fprintf(stderr, " -dev=%d\n", model.devID);
         }
     }
-
-    for(int i = 0; i < argc; i++){
-        if (!strcmp(argv[i], "-mempool"))
-            model.mem = new XMem(model.devID);
-    }
 }
 
 /* check model settings */
@@ -262,11 +257,6 @@ void Copy(FNNModel &tgt, FNNModel &src)
     tgt.vSize = src.vSize;
     tgt.devID = src.devID;
     tgt.useMemPool = src.useMemPool;
-    if(src.mem != NULL){
-        tgt.mem = new XMem(src.mem->devID, src.mem->mode, 
-                           src.mem->maxBlockSize, src.mem->blockNum, 
-                           src.mem->bufSize);
-    }
 }
 
 /* 
@@ -310,7 +300,7 @@ initialize a 1d tensor using the fnn model setting
 */
 void InitModelTensor1D(XTensor &tensor, int num, FNNModel &model)
 {
-    InitTensor1D(&tensor, num, X_FLOAT, model.devID, model.mem);
+    InitTensor1D(&tensor, num, X_FLOAT, model.devID);
 }
 
 /* 
@@ -322,7 +312,7 @@ initialize a 2d tensor using the fnn model setting
 */
 void InitModelTensor2D(XTensor &tensor, int rowNum, int colNum, FNNModel &model)
 {
-    InitTensor2D(&tensor, rowNum, colNum, X_FLOAT, model.devID, model.mem);
+    InitTensor2D(&tensor, rowNum, colNum, X_FLOAT, model.devID);
 }
 
 
@@ -331,6 +321,7 @@ void Init(FNNModel &model)
 {
     /* create embedding parameter matrix: vSize * eSize */
     InitModelTensor2D(model.embeddingW, model.vSize, model.eSize, model);
+    model.embeddingW.SetVarFlag();
     
     /* create hidden layer parameter matrics */
     for(int i = 0; i < model.hDepth; i++){
@@ -340,15 +331,19 @@ void Init(FNNModel &model)
             InitModelTensor2D(model.hiddenW[i], (model.n - 1) * model.eSize, model.hSize, model);
         else
             InitModelTensor2D(model.hiddenW[i], model.hSize, model.hSize, model);
-        
+        model.hiddenW[i].SetVarFlag();
+
         /* bias term: a row vector of hSize entries */
         InitModelTensor1D(model.hiddenB[i], model.hSize, model);
+        model.hiddenB[i].SetVarFlag();
     }
     
     /* create the output layer parameter matrix and bias term */
     int iSize = model.hDepth == 0 ? (model.n - 1) * model.eSize : model.hSize;
     InitModelTensor2D(model.outputW, iSize, model.vSize, model);
     InitModelTensor1D(model.outputB, model.vSize, model);
+    model.outputW.SetVarFlag();
+    model.outputB.SetVarFlag();
     
     /* then, we initialize model parameters using a uniform distribution in range
        of [-minmax, minmax] */
@@ -449,12 +444,15 @@ void Train(const char * train, bool isShuffled, FNNModel &model)
             /* the gold standard */
             XTensor gold;
 
+            /* the loss tensor */
+            XTensor lossTensor;
+
             /* make the input tensor for position i */
             for(int i = 0; i < model.n - 1; i++)
-                MakeWordBatch(inputs[i], ngrams, ngramNum, i, model.vSize, model.devID, model.mem);
+                MakeWordBatch(inputs[i], ngrams, ngramNum, i, model.vSize, model.devID);
 
             /* make the gold tensor */
-            MakeWordBatch(gold, ngrams, ngramNum, model.n - 1, model.vSize, model.devID, model.mem);
+            MakeWordBatch(gold, ngrams, ngramNum, model.n - 1, model.vSize, model.devID);
 
             if(!autoDiff){
                 /* prepare an empty network for building the fnn */
@@ -471,30 +469,34 @@ void Train(const char * train, bool isShuffled, FNNModel &model)
 
                 /* update model parameters */
                 Update(model, grad, learningRate, false);
+
+                /* get probabilities */
+                float prob = GetProb(output, gold);
+                loss -= prob;
             }
             else{
                 /* gradient = 0 */
                 Clear(model, true);
 
                 /* forward + backward process */
-				
-				/* this is implemented by gather function */
+                
+                /* this is implemented by gather function */
                 ForwardAutoDiff(ngrams, ngramNum, output, model);
-				
-				/* this is implemented by multiply function */
-				//ForwardAutoDiff(inputs, output, model);
+                
+                /* this is implemented by multiply function */
+                lossTensor = CrossEntropy(output, gold);
 
                 /* automatic differentiation */
-                autoDiffer.Backward(output, gold, CROSSENTROPY);
+                autoDiffer.Backward(lossTensor);
 
                 /* update model parameters */
                 Update(model, grad, learningRate, true);
+
+                /* get probabilities */
+                float prob = ReduceSumAll(lossTensor);
+                loss += prob;
             }
-                
-            /* get probabilities */
-            float prob = GetProb(output, gold);
-                
-            loss += -prob;
+
             wordCount += ngramNum;
             wordCountTotal += ngramNum;
             
@@ -537,8 +539,8 @@ update the model parameters using the delta rule
 */
 void Update(FNNModel &model, FNNModel &grad, float epsilon, bool isNodeGrad)
 {
-    XList paraList(10);
-    XList gradList(10);
+    TensorList paraList(10);
+    TensorList gradList(10);
 
     paraList.Add(&model.outputW);
     paraList.Add(&model.outputB);
@@ -577,9 +579,6 @@ void Update(FNNModel &model, FNNModel &grad, float epsilon, bool isNodeGrad)
         XTensor * para = (XTensor*)paraList.GetItem(i);
         XTensor * paraGrad = (XTensor*)gradList.GetItem(i);
 
-        //fprintf(stderr, "%d\n", i);
-        //paraGrad->Dump(stderr, "grad:", 10);
-
         /* the delta rule */
         _Sum(para, paraGrad, para, -epsilon);
     }
@@ -598,14 +597,14 @@ float GetProb(XTensor &output, XTensor &gold, XTensor * wordProbs)
     InitTensor(&probs, &output);
     
     /* probs[i,j] = output[i,j] * gold[i,j] */
-    _Multiply(&output, &gold, &probs);
+    Multiply(output, gold, probs);
 
     /* probability of each word */
     XTensor wprobs;
-    InitTensor1D(&wprobs, output.GetDim(0), output.dataType, output.devID, output.mem);
-    _ReduceSum(&probs, &wprobs, 1);
+    InitTensor1D(&wprobs, output.GetDim(0), output.dataType, output.devID);
+    ReduceSum(probs, wprobs, 1);
     if(wordProbs != NULL)
-        _CopyValues(&wprobs, wordProbs);
+        CopyValues(wprobs, *wordProbs);
 
     /* reshape the tensor to fit it into the reduce procedure 
        TODO: XTensor supports scalars */
@@ -616,8 +615,8 @@ float GetProb(XTensor &output, XTensor &gold, XTensor * wordProbs)
  
     /* probability for the batch */
     XTensor result;
-    InitTensor1D(&result, 1, X_FLOAT, output.devID, output.mem);
-    _ReduceSum(&probs, &result, 1);
+    InitTensor1D(&result, 1, X_FLOAT, output.devID);
+    ReduceSum(probs, result, 1);
     
     return result.Get1D(0);
 }
@@ -713,12 +712,11 @@ The indexed cell is set to 1, and 0 otherwise.
 >> cols - column index
 >> itemNum - number of non-zero items
 >> devID - device id
->> mem - memory pool
 */
 void InitZeroOneTensor2D(XTensor &tensor, int rowNum, int colNum, int * rows, int * cols, 
-                         int itemNum, int devID, XMem * mem)
+                         int itemNum, int devID)
 {
-    InitTensor2D(&tensor, rowNum, colNum, X_FLOAT, devID, mem);
+    InitTensor2D(&tensor, rowNum, colNum, X_FLOAT, devID);
 
     tensor.SetZeroAll();
 
@@ -735,9 +733,8 @@ make a tensor that encodes a batch of words
 >> n - indicate which word is encode for each ngram
 >> vSize - vocabulary size
 >> devID - device id
->> mem - memory pool
 */
-void MakeWordBatch(XTensor &batch, NGram * ngrams, int ngramNum, int n, int vSize, int devID, XMem * mem)
+void MakeWordBatch(XTensor &batch, NGram * ngrams, int ngramNum, int n, int vSize, int devID)
 {
     int * rows = new int[ngramNum];
     int * cols = new int[ngramNum];
@@ -747,7 +744,7 @@ void MakeWordBatch(XTensor &batch, NGram * ngrams, int ngramNum, int n, int vSiz
         cols[i] = ngrams[i].words[n];
     }
 
-    InitZeroOneTensor2D(batch, ngramNum, vSize, rows, cols, ngramNum, devID, mem);
+    InitZeroOneTensor2D(batch, ngramNum, vSize, rows, cols, ngramNum, devID);
 
     delete[] rows;
     delete[] cols;
@@ -765,7 +762,7 @@ void Forward(XTensor inputs[], XTensor &output, FNNModel &model, FNNNet &net)
     int batchSize = -1;
     int n = model.n;
     int depth = model.hDepth;
-    XList eList(n - 1);
+    TensorList eList(n - 1);
 
     /* previoius n - 1 words */
     for(int i = 0; i < n - 1; i++){
@@ -784,7 +781,7 @@ void Forward(XTensor inputs[], XTensor &output, FNNModel &model, FNNNet &net)
 
         /* generate word embedding of position i:
            embedding = input * w   */
-        _MatrixMul(&input, X_NOTRANS, &w, X_NOTRANS, &embedding);
+        MatrixMul(input, X_NOTRANS, w, X_NOTRANS, embedding);
 
         eList.Add(&net.embeddings[i]);
     }
@@ -792,7 +789,7 @@ void Forward(XTensor inputs[], XTensor &output, FNNModel &model, FNNNet &net)
     /* concatenate word embeddings
        embeddingcat = cat(embedding_0...embedding_{n-1}) */
     InitModelTensor2D(net.embeddingCat, batchSize, (n - 1) * model.eSize, model);
-    _Concatenate(&eList, &net.embeddingCat, 1);
+    Concatenate(eList, net.embeddingCat, 1);
 
     /* go over each hidden layer */
     for(int i = 0; i < depth; i++){
@@ -807,22 +804,22 @@ void Forward(XTensor inputs[], XTensor &output, FNNModel &model, FNNNet &net)
 
         /* generate hidden states of layer i: 
            s = h_pre * w    */
-        _MatrixMul(&h_pre, X_NOTRANS, &w, X_NOTRANS, &s);
+        MatrixMul(h_pre, X_NOTRANS, w, X_NOTRANS, s);
 
         /* make a 2d tensor for the bias term */
         XTensor b2D;
         InitTensor(&b2D, &s);
-        _Unsqueeze(&b, &b2D, 0, batchSize);
+        Unsqueeze(b, b2D, 0, batchSize);
 
         /* introduce bias term:
            s = s + b
            NOTE: the trick here is to extend b to a 2d tensor
                  to fit into the 2d representation in tensor summation */
-        _Sum(&s, &b2D, &s);
+        Sum(s, b2D, s);
 
         /* pass the state through the hard tanh function:
            h = tanh(s) */
-        _HardTanH(&s, &h);
+        HardTanH(s, h);
     }
 
     /* generate the output Pr(w_{n-1}|w_0...w_{n-2}):
@@ -840,16 +837,16 @@ void Forward(XTensor inputs[], XTensor &output, FNNModel &model, FNNNet &net)
         InitModelTensor2D(y, batchSize, model.vSize, model);
 
         /* s = h_last * w  */
-        _MatrixMul(&h_last, X_NOTRANS, &w, X_NOTRANS, &s);
+        MatrixMul(h_last, X_NOTRANS, w, X_NOTRANS, s);
 
         XTensor b2D;
         InitTensor(&b2D, &s);
-        _Unsqueeze(&b, &b2D, 0, batchSize);
+        Unsqueeze(b, b2D, 0, batchSize);
 
-        _Sum(&s, &b2D, &s);
+        Sum(s, b2D, s);
 
         /* y = softmax(s) */
-        _LogSoftmax(&s, &y, 1);
+        LogSoftmax(s, y, 1);
     }
 }
 
@@ -891,18 +888,18 @@ void Backward(XTensor inputs[], XTensor &output, XTensor &gold, LOSS_FUNCTION_NA
         x is the top most hidden layer)
        so we know 
        dE/dw = x^T * dE/ds */
-    _MatrixMul(&x, X_TRANS, &deds, X_NOTRANS, &dedw);
+    MatrixMul(x, X_TRANS, deds, X_NOTRANS, dedw);
 
     /* gradient of the bias: dE/db = dE/ds * 1 = dE/ds
     specifically dE/db_{j} = \sum_{i} dE/ds_{i,j} */
-    _ReduceSum(&deds, &dedb, 0);
+    ReduceSum(deds, dedb, 0);
 
     /* then, we compute 
        dE/dx_{j} = \sum_j' (dE/ds_{j'} * ds_{j'}/dx_j) 
                  = \sum_j' (dE/ds_{j'} * w_{j, j'})
        i.e., 
        dE/dx = dE/ds * w^T */
-    _MatrixMul(&deds, X_NOTRANS, &w, X_TRANS, &dedx);
+    MatrixMul(deds, X_NOTRANS, w, X_TRANS, dedx);
 
     XTensor &gradPassed = dedx;
     XTensor dedsHidden;
@@ -927,27 +924,27 @@ void Backward(XTensor inputs[], XTensor &output, XTensor &gold, LOSS_FUNCTION_NA
         
         /* backpropagation through the activation fucntion: 
            dE/ds = dE/dh * dh/ds */
-        _HardTanHBackward(NULL, &h, &s, &dedh, &deds, NOLOSS);
+        _HardTanHBackward(&h, &s, &dedh, &deds);
 
         /* gradient of the weight: dE/dw = x^T * dE/ds   */
-        _MatrixMul(&x, X_TRANS, &deds, X_NOTRANS, &dedw);
+        MatrixMul(x, X_TRANS, deds, X_NOTRANS, dedw);
 
         /* gradient of the bias: dE/db = dE/ds * 1 = dE/ds
            specifically dE/db_{j} = \sum_{i} dE/ds_{i,j} */
-        _ReduceSum(&deds, &dedb, 0);
+        ReduceSum(deds, dedb, 0);
 
         /* gradient of the input: dE/dx = dE/ds * w^T    */
-        _MatrixMul(&deds, X_NOTRANS, &w, X_TRANS, &dedx);
+        MatrixMul(deds, X_NOTRANS, w, X_TRANS, dedx);
 
         if (i > 0)
-            _CopyValues(&dedx, &gradPassed);
+            CopyValues(dedx, gradPassed);
     }
 
-    XList eList(n - 1);
+    TensorList eList(n - 1);
 
     /* back-propagation for the embedding layer */
     for (int i = 0; i < n - 1; i++) {
-        XTensor * dedy = NewTensor2D(batchSize, model.eSize, X_FLOAT, model.devID, model.mem);
+        XTensor * dedy = NewTensor2D(batchSize, model.eSize, X_FLOAT, model.devID);
         eList.Add(dedy);
     }
 
@@ -955,7 +952,7 @@ void Backward(XTensor inputs[], XTensor &output, XTensor &gold, LOSS_FUNCTION_NA
     XTensor &dedyCat = depth > 0 ? dedxBottom : dedx;
 
     /* split the concatenation of gradients of the embeddings */
-    _Split(&dedyCat, &eList, 1, n - 1);
+    Split(dedyCat, eList, 1, n - 1);
 
     /* go over for each word */
     for (int i = 0; i < n - 1; i++) {
@@ -966,7 +963,7 @@ void Backward(XTensor inputs[], XTensor &output, XTensor &gold, LOSS_FUNCTION_NA
         /* gradient of the embedding weight: dE/dw += x^T * dE/dy 
            NOTE that we accumulate dE/dw here because the matrix w
            is shared by several layers (or words) */
-        _MatrixMul(&x, X_TRANS, dedy, X_NOTRANS, &dedw, 1.0F, 1.0F);
+        MatrixMul(x, X_TRANS, *dedy, X_NOTRANS, dedw, 1.0F, 1.0F);
 
         delete dedy;
     }
@@ -999,7 +996,7 @@ void ForwardAutoDiff(NGram * ngrams, int batch, XTensor &output, FNNModel &model
         }
     }
 
-    InitTensor1D(&words, size, X_INT, model.devID, model.mem);
+    InitTensor1D(&words, size, X_INT, model.devID);
     words.SetData(index, size);
 
     embeddingBig = Gather(model.embeddingW, words);
@@ -1017,7 +1014,8 @@ void ForwardAutoDiff(NGram * ngrams, int batch, XTensor &output, FNNModel &model
         hidden = HardTanH(MMul(hidden, model.hiddenW[i]) + model.hiddenB[i]);
 
     /* output layer */
-    output = LogSoftmax(MMul(hidden, model.outputW) + model.outputB, 1);
+    //output = LogSoftmax(MMul(hidden, model.outputW) + model.outputB, 1);
+    output = Softmax(MMul(hidden, model.outputW) + model.outputB, 1);
 }
 
 /*
@@ -1036,7 +1034,7 @@ void ForwardAutoDiff(XTensor inputs[], XTensor &output, FNNModel &model)
     XTensor hidden;
     XTensor b;
 
-    XList inputList(n - 1);
+    TensorList inputList(n - 1);
     for(int i = 0; i < n - 1; i++)
         inputList.Add(inputs + i);
 
@@ -1155,10 +1153,10 @@ void Test(const char * test, const char * result, FNNModel &model)
         
         /* make the input tensor for position i */
         for (int i = 0; i < model.n - 1; i++)
-            MakeWordBatch(inputs[i], ngrams, ngramNum, i, model.vSize, model.devID, model.mem);
+            MakeWordBatch(inputs[i], ngrams, ngramNum, i, model.vSize, model.devID);
 
         /* make the gold tensor */
-        MakeWordBatch(gold, ngrams, ngramNum, model.n - 1, model.vSize, model.devID, model.mem);
+        MakeWordBatch(gold, ngrams, ngramNum, model.n - 1, model.vSize, model.devID);
 
         if (!autoDiff) {
             /* prepare an empty network for building the fnn */
@@ -1167,9 +1165,10 @@ void Test(const char * test, const char * result, FNNModel &model)
             /* forward computation */
             Forward(inputs, output, model, net);
         }
-        else {			
-			/* this is implemented by gather function */
+        else {            
+            /* this is implemented by gather function */
             ForwardAutoDiff(ngrams, ngramNum, output, model);
+            output = Log(output);
 				
 			/* this is implemented by multiply function */
 			//ForwardAutoDiff(inputs, output, model);
@@ -1200,6 +1199,7 @@ void Test(const char * test, const char * result, FNNModel &model)
     }
 
     fclose(file);
+    fclose(ofile);
 
     double elapsed = GetClockSec() - startT;
 

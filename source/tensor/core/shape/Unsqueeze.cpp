@@ -42,16 +42,15 @@ void _Unsqueeze(const XTensor * a, XTensor * b, int dim, int dSize)
     CheckNTErrors((a->order == b->order - 1), "Unmatched tensors!");
     CheckNTErrors((a->unitSize == b->unitSize), "Unmatched tensors!");
 
-    int dimRDI = b->order - dim - 1;
     for (int i = 0; i < b->order; i++) {
-        if (i < dimRDI) {
-            CheckNTErrors((a->dimSizeRDI[i] == b->dimSizeRDI[i]), "Unmatched tensors!");
+        if (i < dim) {
+            CheckNTErrors((a->dimSize[i] == b->dimSize[i]), "Unmatched tensors!");
         }
-        else if (i > dimRDI) {
-            CheckNTErrors((a->dimSizeRDI[i - 1] == b->dimSizeRDI[i]), "Unmatched tensors!");
+        else if (i > dim) {
+            CheckNTErrors((a->dimSize[i - 1] == b->dimSize[i]), "Unmatched tensors!");
         }
         else {
-            CheckNTErrors((dSize == b->dimSizeRDI[i]), "Unmatched tensors!");
+            CheckNTErrors((dSize == b->dimSize[i]), "Unmatched tensors!");
         }
     }
 
@@ -60,8 +59,8 @@ void _Unsqueeze(const XTensor * a, XTensor * b, int dim, int dSize)
 
     int blockNumA = 1;
     int blockNumB = 1;
-    for (int i = 0; i < dimRDI; i++)
-        blockSize *= a->dimSizeRDI[i];
+    for (int i = dim; i < a->order; i++)
+        blockSize *= a->dimSize[i];
 
     realBlockSize = blockSize * a->unitSize;
 
@@ -78,7 +77,7 @@ void _Unsqueeze(const XTensor * a, XTensor * b, int dim, int dSize)
 #endif
     }
     else {
-        XList * sourceArrays = new XList(blockNumB);
+        StrList * sourceArrays = new StrList(blockNumB);
         int * blockSizes = new int[blockNumB];
 
         for (int i = 0; i < blockNumA; i++) {
@@ -94,6 +93,34 @@ void _Unsqueeze(const XTensor * a, XTensor * b, int dim, int dSize)
         delete sourceArrays;
         delete[] blockSizes;
     }
+}
+
+bool CheckUnsqueezeSize(const XTensor * a, const XTensor * b, int dim, int dSize)
+{
+    if (!(a && b))
+        return false;
+
+    if (!(a->dataType == b->dataType))
+        return false;
+
+    int order = a->order + 1;
+    int * dimSize = new int[order];
+
+    for (int i = 0; i < order; i++) {
+        if (i < dim)
+            dimSize[i] = a->dimSize[i];
+        else if (i == dim)
+            dimSize[i] = dSize;
+        else
+            dimSize[i] = a->dimSize[i - 1];
+    }
+
+    for (int i = 0; i < order; i++) {
+        if (dimSize[i] != b->dimSize[i])
+            return false;
+    }
+
+    return true;
 }
 
 /*
@@ -128,14 +155,49 @@ XTensor Unsqueeze(const XTensor &a, int dim, int dSize)
     _Unsqueeze(&a, &b, dim, dSize);
 
     /* tensor connections */
-    XLink::MakeLink(&a, NULL, &b, SHAPE_UNSQUEEZE);
-    XLink::AddParamToHeadInt(&b, dim);
-    XLink::AddParamToHeadInt(&b, dSize);
+    if (a.enableGrad) {
+        XLink::MakeLink(&a, NULL, &b, SHAPE_UNSQUEEZE);
+        XLink::AddParamToHeadInt(&b, dim);
+        XLink::AddParamToHeadInt(&b, dSize);
+    }
 
     /* destroy variables */
     delete[] dimSize;
 
     return b;
+}
+
+void Unsqueeze(const XTensor &a, XTensor &b, int dim, int dSize)
+{
+    if (!b.isInit || !CheckUnsqueezeSize(&a, &b, dim, dSize)) {
+        int order = a.order + 1;
+        int * dimSize = new int[order];
+
+        for (int i = 0; i < order; i++) {
+            if (i < dim)
+                dimSize[i] = a.dimSize[i];
+            else if (i == dim)
+                dimSize[i] = dSize;
+            else
+                dimSize[i] = a.dimSize[i - 1];
+        }
+
+        float dr = (!a.isSparse) ? 1.0F : a.denseRatio;
+        InitTensorV2(&b, order, dimSize, a.dataType, dr, a.devID, a.mem);
+
+        /* destroy variables */
+        delete[] dimSize;
+    }
+
+    /* call _Unsqueeze function */
+    _Unsqueeze(&a, &b, dim, dSize);
+
+    if (a.enableGrad) {
+        /* tensor connections */
+        XLink::MakeLink(&a, NULL, &b, SHAPE_UNSQUEEZE);
+        XLink::AddParamToHeadInt(&b, dim);
+        XLink::AddParamToHeadInt(&b, dSize);
+    }
 }
 
 } // namespace nts(NiuTrans.Tensor)

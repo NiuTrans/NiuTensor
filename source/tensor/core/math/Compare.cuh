@@ -28,17 +28,17 @@ namespace nts{ // namespace nts(NiuTrans.Tensor)
 
 #ifdef USE_CUDA
 
-/* compare whether every entry is equal to the specified value (cuda kernel) */
-__global__
-void KernelEqual(DTYPE * a, DTYPE * b, DTYPE * number);
-/* compare whether every entry is equal to the specified value (cuda version) */
-void _CudaEqual(const XTensor * a, XTensor * b, DTYPE number);
+/* check whether every entry is equal to the given value (cuda version) */
+void _CudaEqual(const XTensor * a, XTensor * b, DTYPE value);
 
-/* compare whether every entry is not equal to the specified value (cuda kernel) */
-__global__
-void KernelNotEqual(DTYPE * a, DTYPE * b, DTYPE * number);
-/* compare whether every entry is not equal to the specified value (cuda version) */
-void _CudaNotEqual(const XTensor * a, XTensor * b, DTYPE number);
+/* check whether every entry is not equal to the given value (cuda version) */
+void _CudaNotEqual(const XTensor * a, XTensor * b, DTYPE value);
+
+/* return maximum of two tensor for each items (cuda version) */
+void _CudaMax(const XTensor * a, const XTensor * b, XTensor *c);
+
+/* return minimum of two tensor for each items (cuda version) */
+void _CudaMin(const XTensor * a, const XTensor * b, XTensor *c);
 
 #endif // USE_CUDA
 

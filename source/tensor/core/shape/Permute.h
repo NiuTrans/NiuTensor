@@ -41,6 +41,13 @@ a = permuted(a)
 */
 void _PermuteMe(XTensor * a, int * dimPermute);
 
+/*
+permute the tensor dimensions (do it on site).
+keep the result in the input tensor and return nothing.
+a = permuted(a)
+*/
+void PermuteMe(XTensor  &a, int * dimPermute);
+
 /* 
 make a tensor with permuted dimensions (return an XTensor structure).
 make a new tensor to keep the result and return it.

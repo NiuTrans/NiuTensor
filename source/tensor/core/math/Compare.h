@@ -26,23 +26,65 @@
 
 namespace nts{ // namespace nts(NiuTrans.Tensor)
 
-/* compare whether every entry is equal to the specified value */
-void _Equal(const XTensor * a, XTensor * b, DTYPE number);
-/* compare whether every entry is equal to the specified value (do it on site)
-keep the result in the input tensor a and return nothing */
-void _EqualMe(XTensor * a, DTYPE number);
-/* compare whether every entry is equal to the specified value (return an XTensor structure)
-make a new tensor to keep the result and return it */
-XTensor Equal(const XTensor & a, DTYPE number);
+/* check whether every entry is equal to the given value */
+void _Equal(const XTensor * a, XTensor * b, DTYPE value);
 
-/* compare whether every entry is not equal to the specified value */
-void _NotEqual(const XTensor * a, XTensor * b, DTYPE number);
-/* compare whether every entry is not equal to the specified value (do it on site)
-keep the result in the input tensor a and return nothing */
-void _NotEqualMe(XTensor * a, DTYPE number);
-/* compare whether every entry is not equal to the specified value (return an XTensor structure)
-make a new tensor to keep the result and return it */
-XTensor NotEqual(const XTensor & a, DTYPE number);
+/* check whether every entry is equal to the given value (do it on site) */
+void _EqualMe(XTensor * a, DTYPE value);
+
+/* check whether every entry is equal to the given value (do it on site) */
+void EqualMe(XTensor & a, DTYPE value);
+
+/* check whether every entry is equal to the given value (return an XTensor structure) */
+XTensor Equal(const XTensor & a, DTYPE value);
+
+/* check whether every entry is equal to the given value */
+void Equal(const XTensor & a, XTensor & b, DTYPE value);
+
+/* check whether every entry is not equal to the given value */
+void _NotEqual(const XTensor * a, XTensor * b, DTYPE value);
+
+/* check whether every entry is not equal to the given value (do it on site) */
+void _NotEqualMe(XTensor * a, DTYPE value);
+
+/* check whether every entry is not equal to the given value (do it on site) */
+void NotEqualMe(XTensor & a, DTYPE value);
+
+/* check whether every entry is not equal to the given value (return an XTensor structure) */
+XTensor NotEqual(const XTensor & a, DTYPE value);
+
+/* check whether every entry is not equal to the given value */
+void NotEqual(const XTensor & a, XTensor & b, DTYPE value);
+
+/* return maximum of two tensor for each items */
+void _Max(const XTensor * a, const XTensor * b, XTensor * c);
+
+/* return maximum of two tensor for each items (do it on site) */
+void _MaxMe(XTensor * a, const XTensor * b);
+
+/* return maximum of two tensor for each items (do it on site) */
+void MaxMe(XTensor & a, const XTensor & b);
+
+/* return maximum of two tensor for each items (return an XTensor structure) */
+XTensor Max(const XTensor & a, const XTensor & b);
+
+/* return maximum of two tensor for each items */
+void Max(const XTensor & a, const XTensor & b, XTensor & c);
+
+/* return minimum of two tensor for each items */
+void _Min(const XTensor * a, const XTensor * b, XTensor * c);
+
+/* return minimum of two tensor for each items (do it on site) */
+void _MinMe(XTensor * a, const XTensor * b);
+
+/* return minimum of two tensor for each items (do it on site) */
+void MinMe(XTensor & a, const XTensor & b);
+
+/* return minimum of two tensor for each items (return an XTensor structure) */
+XTensor Min(const XTensor & a, const XTensor & b);
+
+/* return minimum of two tensor for each items */
+void Min(const XTensor & a, const XTensor & b, XTensor & c);
 
 } // namespace nts(NiuTrans.Tensor)
 

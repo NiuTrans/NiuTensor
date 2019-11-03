@@ -21,6 +21,7 @@
 
 #include "../XTensor.h"
 #include "../XList.h"
+#include "../core/utilities/CheckData.h"
 #include "TMerge.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
@@ -58,8 +59,8 @@ bool TestMerge1()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s = NewTensor(sOrder, sDimSize);
-    XTensor * t = NewTensor(tOrder, tDimSize);
+    XTensor * s = NewTensorV2(sOrder, sDimSize);
+    XTensor * t = NewTensorV2(tOrder, tDimSize);
     XTensor tUser;
 
     /* initialize variables */
@@ -71,15 +72,15 @@ bool TestMerge1()
     tUser = Merge(*s, 1, 0);
 
     /* check results */
-    cpuTest = t->CheckData(answer, tUnitNum) && tUser.CheckData(answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensor */
-    XTensor * sGPU = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * tGPU = NewTensor(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
     XTensor tUserGPU;
 
     /* Initialize variables */
@@ -91,7 +92,7 @@ bool TestMerge1()
     tUserGPU = Merge(*sGPU, 1, 0);
 
     /* check results */
-	gpuTest = tGPU->CheckData(answer, tUnitNum) && tUserGPU.CheckData(answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
 
     /* destroy variables */
     delete s;
@@ -167,9 +168,9 @@ bool TestMerge2()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s = NewTensor(sOrder, sDimSize);
-    XTensor * t1 = NewTensor(tOrder1, tDimSize1);
-    XTensor * t2 = NewTensor(tOrder2, tDimSize2);
+    XTensor * s = NewTensorV2(sOrder, sDimSize);
+    XTensor * t1 = NewTensorV2(tOrder1, tDimSize1);
+    XTensor * t2 = NewTensorV2(tOrder2, tDimSize2);
     XTensor tUser1;
     XTensor tUser2;
 
@@ -185,17 +186,17 @@ bool TestMerge2()
     tUser2 = Merge(*s, 2, 0);
 
     /* check results */
-    cpuTest = t1->CheckData(answer1, tUnitNum1) && tUser1.CheckData(answer1, tUnitNum1)
-        && t2->CheckData(answer2, tUnitNum2) && tUser2.CheckData(answer2, tUnitNum2);
+    cpuTest = _CheckData(t1, answer1, tUnitNum1) && _CheckData(&tUser1, answer1, tUnitNum1)
+        && _CheckData(t2, answer2, tUnitNum2) && _CheckData(&tUser2, answer2, tUnitNum2);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensor */
-    XTensor * sGPU = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * tGPU1 = NewTensor(tOrder1, tDimSize1, X_FLOAT, 1.0F, 0);
-    XTensor * tGPU2 = NewTensor(tOrder2, tDimSize2, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU1 = NewTensorV2(tOrder1, tDimSize1, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU2 = NewTensorV2(tOrder2, tDimSize2, X_FLOAT, 1.0F, 0);
     XTensor tUserGPU1;
     XTensor tUserGPU2;
 
@@ -211,8 +212,8 @@ bool TestMerge2()
     tUserGPU2 = Merge(*sGPU, 2, 0);
 
     /* check results */
-    gpuTest = tGPU1->CheckData(answer1, tUnitNum1) && tUserGPU1.CheckData(answer1, tUnitNum1)
-        && tGPU2->CheckData(answer2, tUnitNum2) && tUserGPU2.CheckData(answer2, tUnitNum2);
+    gpuTest = _CheckData(tGPU1, answer1, tUnitNum1) && _CheckData(&tUserGPU1, answer1, tUnitNum1)
+        && _CheckData(tGPU2, answer2, tUnitNum2) && _CheckData(&tUserGPU2, answer2, tUnitNum2);
 
     /* destroy variables */
     delete s;
@@ -246,7 +247,7 @@ In this case, 2 * (2, 4) -> (4, 4), whereToMerge=0.
 bool TestMerge3()
 {
     /* create list */
-    XList * smallList = new XList();
+    TensorList * smallList = new TensorList();
 
     /* a small tensor of size (2, 4) */
     int sOrder = 2;
@@ -282,9 +283,9 @@ bool TestMerge3()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s1 = NewTensor(sOrder, sDimSize);
-    XTensor * s2 = NewTensor(sOrder, sDimSize);
-    XTensor * t = NewTensor(tOrder, tDimSize);
+    XTensor * s1 = NewTensorV2(sOrder, sDimSize);
+    XTensor * s2 = NewTensorV2(sOrder, sDimSize);
+    XTensor * t = NewTensorV2(tOrder, tDimSize);
     XTensor tUser;
 
     /* initialize variables */
@@ -301,7 +302,7 @@ bool TestMerge3()
     tUser = Merge(*smallList, 0);
 
     /* check results */
-    cpuTest = t->CheckData(answer, tUnitNum) && tUser.CheckData(answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -311,9 +312,9 @@ bool TestMerge3()
     smallList->Clear();
 
     /* create tensors */
-    XTensor * sGPU1 = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * sGPU2 = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * tGPU = NewTensor(tOrder, tDimSize);
+    XTensor * sGPU1 = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU2 = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(tOrder, tDimSize);
     XTensor tUserGPU;
 
     /* initialize variables */
@@ -330,7 +331,7 @@ bool TestMerge3()
     tUserGPU = Merge(*smallList, 0);
 
     /* check results */
-	gpuTest = tGPU->CheckData(answer, tUnitNum) && tUserGPU.CheckData(answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
 
     /* destroy variables */
     delete s1;
@@ -364,7 +365,7 @@ In this case, 2 * (2, 4) -> (2, 8), whereToMerge=1.
 bool TestMerge4()
 {
     /* create list */
-    XList * smallList = new XList();
+    TensorList * smallList = new TensorList();
 
     /* a small tensor of size (2, 4) */
     int sOrder = 2;
@@ -398,9 +399,9 @@ bool TestMerge4()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s1 = NewTensor(sOrder, sDimSize);
-    XTensor * s2 = NewTensor(sOrder, sDimSize);
-    XTensor * t = NewTensor(tOrder, tDimSize);
+    XTensor * s1 = NewTensorV2(sOrder, sDimSize);
+    XTensor * s2 = NewTensorV2(sOrder, sDimSize);
+    XTensor * t = NewTensorV2(tOrder, tDimSize);
     XTensor tUser;
 
     /* initialize variables */
@@ -417,7 +418,7 @@ bool TestMerge4()
     tUser = Merge(*smallList, 1);
 
     /* check results */
-    cpuTest = t->CheckData(answer, tUnitNum) && tUser.CheckData(answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -427,9 +428,9 @@ bool TestMerge4()
     smallList->Clear();
 
     /* create tensors */
-    XTensor * sGPU1 = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * sGPU2 = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * tGPU = NewTensor(tOrder, tDimSize);
+    XTensor * sGPU1 = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU2 = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(tOrder, tDimSize);
     XTensor tUserGPU;
 
     /* initialize variables */
@@ -446,7 +447,7 @@ bool TestMerge4()
     tUserGPU = Merge(*smallList, 1);
 
     /* check results */
-	gpuTest = tGPU->CheckData(answer, tUnitNum) && tUserGPU.CheckData(answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
 
     /* destroy variables */
     delete s1;

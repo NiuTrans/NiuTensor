@@ -20,8 +20,8 @@
  */
 
 #include "../XUtility.h"
-#include "TDropout.h"
 #include "../core/getandset/SetData.h"
+#include "TDropout.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
@@ -45,8 +45,8 @@ bool TestDropout1()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * x = NewTensor(order, dimSize);
-    XTensor * y = NewTensor(order, dimSize);
+    XTensor * x = NewTensorV2(order, dimSize);
+    XTensor * y = NewTensorV2(order, dimSize);
     XTensor yUser;
 
     /* initialize variables */
@@ -83,8 +83,8 @@ bool TestDropout1()
     bool gpuTest = true;
 
     /* create tensors */
-    XTensor * xGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * yGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * xGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * yGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
     XTensor yUserGPU;
 
     /* initialize variables */
@@ -151,10 +151,10 @@ bool TestDropout2()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * x = NewTensor(order, dimSize);
-    XTensor * y = NewTensor(order, dimSize);
-    XTensor * dedx = NewTensor(order, dimSize);
-    XTensor * dedy = NewTensor(order, dimSize);
+    XTensor * x = NewTensorV2(order, dimSize);
+    XTensor * y = NewTensorV2(order, dimSize);
+    XTensor * dedx = NewTensorV2(order, dimSize);
+    XTensor * dedy = NewTensorV2(order, dimSize);
 
     /* initialize variables */
     _SetDataFixedFloat(x, 1.0F);
@@ -177,10 +177,10 @@ bool TestDropout2()
     bool gpuTest = true;
 
     /* create tensors */
-    XTensor * xGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * yGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * dedxGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * dedyGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * xGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * yGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * dedxGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * dedyGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
 
     /* initialize variables */
     _SetDataFixedFloat(xGPU, 1.0F);

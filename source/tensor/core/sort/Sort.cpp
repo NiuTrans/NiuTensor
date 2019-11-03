@@ -19,8 +19,11 @@
 * $Created by: XIAO Tong (email: xiaotong@mail.neu.edu.cn) 2018-04-24
 */
 
+#include <math.h>
 #include "../../XTensor.h"
 #include "../movement/CopyValues.h"
+#include "../shape/IsSameShaped.h"
+#include "../utilities/SetAscendingOrder.h"
 #include "../../XUtility.h"
 #include "../../XName.h"
 #include "Sort.h"
@@ -37,14 +40,15 @@ sort the tensor along a given dimension
 */
 void _Sort(const XTensor * a, XTensor * b, XTensor * index, int dim)
 {
-    CheckNTErrors((XTensor::IsSameShaped(a, b)), "Input tensors should have the same type!");
+    dim = MODX(dim, a->order);
+    
+    CheckNTErrors((_IsSameShaped(a, b)), "Input tensors should have the same type!");
     CheckNTErrors((dim >= 0 && dim < a->order), "Incorrect dimension specified!");
     CheckNTErrors((a->order == index->order), "Unmatched input tensors!");
     CheckNTErrors((index->dataType == X_INT), "Wrong data type!");
 
-	int dimRDI = a->order - dim - 1;
     /* make the index tensor */
-    index->SetAscendingOrder(dim);
+    SetAscendingOrder(*index, dim);
 
     if (a->devID >= 0) {
 #ifdef USE_CUDA
@@ -55,16 +59,16 @@ void _Sort(const XTensor * a, XTensor * b, XTensor * index, int dim)
     }
     else {
         int stride = 1;
-        int strideNum = a->dimSizeRDI[dimRDI];
-        for (int i = 0; i < dimRDI; i++)
-            stride *= a->dimSizeRDI[i];
-
         int blockNum = 1;
-        for (int i = dimRDI + 1; i < a->order; i++)
-            blockNum *= a->dimSizeRDI[i];
+        int strideNum = a->dimSize[dim];
+        for (int i = 0; i < dim; i++)
+            blockNum *= a->dimSize[i];
+
+        for (int i = dim + 1; i < a->order; i++)
+            stride *= a->dimSize[i];
         int blockSize = stride * strideNum;
 
-		_CopyValues(a, b);
+        _CopyValues(a, b);
         for (int k = 0; k < blockNum; k++) {
         for (int i = 0; i < stride; i++) {
                 void * dataB = (char*)b->data + (k * blockSize + i) * b->unitSize;
@@ -95,6 +99,21 @@ void _SortMe(XTensor * a, XTensor * index, int dim)
 }
 
 /*
+sort the tensor along a given dimension (do it on site)
+keep the result in the input tensor a and return nothing
+
+>> a - input tensor
+>> index - index of the items in the resulting tensor
+>> dim - the dimension along which the sorting is performed
+*/
+void SortMe(XTensor& a, XTensor& index, int dim)
+{
+    _Sort(&a, &a, &index, dim);
+}
+
+
+
+/*
 sort the tensor along a given dimension (return an XTensor structure)
 make a new tensor to keep the result and return it
 
@@ -105,16 +124,18 @@ make a new tensor to keep the result and return it
 */
 void Sort(XTensor & a, XTensor & b, XTensor & index, int dim)
 {
+    dim = MODX(dim, a.order);
+    
     /* call _Negate function */
     _Sort(&a, &b, &index, dim);
     
     /* tensor connections */
-    XList list(2);
-    list.Add(&b);
-    list.Add(&index);
-     XLink::MakeLink(&a, &list, SORT_SORT);
-     XLink::AddParamToHeadInt(&b, dim);
-     XLink::AddParamToHeadInt(&index, dim);
+    //TensorList list(2);
+    //list.Add(&b);
+    //list.Add(&index);
+    // XLink::MakeLink(&a, &list, SORT_SORT);
+    // XLink::AddParamToHeadInt(&b, dim);
+    // XLink::AddParamToHeadInt(&index, dim);
 }
 
 } // namespace nts(NiuTrans.Tensor)

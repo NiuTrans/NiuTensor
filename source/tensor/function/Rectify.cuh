@@ -23,7 +23,6 @@
 #define __RECTIFY_CUH__
 
 #include "../XTensor.h"
-#include "Loss.h"
 
 namespace nts{ // namespace nts(NiuTrans.Tensor)
 
@@ -33,9 +32,8 @@ namespace nts{ // namespace nts(NiuTrans.Tensor)
 void _CudaRectify(const XTensor * input, XTensor * output);
 
 /* de/dx (Cuda version) */
-void _CudaRectifyBackward(XTensor * gold, XTensor * y, XTensor * x, 
-                          XTensor * dedy, XTensor * dedx,
-                          LOSS_FUNCTION_NAME lossName);
+void _CudaRectifyBackward(XTensor * y, XTensor * x, 
+                          XTensor * dedy, XTensor * dedx);
 
 #endif // USE_CUDA
 

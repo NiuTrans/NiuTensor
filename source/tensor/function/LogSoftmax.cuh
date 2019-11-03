@@ -16,8 +16,8 @@
 */
 
 /*
-* $Created by: XIAO Tong (email: xiaotong@mail.neu.edu.cn) 2018-04-26
-*/
+ * $Created by: XIAO Tong (email: xiaotong@mail.neu.edu.cn) 2018-04-26
+ */
 
 #ifndef __LOGSOFTMAX_CUH__
 #define __LOGSOFTMAX_CUH__

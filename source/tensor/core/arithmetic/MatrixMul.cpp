@@ -65,8 +65,8 @@ void _MatrixMul(const XTensor * a, MATRIX_TRANS_TYPE transposedA,
     if(transposedA == X_NOTRANS && a->order > 2 && b->order == 2){
         int ncolA = a->dimSize[a->order - 1];
         int ncolC = c->dimSize[c->order - 1];
-        XTensor * a2 = NewTensor2D(a->unitNum/ncolA, -ncolA, a->dataType, a->devID, a->mem);
-        XTensor * c2 = NewTensor2D(c->unitNum/ncolC, -ncolC, c->dataType, c->devID, c->mem);
+        XTensor * a2 = NewTensor2DV2(a->unitNum/ncolA, -ncolA, a->dataType, a->devID, a->mem);
+        XTensor * c2 = NewTensor2DV2(c->unitNum/ncolC, -ncolC, c->dataType, c->devID, c->mem);
         a2->data = a->data;
         c2->data = c->data;
         _MatrixMul2D(a2, transposedA, b, transposedB, c2, alpha, beta, parallelRunner);
@@ -77,18 +77,18 @@ void _MatrixMul(const XTensor * a, MATRIX_TRANS_TYPE transposedA,
         return;
     }
 
-    int an = transposedA == X_TRANS ? a->dimSizeRDI[0] : a->dimSizeRDI[1];
-    int am = transposedA == X_TRANS ? a->dimSizeRDI[1] : a->dimSizeRDI[0];
-    int bn = transposedB == X_TRANS ? b->dimSizeRDI[0] : b->dimSizeRDI[1];
-    int bm = transposedB == X_TRANS ? b->dimSizeRDI[1] : b->dimSizeRDI[0];
-    int cn = c->dimSizeRDI[1];
-    int cm = c->dimSizeRDI[0];
+    int an = transposedA == X_TRANS ? a->dimSize[a->order - 1] : a->dimSize[a->order - 2];
+    int am = transposedA == X_TRANS ? a->dimSize[a->order - 2] : a->dimSize[a->order - 1];
+    int bn = transposedB == X_TRANS ? b->dimSize[b->order - 1] : b->dimSize[b->order - 2];
+    int bm = transposedB == X_TRANS ? b->dimSize[b->order - 2] : b->dimSize[b->order - 1];
+    int cn = c->dimSize[c->order - 2];
+    int cm = c->dimSize[c->order - 1];
 
     CheckNTErrors((am == bn && an == cn && bm == cm), "Unmatched tensors in multiplication!");
 
-    int aBlockSize = a->dimSizeRDI[0] * a->dimSizeRDI[1];
-    int bBlockSize = b->dimSizeRDI[0] * b->dimSizeRDI[1];
-    int cBlockSize = c->dimSizeRDI[0] * c->dimSizeRDI[1];
+    int aBlockSize = a->dimSize[a->order - 1] * a->dimSize[a->order - 2];
+    int bBlockSize = b->dimSize[b->order - 1] * b->dimSize[b->order - 2];
+    int cBlockSize = c->dimSize[c->order - 1] * c->dimSize[c->order - 2];
     int aRealBlockSize = aBlockSize * a->unitSize;
     int bRealBlockSize = bBlockSize * b->unitSize;
     int cRealBlockSize = cBlockSize * c->unitSize;
@@ -96,24 +96,25 @@ void _MatrixMul(const XTensor * a, MATRIX_TRANS_TYPE transposedA,
     int bBlockNum = 1;
     int cBlockNum = 1;
 
-    for (int i = 2; i < a->order; i++) {
-        CheckNTErrors(a->dimSizeRDI[i] == c->dimSizeRDI[i - 2 + b->order], "Incorrect tensor sizes!");
-        aBlockNum *= a->dimSizeRDI[i];
-        cBlockNum *= a->dimSizeRDI[i];
+
+    for (int i = 0; i < a->order - 2; i++) {
+        CheckNTErrors(a->dimSize[i] == c->dimSize[i], "Incorrect tensor sizes!");
+        aBlockNum *= a->dimSize[i];
+        cBlockNum *= a->dimSize[i];
     }
 
-    for (int i = 2; i < b->order; i++) {
-        CheckNTErrors(b->dimSizeRDI[i] == c->dimSizeRDI[i], "Incorrect tensor sizes!");
-        bBlockNum *= b->dimSizeRDI[i];
-        cBlockNum *= b->dimSizeRDI[i];
+    for (int i = 0; i < b->order - 2; i++) {
+        CheckNTErrors(b->dimSize[i] == c->dimSize[i - 2 + a->order], "Incorrect tensor sizes!");
+        bBlockNum *= b->dimSize[i];
+        cBlockNum *= b->dimSize[i];
     }
 
-    XList * aList = new XList(10);
-    XList * bList = new XList(10);
-    XList * cList = new XList(10);
-    int aDimSize[2] = { -a->dimSizeRDI[1], a->dimSizeRDI[0] };
-    int bDimSize[2] = { -b->dimSizeRDI[1], b->dimSizeRDI[0] };
-    int cDimSize[2] = { -c->dimSizeRDI[1], c->dimSizeRDI[0] };
+    TensorList * aList = new TensorList(10);
+    TensorList * bList = new TensorList(10);
+    TensorList * cList = new TensorList(10);
+    int aDimSize[2] = { -a->dimSize[a->order - 2], a->dimSize[a->order - 1] };
+    int bDimSize[2] = { -b->dimSize[b->order - 2], b->dimSize[b->order - 1] };
+    int cDimSize[2] = { -c->dimSize[c->order - 2], c->dimSize[c->order - 1] };
 
     bool isSparseMul = false;
 
@@ -126,9 +127,9 @@ void _MatrixMul(const XTensor * a, MATRIX_TRANS_TYPE transposedA,
             CheckNTErrors((bRealBlockSize * q < b->unitNum * b->unitSize), "Something wrong!");
             CheckNTErrors((cRealBlockSize * (p * bBlockNum + q) < c->unitNum * c->unitSize), "Something wrong!");
 
-            XTensor * ai = NewTensor(2, aDimSize, a->dataType, a->denseRatio, a->devID, a->mem);
-            XTensor * bi = NewTensor(2, bDimSize, b->dataType, b->denseRatio, b->devID, b->mem);
-            XTensor * ci = NewTensor(2, cDimSize, c->dataType, c->denseRatio, c->devID, c->mem);
+            XTensor * ai = NewTensorV2(2, aDimSize, a->dataType, a->denseRatio, a->devID, a->mem);
+            XTensor * bi = NewTensorV2(2, bDimSize, b->dataType, b->denseRatio, b->devID, b->mem);
+            XTensor * ci = NewTensorV2(2, cDimSize, c->dataType, c->denseRatio, c->devID, c->mem);
             ai->data = ap;
             bi->data = bp;
             ci->data = cp;
@@ -202,6 +203,47 @@ void _MatrixMul(const XTensor * a, MATRIX_TRANS_TYPE transposedA,
     delete cList;
 }
 
+bool CheckMMulShape(const XTensor * a, MATRIX_TRANS_TYPE transposedA, 
+                    const XTensor * b, MATRIX_TRANS_TYPE transposedB, 
+                    XTensor * c)
+{
+    if (!(a && b && c))
+        return false;
+
+    if(!(a->dataType == b->dataType && a->dataType == c->dataType))
+        return false;
+
+    if (!(a->order >= 2 && b->order >= 2 && c->order >= 2))
+        return false;
+
+    int an = transposedA == X_TRANS ? a->dimSize[a->order - 1] : a->dimSize[a->order - 2];
+    int am = transposedA == X_TRANS ? a->dimSize[a->order - 2] : a->dimSize[a->order - 1];
+    int bn = transposedB == X_TRANS ? b->dimSize[b->order - 1] : b->dimSize[b->order - 2];
+    int bm = transposedB == X_TRANS ? b->dimSize[b->order - 2] : b->dimSize[b->order - 1];
+
+    CheckNTErrors(am == bn, "Unmatched tensors in multiplication!");
+
+    int order = a->order + b->order - 2;
+    int sub = 0;
+    int * dimSize = new int[order];
+    for (int i = 0; i < a->order - 2; i++)
+        dimSize[sub++] = a->dimSize[i];
+    for (int i = 0; i < b->order - 2; i++)
+        dimSize[sub++] = b->dimSize[i];
+    dimSize[sub++] = an;
+    dimSize[sub++] = bm;
+
+    for (int i = 0; i < order; i++) {
+        if (dimSize[i] != c->dimSize[i]) {
+            delete[] dimSize;
+            return false;
+        }
+    }
+    
+    delete[] dimSize;
+    return true;
+}
+
 /*
 matrix multiplication (return an XTensor structure) c = trans(a) * trans(b) * alpha
 make a new tensor to keep the result and return it
@@ -230,20 +272,20 @@ XTensor MatrixMul(const XTensor &a, MATRIX_TRANS_TYPE transposedA,
     CheckNTErrors(a.dataType == b.dataType, "Input tensors should have the same data type!");
     CheckNTErrors(a.order >= 2 && b.order >= 2, "Input tensors must have a order >= 2!");
 
-    int an = transposedA == X_TRANS ? a.dimSizeRDI[0] : a.dimSizeRDI[1];
-    int am = transposedA == X_TRANS ? a.dimSizeRDI[1] : a.dimSizeRDI[0];
-    int bn = transposedB == X_TRANS ? b.dimSizeRDI[0] : b.dimSizeRDI[1];
-    int bm = transposedB == X_TRANS ? b.dimSizeRDI[1] : b.dimSizeRDI[0];
+    int an = transposedA == X_TRANS ? a.dimSize[a.order - 1] : a.dimSize[a.order - 2];
+    int am = transposedA == X_TRANS ? a.dimSize[a.order - 2] : a.dimSize[a.order - 1];
+    int bn = transposedB == X_TRANS ? b.dimSize[b.order - 1] : b.dimSize[b.order - 2];
+    int bm = transposedB == X_TRANS ? b.dimSize[b.order - 2] : b.dimSize[b.order - 1];
 
     CheckNTErrors(am == bn, "Unmatched tensors in multiplication!");
 
     int order = a.order + b.order - 2;
     int sub = 0;
     int * dimSize = new int[order];
-    for (int i = 2; i < a.order; i++)
-        dimSize[sub++] = a.dimSizeRDI[a.order + 1 - i];
-    for (int i = 2; i < b.order; i++)
-        dimSize[sub++] = b.dimSizeRDI[b.order + 1 - i];    
+    for (int i = 0; i < a.order - 2; i++)
+        dimSize[sub++] = a.dimSize[i];
+    for (int i = 0; i < b.order - 2; i++)
+        dimSize[sub++] = b.dimSize[i];    
     dimSize[sub++] = an;
     dimSize[sub++] = bm;
 
@@ -255,15 +297,64 @@ XTensor MatrixMul(const XTensor &a, MATRIX_TRANS_TYPE transposedA,
     _MatrixMul(&a, transposedA, &b, transposedB, &c, alpha, 0, parallelRunner);
 
     /* tensor connections */
-    XLink::MakeLink(&a, &b, &c, MATH_MATRIXMUL);
-    XLink::AddParamToHeadTrans(&c, transposedA);
-    XLink::AddParamToHeadTrans(&c, transposedB);
-    XLink::AddParamToHead(&c, alpha);
+    if (a.enableGrad && b.enableGrad) {
+        XLink::MakeLink(&a, &b, &c, MATH_MATRIXMUL);
+        XLink::AddParamToHeadTrans(&c, transposedA);
+        XLink::AddParamToHeadTrans(&c, transposedB);
+        XLink::AddParamToHead(&c, alpha);
+    }
 
     /* destroy variables */
     delete[] dimSize;
 
     return c;
+}
+
+void MatrixMul(const XTensor &a, MATRIX_TRANS_TYPE transposedA,
+               const XTensor &b, MATRIX_TRANS_TYPE transposedB, XTensor &c, 
+               DTYPE alpha, DTYPE beta, XPRunner * parallelRunner)
+{
+    CheckNTErrors(a.dataType == b.dataType, "Input tensors should have the same data type!");
+    CheckNTErrors(a.order >= 2 && b.order >= 2, "Input tensors must have a order >= 2!");
+
+    if (!c.isInit || !CheckMMulShape(&a, transposedA, &b, transposedB, &c)) {
+
+        int an = transposedA == X_TRANS ? a.dimSize[a.order - 1] : a.dimSize[a.order - 2];
+        int am = transposedA == X_TRANS ? a.dimSize[a.order - 2] : a.dimSize[a.order - 1];
+        int bn = transposedB == X_TRANS ? b.dimSize[b.order - 1] : b.dimSize[b.order - 2];
+        int bm = transposedB == X_TRANS ? b.dimSize[b.order - 2] : b.dimSize[b.order - 1];
+
+        CheckNTErrors(am == bn, "Unmatched tensors in multiplication!");
+
+        int order = a.order + b.order - 2;
+        int sub = 0;
+        int * dimSize = new int[order];
+        for (int i = 0; i < a.order - 2; i++)
+            dimSize[sub++] = a.dimSize[i];
+        for (int i = 0; i < b.order - 2; i++)
+            dimSize[sub++] = b.dimSize[i];
+        dimSize[sub++] = an;
+        dimSize[sub++] = bm;
+
+        float dr = (!a.isSparse || !b.isSparse) ? 1.0F : MAX(a.denseRatio, b.denseRatio);
+        InitTensorV2(&c, order, dimSize, a.dataType, dr, a.devID, a.mem);
+
+        /* destroy variables */
+        delete[] dimSize;
+
+    }
+
+    /* call _MatrixMul function */
+    _MatrixMul(&a, transposedA, &b, transposedB, &c, alpha, beta, parallelRunner);
+
+    if (a.enableGrad && b.enableGrad) {
+        /* tensor connections */
+        XLink::MakeLink(&a, &b, &c, MATH_MATRIXMUL);
+        XLink::AddParamToHeadTrans(&c, transposedA);
+        XLink::AddParamToHeadTrans(&c, transposedB);
+        XLink::AddParamToHead(&c, alpha);
+    }
+
 }
 
 /* 
@@ -280,20 +371,20 @@ XTensor MatrixMul(const XTensor &a, const XTensor &b,
     CheckNTErrors(a.dataType == b.dataType, "Input tensors should have the same data type!");
     CheckNTErrors(a.order >= 2 && b.order >= 2, "Input tensors must have a order >= 2!");
 
-    int an = a.dimSizeRDI[1];
-    int am = a.dimSizeRDI[0];
-    int bn = b.dimSizeRDI[1];
-    int bm = b.dimSizeRDI[0];
+    int an = a.dimSize[a.order - 2];
+    int am = a.dimSize[a.order - 1];
+    int bn = b.dimSize[b.order - 2];
+    int bm = b.dimSize[b.order - 1];
 
     CheckNTErrors(am == bn, "Unmatched tensors in multiplication!");
 
     int order = a.order + b.order - 2;
     int sub = 0;
     int * dimSize = new int[order];
-    for (int i = 2; i < a.order; i++)
-        dimSize[sub++] = a.dimSizeRDI[a.order + 1 - i];
-    for (int i = 2; i < b.order; i++)
-        dimSize[sub++] = b.dimSizeRDI[b.order + 1 - i];    
+    for (int i = 0; i < a.order - 2; i++)
+        dimSize[sub++] = a.dimSize[i];
+    for (int i = 0; i < b.order - 2; i++)
+        dimSize[sub++] = b.dimSize[i];    
     dimSize[sub++] = an;
     dimSize[sub++] = bm;
 
@@ -305,15 +396,63 @@ XTensor MatrixMul(const XTensor &a, const XTensor &b,
     _MatrixMul(&a, X_NOTRANS, &b, X_NOTRANS, &c, alpha, 0, parallelRunner);
 
     /* tensor connections */
-    XLink::MakeLink(&a, &b, &c, MATH_MATRIXMUL);
-    XLink::AddParamToHeadTrans(&c, X_NOTRANS);
-    XLink::AddParamToHeadTrans(&c, X_NOTRANS);
-    XLink::AddParamToHead(&c, alpha);
+    if (a.enableGrad && b.enableGrad) {
+        XLink::MakeLink(&a, &b, &c, MATH_MATRIXMUL);
+        XLink::AddParamToHeadTrans(&c, X_NOTRANS);
+        XLink::AddParamToHeadTrans(&c, X_NOTRANS);
+        XLink::AddParamToHead(&c, alpha);
+    }
 
     /* destroy variables */
     delete[] dimSize;
 
     return c;
+}
+
+void MatrixMul(const XTensor &a, const XTensor &b, XTensor &c,
+               DTYPE alpha, XPRunner * parallelRunner)
+{
+    CheckNTErrors(a.dataType == b.dataType, "Input tensors should have the same data type!");
+    CheckNTErrors(a.order >= 2 && b.order >= 2, "Input tensors must have a order >= 2!");
+
+    if (!c.isInit || !CheckMMulShape(&a, X_NOTRANS, &b, X_NOTRANS, &c)) {
+
+        int an = a.dimSize[a.order - 2];
+        int am = a.dimSize[a.order - 1];
+        int bn = b.dimSize[b.order - 2];
+        int bm = b.dimSize[b.order - 1];
+
+        CheckNTErrors(am == bn, "Unmatched tensors in multiplication!");
+
+        int order = a.order + b.order - 2;
+        int sub = 0;
+        int * dimSize = new int[order];
+        for (int i = 0; i < a.order - 2; i++)
+            dimSize[sub++] = a.dimSize[i];
+        for (int i = 0; i < b.order - 2; i++)
+            dimSize[sub++] = b.dimSize[i];
+        dimSize[sub++] = an;
+        dimSize[sub++] = bm;
+
+        float dr = (!a.isSparse || !b.isSparse) ? 1.0F : MAX(a.denseRatio, b.denseRatio);
+        InitTensorV2(&c, order, dimSize, a.dataType, dr, a.devID, a.mem);
+
+        /* destroy variables */
+        delete[] dimSize;
+
+    }
+
+    /* call _MatrixMul function */
+    _MatrixMul(&a, X_NOTRANS, &b, X_NOTRANS, &c, alpha, 0, parallelRunner);
+
+    if (a.enableGrad && b.enableGrad) {
+        /* tensor connections */
+        XLink::MakeLink(&a, &b, &c, MATH_MATRIXMUL);
+        XLink::AddParamToHeadTrans(&c, X_NOTRANS);
+        XLink::AddParamToHeadTrans(&c, X_NOTRANS);
+        XLink::AddParamToHead(&c, alpha);
+    }
+
 }
 
 } // namespace nts(NiuTrans.Tensor)

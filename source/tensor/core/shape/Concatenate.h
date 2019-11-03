@@ -31,7 +31,7 @@ concatenate a list of tensors along a given dimension
 Note that this is actually a wrapper that selects 
 "ConcatenateSolely" or "Merge" by means of the tensor shapes 
 */
-void _Concatenate(const XList * smalls, XTensor * big, int dim);
+void _Concatenate(const TensorList * smalls, XTensor * big, int dim);
 
 /*
 concatenate a list of tensors along a given dimension (return an XTensor structure)
@@ -39,7 +39,9 @@ make a new tensor to keep the result and return it
 Note that this is actually a wrapper that selects 
 "ConcatenateSolely" or "Merge" by means of the tensor shapes 
 */
-XTensor Concatenate(const XList &smalls, int dim);
+XTensor Concatenate(const TensorList &smalls, int dim);
+
+void Concatenate(const TensorList & smalls, XTensor & big, int dim);
 
 /* concatenate two tensors along a given dimension */
 void _Concatenate(const XTensor * smallA, const XTensor * smallB, XTensor * big, int dim);

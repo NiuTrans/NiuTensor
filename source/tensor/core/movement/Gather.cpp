@@ -33,21 +33,22 @@ gather indexed sub-tensors
 
 >> s - the source tensor
 >> t - the target tensor
->> dim - the leading dimension to define "sub-tensors"
-         e.g., for a tensor of size (3, 2, 4) and dim = 2, 
-         we have 4 sub-tensors of size (3, 2)
 >> srcIndex - index of the source sub-tensors
->> indexSize - length of srcIndex (and tgtIndex)
+>> dim - the leading dimension to define "sub-tensors"
+e.g., for a tensor of size (3, 2, 4) and dim = 2,
+we have 4 sub-tensors of size (3, 2)
 */
-void _Gather(XTensor * s, XTensor * t, int dim, int * srcIndex, int indexSize)
+void _Gather(const XTensor * s, XTensor * t, XTensor * srcIndex, int dim)
 {
-    int * tgtIndex = new int[indexSize];
-    for(int i = 0; i < indexSize; i++)
-        tgtIndex[i] = i;
-
-    _CopyIndexed(s, t, dim, srcIndex, indexSize, tgtIndex, 1);
-
-    delete[] tgtIndex;
+    CheckNTErrors((s && t), "Invalid tensors!");
+    CheckNTErrors(s->devID == t->devID, "the data must be kept on the same device!");
+    CheckNTErrors((t->unitSize == srcIndex->unitSize), "Unmatched tensors!");
+#ifdef USE_CUDA
+    if (s->devID >= 0 && t->devID >= 0) {
+        _CudaGather(s, t, srcIndex, dim);
+        return;
+    }
+#endif
 }
 
 /*
@@ -120,7 +121,10 @@ XTensor Gather(XTensor &s, XTensor &index)
     _Gather(&s, &t, &index);
 
     /* tensor connection */
-    XLink::MakeLink(&s, &index, &t, MOVEMENT_GATHER);
+    if (s.enableGrad)
+    {
+        XLink::MakeLink(&s, &index, &t, MOVEMENT_GATHER);
+    }
 
     if(index.order > 1) {
         int * dims = new int[index.order + 1];

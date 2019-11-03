@@ -22,6 +22,7 @@
 #include "../../XTensor.h"
 #include "../../XName.h"
 #include "../../XUtility.h"
+#include "../shape/IsSameShaped.h"
 #include "Sub.h"
 #include "Sub.cuh"
 #include "SubDim.h"
@@ -43,6 +44,8 @@ void _Sub(const XTensor * a, const XTensor * b, XTensor * c, DTYPE beta)
                   "Unmatched tensors in addition!");
     CheckNTErrors(a->dataType == b->dataType && a->dataType == c->dataType,
                   "Unmatched tensors in addition!");
+
+    CheckDev(a->devID, b->devID);
 
     if (a->devID >= 0 || b->devID >= 0 || c->devID >= 0) {
 
@@ -124,6 +127,19 @@ void _SubMe(XTensor * a, const XTensor * b, DTYPE beta)
 {
     _Sub(a, b, a, beta);
 }
+
+/*
+tensor subtraction a = a - b * \beta (do it on site)
+keep the result in the tensor a and return nothing
+
+>> a - a tensor
+>> b - another tensor
+>> beta - the scaling factor
+*/
+void SubMe(XTensor& a, const XTensor& b, DTYPE beta)
+{
+    _Sub(&a, &b, &a, beta);
+}
   
 /* 
 return a dimension if the subtraction is performed as SubDim (in more details in SubDim.h)
@@ -134,7 +150,7 @@ int GetSubDimIndex(const XTensor &a, const XTensor &b)
 {
     if(a.order < b.order)
         return -1;
-    if(XTensor::IsSameShaped(&a, &b))
+    if(IsSameShaped(a, b))
         return -1;
 
     int hitCount = 0;
@@ -175,23 +191,69 @@ XTensor Sub(const XTensor &a, const XTensor &b, DTYPE beta)
         _Sub(&a, &b, &c, beta);
         
         /* tensor connections */
-        XLink::MakeLink(&a, &b, &c, MATH_SUB);
-        XLink::AddParamToHead(&c, beta);
+        if (a.enableGrad && b.enableGrad) {
+            XLink::MakeLink(&a, &b, &c, MATH_SUB);
+            XLink::AddParamToHead(&c, beta);
+        }
     }
     else if(n >= 0 && n < a.order){
         /* call _SubDim function */
         _SubDim(&a, &b, &c, n, beta);
         
         /* tensor connections */
-        XLink::MakeLink(&a, &b, &c, MATH_SUBDIM);
-        XLink::AddParamToHeadInt(&c, n);
-        XLink::AddParamToHead(&c, beta);
+        if (a.enableGrad && b.enableGrad) {
+            XLink::MakeLink(&a, &b, &c, MATH_SUBDIM);
+            XLink::AddParamToHeadInt(&c, n);
+            XLink::AddParamToHead(&c, beta);
+        }
     }
     else{
         ShowNTErrors("Something is wrong!");
     }
     
     return c;
+}
+
+/*
+tensor subtraction c = a - b * \beta
+
+>> a - a tensor
+>> b - another tensor
+>> c - where we put a-b*\beta. we save it in a if c is NULL
+>> beta - the scaling factor
+*/
+void Sub(const XTensor &a, const XTensor &b, XTensor &c, DTYPE beta)
+{
+    if (!c.isInit || !IsSameShaped(a, c)) {
+        InitTensorV2(&c, &a);
+    }
+
+    int n = GetSubDimIndex(a, b);
+
+    if (n == -1) {
+        /* call _Sub function */
+        _Sub(&a, &b, &c, beta);
+
+        if (a.enableGrad && b.enableGrad) {
+            /* tensor connections */
+            XLink::MakeLink(&a, &b, &c, MATH_SUB);
+            XLink::AddParamToHead(&c, beta);
+        }
+    }
+    else if (n >= 0 && n < a.order) {
+        /* call _SubDim function */
+        _SubDim(&a, &b, &c, n, beta);
+
+        if (a.enableGrad && b.enableGrad) {
+            /* tensor connections */
+            XLink::MakeLink(&a, &b, &c, MATH_SUBDIM);
+            XLink::AddParamToHeadInt(&c, n);
+            XLink::AddParamToHead(&c, beta);
+        }
+    }
+    else {
+        ShowNTErrors("Something is wrong!");
+    }
 }
 
 } // namespace nts(NiuTrans.Tensor)

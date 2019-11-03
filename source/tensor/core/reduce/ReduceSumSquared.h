@@ -40,6 +40,13 @@ For a 1-dimensional data array a, sum = \sum_i (a_i - shift)^2
 */
 XTensor ReduceSumSquared(const XTensor &input, int dim, const XTensor &shift);
 
+/* 
+squared sum of the items along a dimension of the tensor
+For a 1-dimensional data array a,
+sum = \sum_i (a_i - shift)^2
+*/
+void ReduceSumSquared(const XTensor &input, XTensor &output, int dim, const XTensor &shift);
+
 } // namespace nts(NiuTrans.Tensor)
 
 #endif // __REDUCESUMSQUARED_H__

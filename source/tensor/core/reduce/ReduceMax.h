@@ -29,11 +29,20 @@ namespace nts{ // namespace nts(NiuTrans.Tensor)
 /* get the max value of the items along a dimension of the tensor. */
 void _ReduceMax(const XTensor * input, XTensor * output, int dim);
 
+/* get the min value of the items along a dimension of the tensor. */
+void _ReduceMin(const XTensor * input, XTensor * output, int dim);
+
 /* 
 get the max value of the items along a dimension of the tensor (return an XTensor structure)
 make a new tensor to keep the result and return it
 */
 XTensor ReduceMax(const XTensor &input, int dim);
+
+/*
+get the min value of the items along a dimension of the tensor (return an XTensor structure)
+make a new tensor to keep the result and return it
+*/
+XTensor ReduceMin(const XTensor &input, int dim);
 
 } // namespace nts(NiuTrans.Tensor)
 

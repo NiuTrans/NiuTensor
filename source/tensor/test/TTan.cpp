@@ -20,6 +20,7 @@
 */
 
 #include "../core/math/Unary.h"
+#include "../core/utilities/CheckData.h"
 #include "TTan.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
@@ -30,84 +31,84 @@ Set every entry to its tangent value.
 */
 bool TestTan1()
 {
-	/* a tensor of size (3, 2) */
-	int order = 2;
-	int * dimSize = new int[order];
-	dimSize[0] = 3;
-	dimSize[1] = 2;
+    /* a tensor of size (3, 2) */
+    int order = 2;
+    int * dimSize = new int[order];
+    dimSize[0] = 3;
+    dimSize[1] = 2;
 
-	int unitNum = 1;
-	for (int i = 0; i < order; i++)
-		unitNum *= dimSize[i];
+    int unitNum = 1;
+    for (int i = 0; i < order; i++)
+        unitNum *= dimSize[i];
 
-	DTYPE aData[3][2] = { {1.0F, 2.0F}, 
-	                      {-1.0F, -2.0F},
-	                      {0.0F, 0.5F} };
-	DTYPE answer[3][2] = { {1.5574F, -2.1850F},
-	                       {-1.5574F, 2.1850F},
-	                       {0.0F, 0.5463F} };
+    DTYPE aData[3][2] = { {1.0F, 2.0F}, 
+                          {-1.0F, -2.0F},
+                          {0.0F, 0.5F} };
+    DTYPE answer[3][2] = { {1.5574F, -2.1850F},
+                           {-1.5574F, 2.1850F},
+                           {0.0F, 0.5463F} };
 
-	/* CPU test */
-	bool cpuTest = true;
+    /* CPU test */
+    bool cpuTest = true;
 
-	/* create tensors */
-	XTensor * a = NewTensor(order, dimSize);
-    XTensor * b = NewTensor(order, dimSize);
-	XTensor * aMe = NewTensor(order, dimSize);
+    /* create tensors */
+    XTensor * a = NewTensorV2(order, dimSize);
+    XTensor * b = NewTensorV2(order, dimSize);
+    XTensor * aMe = NewTensorV2(order, dimSize);
     XTensor bUser;
 
-	/* initialize variables */
-	a->SetData(aData, unitNum);
-	aMe->SetData(aData, unitNum);
+    /* initialize variables */
+    a->SetData(aData, unitNum);
+    aMe->SetData(aData, unitNum);
 
-	/* call Tan function */
-	_Tan(a, b);
-	_TanMe(aMe);
+    /* call Tan function */
+    _Tan(a, b);
+    _TanMe(aMe);
     bUser = Tan(*a);
 
-	/* check results */
-	cpuTest = b->CheckData(answer, unitNum, 1e-4F) && aMe->CheckData(answer, unitNum, 1e-4F) && bUser.CheckData(answer, unitNum, 1e-4F);
+    /* check results */
+    cpuTest = _CheckData(b, answer, unitNum, 1e-4F) && _CheckData(aMe, answer, unitNum, 1e-4F) && _CheckData(&bUser, answer, unitNum, 1e-4F);
     
 #ifdef USE_CUDA
-	/* GPU test */
-	bool gpuTest = true;
+    /* GPU test */
+    bool gpuTest = true;
 
-	/* create tensor */
-	XTensor * aGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-	XTensor * bGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-	XTensor * aMeGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
+    /* create tensor */
+    XTensor * aGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * bGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * aMeGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
     XTensor bUserGPU;
 
-	/* Initialize variables */
-	aGPU->SetData(aData, unitNum);
-	aMeGPU->SetData(aData, unitNum);
+    /* Initialize variables */
+    aGPU->SetData(aData, unitNum);
+    aMeGPU->SetData(aData, unitNum);
 
-	/* call Tan function */
+    /* call Tan function */
     _Tan(aGPU, bGPU);
-	_TanMe(aMeGPU);
+    _TanMe(aMeGPU);
     bUserGPU = Tan(*aGPU);
 
-	/* check results */
-	gpuTest = bGPU->CheckData(answer, unitNum, 1e-4F) && aMeGPU->CheckData(answer, unitNum, 1e-4F) && bUserGPU.CheckData(answer, unitNum, 1e-4F);
+    /* check results */
+    gpuTest = _CheckData(bGPU, answer, unitNum, 1e-4F) && _CheckData(aMeGPU, answer, unitNum, 1e-4F) && _CheckData(&bUserGPU, answer, unitNum, 1e-4F);
 
-	/* destroy variables */
-	delete a;
-	delete b;
-	delete aMe;
+    /* destroy variables */
+    delete a;
+    delete b;
+    delete aMe;
     delete aGPU;
     delete bGPU;
     delete aMeGPU;
-	delete[] dimSize;
+    delete[] dimSize;
 
-	return cpuTest && gpuTest;
+    return cpuTest && gpuTest;
 #else
-	/* destroy variables */
-	delete a;
-	delete b;
-	delete aMe;
-	delete[] dimSize;
+    /* destroy variables */
+    delete a;
+    delete b;
+    delete aMe;
+    delete[] dimSize;
 
-	return cpuTest;
+    return cpuTest;
 #endif // USE_CUDA
 }
 
@@ -119,33 +120,33 @@ TODO!!
 /* test for Tan Function */
 bool TestTan()
 {
-	XPRINT(0, stdout, "[TEST Tan] set every entry to its tangent value \n");
-	bool returnFlag = true, caseFlag = true;
+    XPRINT(0, stdout, "[TEST Tan] set every entry to its tangent value \n");
+    bool returnFlag = true, caseFlag = true;
 
-	/* case 1 test */
-	caseFlag = TestTan1();
+    /* case 1 test */
+    caseFlag = TestTan1();
 
-	if (!caseFlag) {
-		returnFlag = false;
-		XPRINT(0, stdout, ">> case 1 failed!\n");
-	}
-	else
-		XPRINT(0, stdout, ">> case 1 passed!\n");
+    if (!caseFlag) {
+        returnFlag = false;
+        XPRINT(0, stdout, ">> case 1 failed!\n");
+    }
+    else
+        XPRINT(0, stdout, ">> case 1 passed!\n");
 
-	/* other cases test */
-	/*
-	TODO!!
-	*/
+    /* other cases test */
+    /*
+    TODO!!
+    */
 
-	if (returnFlag) {
-		XPRINT(0, stdout, ">> All Passed!\n");
-	}
-	else
-		XPRINT(0, stdout, ">> Failed!\n");
+    if (returnFlag) {
+        XPRINT(0, stdout, ">> All Passed!\n");
+    }
+    else
+        XPRINT(0, stdout, ">> Failed!\n");
 
-	XPRINT(0, stdout, "\n");
+    XPRINT(0, stdout, "\n");
 
-	return returnFlag;
+    return returnFlag;
 }
 
 } // namespace nts(NiuTrans.Tensor)

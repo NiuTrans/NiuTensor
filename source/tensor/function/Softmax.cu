@@ -26,6 +26,7 @@
 #include "../core/arithmetic/Multiply.h"
 #include "../core/arithmetic/MultiplyDim.h"
 #include "../core/shape/Unsqueeze.h"
+#include "../core/shape/IsSameShaped.h"
 #include "../core/arithmetic/Sum.h"
 #include "../XDevice.h"
 #include "../XUtility.h"
@@ -171,7 +172,7 @@ float broadcast(float input)
     float output;
     asm(
         "{"
-        "shfl.idx.b32 %0,%1,0x0,0x1f;"
+        "shfl.sync.idx.b32 %0,%1,0x0,0x1f,0xffffffff;"
         "}"
         :"=f"(output) : "f"(input)
     );
@@ -223,16 +224,15 @@ void _CudaSoftmaxSumMax(const XTensor * x, XTensor * y, int leadDim, XTensor * s
 {
     CheckNTErrors((x->devID >= 0), "Forward computation of softmax must be run on GPUs.");
     CheckNTErrors((x->devID == y->devID), "Tensors used in softmax are not on the same GPU.");
-    CheckNTErrors((XTensor::IsSameShaped(x, y)), "Input tensors must be of the same size!");
+    CheckNTErrors((_IsSameShaped(x, y)), "Input tensors must be of the same size!");
 
-    int leadDimRDI = y->order - leadDim - 1;
-    int dimensionSize = y->dimSizeRDI[leadDimRDI];
+    int dimensionSize = y->dimSize[leadDim];
     int stride = 1;
     int blockSize = 1;
     int blockNum = 1;
 
-    for(int i = 0; i < leadDimRDI; i++)
-        stride *= y->dimSizeRDI[i];
+    for(int i = leadDim + 1; i < y->order; i++)
+        stride *= y->dimSize[i];
     blockSize = stride * dimensionSize;
     blockNum = y->unitNum / blockSize;
 
@@ -372,27 +372,16 @@ void _CudaSoftmaxBackward(XTensor * gold, XTensor * y, XTensor * x,
             int * dimSize = new int[y->order];
             for(int i = 0; i < y->order; i++){
                 if(i < leadDim)
-                    dimSize[i] = -y->dimSize[i];
+                    dimSize[i] = y->dimSize[i];
                 else if(i > leadDim)
-                    dimSize[i - 1] = -y->dimSize[i];
+                    dimSize[i - 1] = y->dimSize[i];
             }
-
-            XMem * mem = y->mem;
 
             /* make a matrix of the same size as the y (i.e., y) */
-            XTensor * ytmp = NewTensor(y, false);
+            XTensor * ytmp = NewTensor(y);
 
             /* make a matrix to keep \beta */
-            XTensor * beta = new XTensor(y->order - 1, dimSize, y->dataType, y->denseRatio, y->devID, mem);
-
-            if(mem != NULL){
-                ytmp->data = mem->AllocBuf(mem->devID, y->unitNum * y->unitSize);
-                beta->data = mem->AllocBuf(mem->devID, beta->unitNum * beta->unitSize);
-            }
-            else{
-                ytmp->data = XMemAlloc(y->devID, y->unitNum * y->unitSize);
-                beta->data = XMemAlloc(y->devID, beta->unitNum * beta->unitSize);
-            }
+            XTensor * beta = NewTensorV2(y->order - 1, dimSize, y->dataType, y->denseRatio, y->devID, y->mem);
 
             /* \beta = \sum_i (dE/dy_i * y_i) */
             _Multiply(dedy, y, ytmp, 0, 0);
@@ -404,19 +393,6 @@ void _CudaSoftmaxBackward(XTensor * gold, XTensor * y, XTensor * x,
 
             /* dE/ds_j = y_j * ytmp = y_j * (dE/dy_j - \beta) */
             _Multiply(y, ytmp, dedx, 0, 0);
-
-
-            if(mem != NULL){
-                mem->ReleaseBuf(mem->devID, y->unitNum * y->unitSize);
-                mem->ReleaseBuf(mem->devID, beta->unitNum * beta->unitSize);
-            }
-            else{
-                XMemFree(y->devID, ytmp->data);
-                XMemFree(y->devID, beta->data);
-            }
-
-            ytmp->data = NULL;
-            beta->data = NULL;
 
             delete[] dimSize;
             delete ytmp;

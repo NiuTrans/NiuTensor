@@ -16,23 +16,26 @@
  */
 
 /*
-* $Created by: XIAO Tong (email: xiaotong@mail.neu.edu.cn) 2018-04-24
-*/
+ * $Created by: XIAO Tong (email: xiaotong@mail.neu.edu.cn) 2018-04-24
+ */
 
 #include "../XName.h"
+#include "../core/shape/IsSameShaped.h"
 #include "Rectify.h"
 #include "Rectify.cuh"
-#include "CrossEntropy.h"
 
 namespace nts{ // namespace nts(NiuTrans.Tensor)
 
 /*
 rectify function y = max(0, x)
->> input - input tensor
->> output - result
+>> x - input tensor
+>> y - output tensor
 */
 void _Rectify(const XTensor * x, XTensor * y)
 {
+    CheckNTErrors(_IsSameShaped(x, y), 
+                 "The input tensor and output tensor must have the same shape!")
+
 #ifdef USE_CUDA
     if(x->devID >= 0 || y->devID >= 0){
         _CudaRectify(x, y);
@@ -40,28 +43,24 @@ void _Rectify(const XTensor * x, XTensor * y)
     }
 #endif
 
-    if(x->dataType == DEFAULT_DTYPE && y->dataType == DEFAULT_DTYPE){
-        DTYPE * ip = (DTYPE*)x->data;
-        DTYPE * op = (DTYPE*)y->data;
-        int n = x->GetSize();
-        for(int i = 0; i < n; i++){
-            DTYPE p = ip[i];
-            if(p < 0)
-                p = 0;
+    DTYPE * ip = (DTYPE*)x->data;
+    DTYPE * op = (DTYPE*)y->data;
+    int n = x->GetSize();
+    for(int i = 0; i < n; i++){
+        DTYPE p = ip[i];
+        if(p < 0)
+            p = 0;
 
-            op[i] = p;
-        }
+        op[i] = p;
     }
-    else
-        ShowNTErrors("TODO!");
 }
 
 /*
 rectify function y = max(0, x) (return an XTensor structure) 
 make a new tensor to keep the result and return it
 
->> input - input tensor
-<< return - y
+>> x - input tensor
+<< return - output tensor
 */
 XTensor Rectify(const XTensor &x)
 {
@@ -72,11 +71,27 @@ XTensor Rectify(const XTensor &x)
     _Rectify(&x, &y);
 
     /* tensor connection */
-    XLink::MakeLink(&x, NULL, &y, FUNC_RECTIFY);
+    if (x.enableGrad) {
+        XLink::MakeLink(&x, NULL, &y, FUNC_RECTIFY);
+    }
 
     return y;
 }
 
+void Rectify(const XTensor &x, XTensor &y)
+{
+    if (!y.isInit || !IsSameShaped(y, x)) {
+        InitTensorV2(&y, &x);
+    }
+
+    /* call _Rectify function */
+    _Rectify(&x, &y);
+
+    if (x.enableGrad) {
+        /* tensor connection */
+        XLink::MakeLink(&x, NULL, &y, FUNC_RECTIFY);
+    }
+}
 
 /*
 backward computation
@@ -93,50 +108,36 @@ rectified: y = 0     if x < 0
    and dy/ds = 0     if x < 0
                1     otherwise
 
->> gold - gold standard to measure error (or loss)
->> y - output of the function
->> x - input of the function
+>> y - output of the rectify function
+>> x - input of the rectify function
 >> dedy - dE/dy
 >> dedx - dE/dx
->> lossName - type of loss function, e.g., cross entropy
 */
-void _RectifyBackward(XTensor * gold, XTensor * y, XTensor * x, 
-                      XTensor * dedy, XTensor * dedx,
-                      LOSS_FUNCTION_NAME lossName)
+void _RectifyBackward(XTensor * y, XTensor * x, 
+                      XTensor * dedy, XTensor * dedx)
 {
-    CheckNTErrors((gold == NULL || XTensor::IsSameShaped(gold, y)), 
-                  "The tensors must be of the same size!");
+    CheckNTErrors(x != NULL, "The input tensor x must be not NULL!")
 
 #ifdef USE_CUDA
-    if(x->devID >= 0 || y->devID >= 0){
-        _CudaRectifyBackward(gold, y, x, dedy, dedx, lossName);
+    if(x->devID >= 0){
+        _CudaRectifyBackward(y, x, dedy, dedx);
         return;
     }
 #endif
 
-    if(x->dataType == DEFAULT_DTYPE && y->dataType == DEFAULT_DTYPE)
-    {
-        /* calculate dE/dy */
-        if(lossName == CROSSENTROPY)
-            _CrossEntropyBackward(dedy, y, gold);
-        else if(lossName != NOLOSS)
-            _LossBackward(dedy, gold, y, lossName);
+    DTYPE * dedyp = (DTYPE*)dedy->data;
+    DTYPE * dedxp = (DTYPE*)dedx->data;
+    DTYPE * ip = (DTYPE*)x->data;
+    int size = x->unitNum;
 
-        DTYPE * dedyp = (DTYPE*)dedy->data;
-        DTYPE * dedxp = (DTYPE*)dedx->data;
-        DTYPE * ip = (DTYPE*)x->data;
-        int size = y->unitNum;
-        for(int i = 0; i < size; i++){
-            /* dE/ds = dE/dy * dy/ds = dE/dy */
-            DTYPE s = ip[i];
-            if(s < 0)
-                dedxp[i] = 0;
-            else
-                dedxp[i] = dedyp[i];
-        }
+    for(int i = 0; i < size; i++){
+        /* dE/ds = dE/dy * dy/ds = dE/dy */
+        DTYPE s = ip[i];
+        if(s < 0)
+            dedxp[i] = 0;
+        else
+            dedxp[i] = dedyp[i];
     }
-    else
-        ShowNTErrors("TODO!");
 }
 
 } // namespace nts(NiuTrans.Tensor)

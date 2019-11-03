@@ -19,6 +19,7 @@
 * $Created by: Lin Ye (email: linye2015@outlook.com) 2018-06-14
 */
 
+#include "../core/utilities/CheckData.h"
 #include "TConcatenate.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
@@ -29,8 +30,8 @@ In this case, 2 * (2, 1) -> (2, 2), dim=1.
 */
 bool TestConcatenate1()
 {
-	/* create list */
-    XList * sList = new XList();
+    /* create list */
+    TensorList * sList = new TensorList();
 
     /* a source tensor of size (2, 1) */
     int sOrder1 = 2;
@@ -73,9 +74,9 @@ bool TestConcatenate1()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s1 = NewTensor(sOrder1, sDimSize1);
-    XTensor * s2 = NewTensor(sOrder2, sDimSize2);
-    XTensor * t = NewTensor(tOrder, tDimSize);
+    XTensor * s1 = NewTensorV2(sOrder1, sDimSize1);
+    XTensor * s2 = NewTensorV2(sOrder2, sDimSize2);
+    XTensor * t = NewTensorV2(tOrder, tDimSize);
     XTensor tUser;
 
     /* initialize variables */
@@ -83,7 +84,7 @@ bool TestConcatenate1()
     s2->SetData(sData2, sUnitNum2);
     t->SetZeroAll();
 
-	/* add tensors to list */
+    /* add tensors to list */
     sList->Add(s1);
     sList->Add(s2);
 
@@ -92,36 +93,36 @@ bool TestConcatenate1()
     tUser = Concatenate(*sList, 1);
 
     /* check results */
-    cpuTest = t->CheckData(answer, tUnitNum) && tUser.CheckData(answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensor */
-	XTensor * sGPU1 = NewTensor(sOrder1, sDimSize1, X_FLOAT, 1.0F, 0);
-	XTensor * sGPU2 = NewTensor(sOrder2, sDimSize2, X_FLOAT, 1.0F, 0);
-	XTensor * tGPU = NewTensor(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU1 = NewTensorV2(sOrder1, sDimSize1, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU2 = NewTensorV2(sOrder2, sDimSize2, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
     XTensor tUserGPU;
 
     /* Initialize variables */
-	sGPU1->SetData(sData1, sUnitNum1);
-	sGPU2->SetData(sData2, sUnitNum2);
-	tGPU->SetZeroAll();
+    sGPU1->SetData(sData1, sUnitNum1);
+    sGPU2->SetData(sData2, sUnitNum2);
+    tGPU->SetZeroAll();
 
-	/* clear list */
-	sList->Clear();
+    /* clear list */
+    sList->Clear();
 
-	/* add tensors to list*/
-	sList->Add(sGPU1);
-	sList->Add(sGPU2);
+    /* add tensors to list*/
+    sList->Add(sGPU1);
+    sList->Add(sGPU2);
 
-	/* call Concatenate function */
-	_Concatenate(sList, tGPU, 1);
+    /* call Concatenate function */
+    _Concatenate(sList, tGPU, 1);
     tUserGPU = Concatenate(*sList, 1);
 
-	/* check results */
-	gpuTest = tGPU->CheckData(answer, tUnitNum) && tUserGPU.CheckData(answer, tUnitNum);
+    /* check results */
+    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
 
     /* destroy variables */
     delete sList;
@@ -135,7 +136,7 @@ bool TestConcatenate1()
     delete[] sDimSize2;
     delete[] tDimSize;
 
-	return cpuTest && gpuTest;
+    return cpuTest && gpuTest;
 #else
     /* destroy variables */
     delete sList;
@@ -156,8 +157,8 @@ In this case, 2 * (2, 1) -> (4, 1), dim=0.
 */
 bool TestConcatenate2()
 {
-	/* create list */
-    XList * sList = new XList();
+    /* create list */
+    TensorList * sList = new TensorList();
 
     /* a source tensor of size (2, 1) */
     int sOrder1 = 2;
@@ -202,9 +203,9 @@ bool TestConcatenate2()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s1 = NewTensor(sOrder1, sDimSize1);
-    XTensor * s2 = NewTensor(sOrder2, sDimSize2);
-    XTensor * t = NewTensor(tOrder, tDimSize);
+    XTensor * s1 = NewTensorV2(sOrder1, sDimSize1);
+    XTensor * s2 = NewTensorV2(sOrder2, sDimSize2);
+    XTensor * t = NewTensorV2(tOrder, tDimSize);
     XTensor tUser;
 
     /* initialize variables */
@@ -212,7 +213,7 @@ bool TestConcatenate2()
     s2->SetData(sData2, sUnitNum2);
     t->SetZeroAll();
 
-	/* add tensors to list */
+    /* add tensors to list */
     sList->Add(s1);
     sList->Add(s2);
 
@@ -221,38 +222,38 @@ bool TestConcatenate2()
     tUser = Concatenate(*sList, 0);
 
     /* check results */
-    cpuTest = t->CheckData(answer, tUnitNum) && tUser.CheckData(answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
 
 #ifdef USE_CUDA
-	/* GPU test */
-	bool gpuTest = true;
+    /* GPU test */
+    bool gpuTest = true;
 
-	/* create tensor */
-	XTensor * sGPU1 = NewTensor(sOrder1, sDimSize1, X_FLOAT, 1.0F, 0);
-	XTensor * sGPU2 = NewTensor(sOrder2, sDimSize2, X_FLOAT, 1.0F, 0);
-	XTensor * tGPU = NewTensor(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    /* create tensor */
+    XTensor * sGPU1 = NewTensorV2(sOrder1, sDimSize1, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU2 = NewTensorV2(sOrder2, sDimSize2, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
     XTensor tUserGPU;
 
-	/* Initialize variables */
-	sGPU1->SetData(sData1, sUnitNum1);
-	sGPU2->SetData(sData2, sUnitNum2);
-	tGPU->SetZeroAll();
+    /* Initialize variables */
+    sGPU1->SetData(sData1, sUnitNum1);
+    sGPU2->SetData(sData2, sUnitNum2);
+    tGPU->SetZeroAll();
     
-	/* clear list */
-	sList->Clear();
+    /* clear list */
+    sList->Clear();
 
-	/* add tensors to list*/
-	sList->Add(sGPU1);
-	sList->Add(sGPU2);
+    /* add tensors to list*/
+    sList->Add(sGPU1);
+    sList->Add(sGPU2);
 
-	/* call Concatenate function */
-	_Concatenate(sList, tGPU, 0);
+    /* call Concatenate function */
+    _Concatenate(sList, tGPU, 0);
     tUserGPU = Concatenate(*sList, 0);
 
-	/* check results */
-	gpuTest = tGPU->CheckData(answer, tUnitNum) && tUserGPU.CheckData(answer, tUnitNum);
+    /* check results */
+    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
 
-	/* destroy variables */
+    /* destroy variables */
     delete sList;
     delete s1;
     delete s2;
@@ -264,7 +265,7 @@ bool TestConcatenate2()
     delete[] sDimSize2;
     delete[] tDimSize;
 
-	return cpuTest && gpuTest;
+    return cpuTest && gpuTest;
 #else
     /* destroy variables */
     delete sList;
@@ -285,8 +286,8 @@ In this case, (2, 1) + (2, 2) -> (2, 3), dim=1.
 */
 bool TestConcatenate3()
 {
-	/* create list */
-    XList * sList = new XList();
+    /* create list */
+    TensorList * sList = new TensorList();
 
     /* a source tensor of size (2, 1) */
     int sOrder1 = 2;
@@ -329,9 +330,9 @@ bool TestConcatenate3()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s1 = NewTensor(sOrder1, sDimSize1);
-    XTensor * s2 = NewTensor(sOrder2, sDimSize2);
-    XTensor * t = NewTensor(tOrder, tDimSize);
+    XTensor * s1 = NewTensorV2(sOrder1, sDimSize1);
+    XTensor * s2 = NewTensorV2(sOrder2, sDimSize2);
+    XTensor * t = NewTensorV2(tOrder, tDimSize);
     XTensor tUser;
 
     /* initialize variables */
@@ -339,7 +340,7 @@ bool TestConcatenate3()
     s2->SetData(sData2, sUnitNum2);
     t->SetZeroAll();
 
-	/* add tensors to list */
+    /* add tensors to list */
     sList->Add(s1);
     sList->Add(s2);
 
@@ -348,38 +349,38 @@ bool TestConcatenate3()
     tUser = Concatenate(*sList, 1);
 
     /* check results */
-    cpuTest = t->CheckData(answer, tUnitNum) && tUser.CheckData(answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
 
 #ifdef USE_CUDA
-	/* GPU test */
-	bool gpuTest = true;
+    /* GPU test */
+    bool gpuTest = true;
 
-	/* create tensor */
-	XTensor * sGPU1 = NewTensor(sOrder1, sDimSize1, X_FLOAT, 1.0F, 0);
-	XTensor * sGPU2 = NewTensor(sOrder2, sDimSize2, X_FLOAT, 1.0F, 0);
-	XTensor * tGPU = NewTensor(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    /* create tensor */
+    XTensor * sGPU1 = NewTensorV2(sOrder1, sDimSize1, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU2 = NewTensorV2(sOrder2, sDimSize2, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
     XTensor tUserGPU;
 
-	/* Initialize variables */
-	sGPU1->SetData(sData1, sUnitNum1);
-	sGPU2->SetData(sData2, sUnitNum2);
-	tGPU->SetZeroAll();
+    /* Initialize variables */
+    sGPU1->SetData(sData1, sUnitNum1);
+    sGPU2->SetData(sData2, sUnitNum2);
+    tGPU->SetZeroAll();
     
-	/* clear list */
-	sList->Clear();
+    /* clear list */
+    sList->Clear();
 
-	/* add tensors to list*/
-	sList->Add(sGPU1);
-	sList->Add(sGPU2);
+    /* add tensors to list*/
+    sList->Add(sGPU1);
+    sList->Add(sGPU2);
 
-	/* call Concatenate function */
-	_Concatenate(sList, tGPU, 1);
+    /* call Concatenate function */
+    _Concatenate(sList, tGPU, 1);
     tUserGPU = Concatenate(*sList, 1);
 
-	/* check results */
-	gpuTest = tGPU->CheckData(answer, tUnitNum) && tUserGPU.CheckData(answer, tUnitNum);
+    /* check results */
+    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
 
-	/* destroy variables */
+    /* destroy variables */
     delete sList;
     delete s1;
     delete s2;
@@ -391,7 +392,7 @@ bool TestConcatenate3()
     delete[] sDimSize2;
     delete[] tDimSize;
 
-	return cpuTest && gpuTest;
+    return cpuTest && gpuTest;
 #else
     /* destroy variables */
     delete sList;
@@ -402,7 +403,7 @@ bool TestConcatenate3()
     delete[] sDimSize2;
     delete[] tDimSize;
 
-	return cpuTest;
+    return cpuTest;
 #endif // USE_CUDA
 }
 
@@ -453,9 +454,9 @@ bool TestConcatenate4()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s1 = NewTensor(sOrder1, sDimSize1);
-    XTensor * s2 = NewTensor(sOrder2, sDimSize2);
-    XTensor * t = NewTensor(tOrder, tDimSize);
+    XTensor * s1 = NewTensorV2(sOrder1, sDimSize1);
+    XTensor * s2 = NewTensorV2(sOrder2, sDimSize2);
+    XTensor * t = NewTensorV2(tOrder, tDimSize);
     XTensor tUser;
 
     /* initialize variables */
@@ -468,31 +469,31 @@ bool TestConcatenate4()
     tUser = Concatenate(*s1, *s2, 1);
 
     /* check results */
-    cpuTest = t->CheckData(answer, tUnitNum) && tUser.CheckData(answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
 
 #ifdef USE_CUDA
-	/* GPU test */
-	bool gpuTest = true;
+    /* GPU test */
+    bool gpuTest = true;
 
-	/* create tensor */
-	XTensor * sGPU1 = NewTensor(sOrder1, sDimSize1, X_FLOAT, 1.0F, 0);
-	XTensor * sGPU2 = NewTensor(sOrder2, sDimSize2, X_FLOAT, 1.0F, 0);
-	XTensor * tGPU = NewTensor(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    /* create tensor */
+    XTensor * sGPU1 = NewTensorV2(sOrder1, sDimSize1, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU2 = NewTensorV2(sOrder2, sDimSize2, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
     XTensor tUserGPU;
 
-	/* Initialize variables */
-	sGPU1->SetData(sData1, sUnitNum1);
-	sGPU2->SetData(sData2, sUnitNum2);
-	tGPU->SetZeroAll();
+    /* Initialize variables */
+    sGPU1->SetData(sData1, sUnitNum1);
+    sGPU2->SetData(sData2, sUnitNum2);
+    tGPU->SetZeroAll();
 
-	/* call Concatenate function */
-	_Concatenate(sGPU1, sGPU2, tGPU, 1);
+    /* call Concatenate function */
+    _Concatenate(sGPU1, sGPU2, tGPU, 1);
     tUserGPU = Concatenate(*sGPU1, *sGPU2, 1);
 
-	/* check results */
-	gpuTest = tGPU->CheckData(answer, tUnitNum) && tUserGPU.CheckData(answer, tUnitNum);
+    /* check results */
+    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
 
-	/* destroy variables */
+    /* destroy variables */
     delete s1;
     delete s2;
     delete t;
@@ -503,7 +504,7 @@ bool TestConcatenate4()
     //delete[] sDimSize2;
     //delete[] tDimSize;
 
-	return cpuTest && gpuTest;
+    return cpuTest && gpuTest;
 #else
     /* destroy variables */
     delete s1;
@@ -513,7 +514,7 @@ bool TestConcatenate4()
     delete[] sDimSize2;
     delete[] tDimSize;
 
-	return cpuTest;
+    return cpuTest;
 #endif // USE_CUDA
 }
 

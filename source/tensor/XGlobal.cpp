@@ -50,8 +50,6 @@ int CONST_MINUSONE = -1;
 bool CONST_TRUE = true;
 
 int verboseLevel = 0;
-bool useBLAS = false;
-bool useCUDA = false;
 
 FILE * tmpLog = NULL;
 double myTime = 0;

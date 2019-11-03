@@ -33,66 +33,74 @@ namespace nts{ // namespace nts(NiuTrans.Tensor)
 /*
 use PTX code to reduce float data
 */
-__device__ __forceinline__  
-float shflDownReduceMax(float input)
-{
-    float output;
-    asm volatile(
-        "{"
-        ".reg .f32 r0;"
-        ".reg .pred p;"
-        "shfl.down.b32  r0, %1, 0x10, 0x1f;"
-        "setp.lt.f32    p,%1,r0;"
-        "@p mov.f32     %1,r0;"
-        "shfl.down.b32  r0, %1, 0x8, 0xf;"
-        "setp.lt.f32    p,%1,r0;"
-        "@p mov.f32     %1,r0;"
-        "shfl.down.b32  r0, %1, 0x4, 0x7;"
-        "setp.lt.f32    p,%1,r0;"
-        "@p mov.f32     %1,r0;"
-        "shfl.down.b32  r0, %1, 0x2, 0x3;"
-        "setp.lt.f32    p,%1,r0;"
-        "@p mov.f32     %1,r0;"
-        "shfl.down.b32  r0, %1, 0x1, 0x1;"
-        "setp.lt.f32    p, %1, r0; "
-        "@p mov.f32     %1,r0;"
-        "mov.f32        %0,%1;"
-        "}"
-        : "=f"(output) : "f"(input));
-    return output;
+#define SHLFUNCFLOAT(funcName, reducePTXOp)                         \
+__device__ __forceinline__                                     \
+float funcName(float input)                                    \
+{                                                              \
+    float output;                                              \
+    asm volatile(                                              \
+        "{"                                                    \
+        ".reg .f32 r0;"                                        \
+        ".reg .pred p;"                                        \
+        "shfl.sync.down.b32  r0, %1, 0x10, 0x1f,0xffffffff;"   \
+        "setp."#reducePTXOp".f32    p,%1,r0;"                  \
+        "@p mov.f32     %1,r0;"                                \
+        "shfl.sync.down.b32  r0, %1, 0x8, 0xf,0xffffffff;"     \
+        "setp."#reducePTXOp".f32    p,%1,r0;"                  \
+        "@p mov.f32     %1,r0;"                                \
+        "shfl.sync.down.b32  r0, %1, 0x4, 0x7,0xffffffff;"     \
+        "setp."#reducePTXOp".f32    p,%1,r0;"                  \
+        "@p mov.f32     %1,r0;"                                \
+        "shfl.sync.down.b32  r0, %1, 0x2, 0x3,0xffffffff;"     \
+        "setp."#reducePTXOp".f32    p,%1,r0;"                  \
+        "@p mov.f32     %1,r0;"                                \
+        "shfl.sync.down.b32  r0, %1, 0x1, 0x1,0xffffffff;"     \
+        "setp."#reducePTXOp".f32    p, %1, r0; "               \
+        "@p mov.f32     %1,r0;"                                \
+        "mov.f32        %0,%1;"                                \
+        "}"                                                    \
+        : "=f"(output) : "f"(input));                          \
+    return output;                                             \
 }
+
+SHLFUNCFLOAT(shflDownReduceMax, lt)
+SHLFUNCFLOAT(shflDownReduceMin, gt)
 
 /*
 use PTX code to reduce int data
 */
-__device__ __forceinline__
-int shflDownReduceMax(int input)
-{
-    int output;
-    asm volatile(
-        "{"
-        ".reg .s32 r0;"
-        ".reg .pred p;"
-        "shfl.down.b32  r0, %1, 0x10, 0x1f;"
-        "setp.lt.s32    p,%1,r0;"
-        "@p mov.s32     %1,r0;"
-        "shfl.down.b32  r0, %1, 0x8, 0xf;"
-        "setp.lt.s32    p,%1,r0;"
-        "@p mov.s32     %1,r0;"
-        "shfl.down.b32  r0, %1, 0x4, 0x7;"
-        "setp.lt.s32    p,%1,r0;"
-        "@p mov.s32     %1,r0;"
-        "shfl.down.b32  r0, %1, 0x2, 0x3;"
-        "setp.lt.s32    p,%1,r0;"
-        "@p mov.s32     %1,r0;"
-        "shfl.down.b32  r0, %1, 0x1, 0x1;"
-        "setp.lt.s32    p, %1, r0; "
-        "@p mov.s32     %1,r0;"
-        "mov.s32        %0,%1;"
-        "}"
-        : "=r"(output) : "r"(input));
-    return output;
+#define SHLFUNCINT(funcName, reducePTXOp)                      \
+__device__ __forceinline__                                     \
+int funcName(int input)                                        \
+{                                                              \
+    int output;                                                \
+    asm volatile(                                              \
+        "{"                                                    \
+        ".reg .s32 r0;"                                        \
+        ".reg .pred p;"                                        \
+        "shfl.sync.down.b32  r0, %1, 0x10, 0x1f,0xffffffff;"   \
+        "setp."#reducePTXOp".s32    p,%1,r0;"                  \
+        "@p mov.s32     %1,r0;"                                \
+        "shfl.sync.down.b32  r0, %1, 0x8, 0xf,0xffffffff;"     \
+        "setp."#reducePTXOp".s32    p,%1,r0;"                  \
+        "@p mov.s32     %1,r0;"                                \
+        "shfl.sync.down.b32  r0, %1, 0x4, 0x7,0xffffffff;"     \
+        "setp."#reducePTXOp".s32    p,%1,r0;"                  \
+        "@p mov.s32     %1,r0;"                                \
+        "shfl.sync.down.b32  r0, %1, 0x2, 0x3,0xffffffff;"     \
+        "setp."#reducePTXOp".s32    p,%1,r0;"                  \
+        "@p mov.s32     %1,r0;"                                \
+        "shfl.sync.down.b32  r0, %1, 0x1, 0x1,0xffffffff;"     \
+        "setp."#reducePTXOp".s32    p, %1, r0; "               \
+        "@p mov.s32     %1,r0;"                                \
+        "mov.s32        %0,%1;"                                \
+        "}"                                                    \
+        : "=r"(output) : "r"(input));                          \
+    return output;                                             \
 }
+
+SHLFUNCINT(shflDownReduceMax, lt)
+SHLFUNCINT(shflDownReduceMin, gt)
 
 /* 
 reduce a tensor to another that keeps the max value along a dimension  - slow version
@@ -108,47 +116,51 @@ crossing of the i-th columne and the j-th row.
 >> blockSize - size of the block (i.e., stride * strideNum)
 >> blockNum - how many blocks
 */
- __global__
-void KernelReduceMax(DTYPE * input, DTYPE * output, 
-                     int stride, int strideNum, int reducedStrideNum, 
-                     int blockSize, int blockNum)
-{
-    __shared__ DTYPE iData[MAX_CUDA_THREAD_NUM_PER_BLOCK * MIN_CUDA_SHARED_MEM_COL_SIZE/2];
-
-    int idx = threadIdx.x * blockDim.y + threadIdx.y;
-    unsigned int i = blockIdx.x*blockDim.x + threadIdx.x;
-    unsigned int j = blockIdx.y*blockDim.y + threadIdx.y;
-
-    if(i >= stride * blockNum)
-        return;
-
-    __syncthreads();
-
-    int k = i / stride;
-    int iOffset = i % stride;
-
-    DTYPE value = (i < stride * blockNum && j < strideNum) ? 
-                   input[blockSize * k + stride * j + iOffset] : FLOAT_MIN;
-
-    /* load data into the shared mem */
-    iData[threadIdx.x * blockDim.y + threadIdx.y] = value;
-
-    __syncthreads();
-
-    /* do reduction in shared mem */
-    for (unsigned int s = blockDim.y/2; s > 0; s >>= 1){
-        if(threadIdx.y < s && iData[idx] < iData[idx + s]){
-            iData[idx] = iData[idx + s];
-        }
-
-        __syncthreads();
-    }
-
-    /* write result for this block to the output array */
-    if (threadIdx.y == 0 && blockIdx.y < reducedStrideNum) 
-        output[(k * reducedStrideNum + blockIdx.y) * stride + iOffset] = iData[threadIdx.x * blockDim.y];
-
+#define KERNELREDUCEFUN3(funName, opName, initData)                                                         \
+ __global__                                                                                                 \
+void funName(DTYPE * input, DTYPE * output,                                                                 \
+                     int stride, int strideNum, int reducedStrideNum,                                       \
+                     int blockSize, int blockNum)                                                           \
+{                                                                                                           \
+    __shared__ DTYPE iData[MAX_CUDA_THREAD_NUM_PER_BLOCK * MIN_CUDA_SHARED_MEM_COL_SIZE/2];                 \
+                                                                                                            \
+    int idx = threadIdx.x * blockDim.y + threadIdx.y;                                                       \
+    unsigned int i = blockIdx.x*blockDim.x + threadIdx.x;                                                   \
+    unsigned int j = blockIdx.y*blockDim.y + threadIdx.y;                                                   \
+                                                                                                            \
+    if(i >= stride * blockNum)                                                                              \
+        return;                                                                                             \
+                                                                                                            \
+    __syncthreads();                                                                                        \
+                                                                                                            \
+    int k = i / stride;                                                                                     \
+    int iOffset = i % stride;                                                                               \
+                                                                                                            \
+    DTYPE value = (i < stride * blockNum && j < strideNum) ?                                                \
+                   input[blockSize * k + stride * j + iOffset] : initData;                                  \
+                                                                                                            \
+    /* load data into the shared mem */                                                                     \
+    iData[threadIdx.x * blockDim.y + threadIdx.y] = value;                                                  \
+                                                                                                            \
+    __syncthreads();                                                                                        \
+                                                                                                            \
+    /* do reduction in shared mem */                                                                        \
+    for (unsigned int s = blockDim.y/2; s > 0; s >>= 1){                                                    \
+        if(threadIdx.y < s){                                                                                \
+            iData[idx] = opName(iData[idx + s], iData[idx]);                                                \
+        }                                                                                                   \
+                                                                                                            \
+        __syncthreads();                                                                                    \
+    }                                                                                                       \
+                                                                                                            \
+    /* write result for this block to the output array */                                                   \
+    if (threadIdx.y == 0 && blockIdx.y < reducedStrideNum)                                                  \
+        output[(k * reducedStrideNum + blockIdx.y) * stride + iOffset] = iData[threadIdx.x * blockDim.y];   \
+                                                                                                            \
 }
+
+KERNELREDUCEFUN3(KernelReduceMax, MAX, FLOAT_MIN)
+KERNELREDUCEFUN3(KernelReduceMin, MIN, MAX_FLOAT)
 
 /*
 reduce a tensor to another that keeps the max value along a dimension  - slow version
@@ -231,47 +243,51 @@ reduce a tensor to another that keeps the max value along a dimension  - fast ve
 >> blockSize - size of the block (i.e., stride * strideNum)
 >> blockNum - how many blocks
 */
-template <unsigned int goodSize> __global__
-void KernelReduceMaxFast(DTYPE * input, DTYPE * output, 
-                         int stride, int strideNum, int reducedStrideNum, 
-                         int blockSize, int blockNum)
-{
-    __shared__ DTYPE iData[MAX_CUDA_THREAD_NUM_PER_BLOCK];
-
-    unsigned int tid = threadIdx.y;
-    unsigned int j = blockIdx.y * (blockDim.y * 2) + threadIdx.y;
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    
-    if(i >= stride * blockNum)
-        return;
-
-    __syncthreads();
-
-    /* first level reduction */
-    int k = i / stride;
-    int iOffset = i % stride;
-
-    DTYPE * data = iData + threadIdx.x * blockDim.y;
-    DTYPE * inputData = input + k * blockSize;
-    DTYPE value = j < strideNum ? inputData[j * stride + iOffset] : FLOAT_MIN;
-    DTYPE value2 = j + blockDim.y < strideNum ? inputData[(j + blockDim.y) * stride + iOffset]: FLOAT_MIN;
-
-    value = MAX(value, value2);
-    value = shflDownReduceMax(value);
-    if ((tid & 0x1f) == 0) 
-        data[tid / 32] = value;
-    __syncthreads();
-
-    if (tid < 32) {
-        if (tid < blockDim.y / 32)
-            value = data[tid];
-        else 
-            value = FLOAT_MIN;
-        value = shflDownReduceMax(value);
-        if (tid == 0 && blockIdx.y < reducedStrideNum)
-            output[(k * reducedStrideNum + blockIdx.y) * stride + iOffset] = value;
-    }
+#define KERNELREDUCEFUN4(funName, opName, opFuncName, initData)                                            \
+template <unsigned int goodSize> __global__                                                                \
+void funName(DTYPE * input, DTYPE * output,                                                    \
+                         int stride, int strideNum, int reducedStrideNum,                                  \
+                         int blockSize, int blockNum)                                                      \
+{                                                                                                          \
+    __shared__ DTYPE iData[MAX_CUDA_THREAD_NUM_PER_BLOCK];                                                 \
+                                                                                                           \
+    unsigned int tid = threadIdx.y;                                                                        \
+    unsigned int j = blockIdx.y * (blockDim.y * 2) + threadIdx.y;                                          \
+    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;                                                \
+                                                                                                           \
+    if(i >= stride * blockNum)                                                                             \
+        return;                                                                                            \
+                                                                                                           \
+    __syncthreads();                                                                                       \
+                                                                                                           \
+    /* first level reduction */                                                                            \
+    int k = i / stride;                                                                                    \
+    int iOffset = i % stride;                                                                              \
+                                                                                                           \
+    DTYPE * data = iData + threadIdx.x * blockDim.y;                                                       \
+    DTYPE * inputData = input + k * blockSize;                                                             \
+    DTYPE value = j < strideNum ? inputData[j * stride + iOffset] : initData;                              \
+    DTYPE value2 = j + blockDim.y < strideNum ? inputData[(j + blockDim.y) * stride + iOffset]: initData;  \
+                                                                                                           \
+    value = opName(value, value2);                                                                         \
+    value = opFuncName(value);                                                                             \
+    if ((tid & 0x1f) == 0)                                                                                 \
+        data[tid / 32] = value;                                                                            \
+    __syncthreads();                                                                                       \
+                                                                                                           \
+    if (tid < 32) {                                                                                        \
+        if (tid < blockDim.y / 32)                                                                         \
+            value = data[tid];                                                                             \
+        else                                                                                               \
+            value = initData;                                                                              \
+        value = opFuncName(value);                                                                         \
+        if (tid == 0 && blockIdx.y < reducedStrideNum)                                                     \
+            output[(k * reducedStrideNum + blockIdx.y) * stride + iOffset] = value;                        \
+    }                                                                                                      \
 }
+
+KERNELREDUCEFUN4(KernelReduceMaxFast, MAX, shflDownReduceMax, FLOAT_MIN)
+KERNELREDUCEFUN4(KernelReduceMinFast, MIN, shflDownReduceMin, MAX_FLOAT)
 
 /*
 reduce a tensor to another that keeps the max value along a dimension  - fast version
@@ -372,14 +388,12 @@ void KernelReduceMaxSimpleFast(DTYPE * input, DTYPE * output,
         int stride4 = stride3 + stride;
         for(int k = 0; k < blockSize; k += stride4){
             DTYPE m = MAX(MAX(ip[k], ip[k + stride]), MAX(ip[k + stride2], ip[k + stride3]));
-            if(max < m)
-                max = m;
+            max = MAX(max, m);
         }
     }
     else{
-        for(int k = 0; k < blockSize; k += stride)
-            if(max < ip[k])
-                max = ip[k];
+        for (int k = 0; k < blockSize; k += stride)
+            max = MAX(max, ip[k]);
     }
 
     __syncthreads();
@@ -429,65 +443,74 @@ inline void adjustThreadForUseWarpOptimization(dim3& blocks, dim3& threads)
 /*
 In some case,we use less block to imporve efficiency
 */
-__global__
-void KernelReduceMaxOpLessBlocks(DTYPE * input, DTYPE * output, int strideNum, int blockNum)
-{
-    int idx = threadIdx.x % 32;
-    int idy = (blockIdx.x * blockDim.x + threadIdx.x) / 32;
-
-    int startIndex = idy * strideNum;
-    DTYPE threadMax = FLOAT_MIN;
-    for (int i = idx; i < strideNum; i += 32) {
-        threadMax = max(input[startIndex + i], threadMax);
-    }
-    threadMax = shflDownReduceMax(threadMax);
-    if (idx == 0) 
-        output[idy] = threadMax;
+#define KERNELREDUCEFUN2(funName, opName, opFuncName, initData)                   \
+__global__                                                                        \
+void funName(DTYPE * input, DTYPE * output, int strideNum, int blockNum)          \
+{                                                                                 \
+    int idx = threadIdx.x % 32;                                                   \
+    int idy = (blockIdx.x * blockDim.x + threadIdx.x) / 32;                       \
+                                                                                  \
+    int startIndex = idy * strideNum;                                             \
+    DTYPE threadMax = initData;                                                   \
+    for (int i = idx; i < strideNum; i += 32) {                                   \
+        threadMax = opName(input[startIndex + i], threadMax);                     \
+    }                                                                             \
+    threadMax = opFuncName(threadMax);                                            \
+    if (idx == 0)                                                                 \
+        output[idy] = threadMax;                                                  \
 }
+
+KERNELREDUCEFUN2(KernelReduceMaxOpLessBlocks, MAX, shflDownReduceMax, FLOAT_MIN)
+KERNELREDUCEFUN2(KernelReduceMinOpLessBlocks, MIN, shflDownReduceMin, MAX_FLOAT)
+
 
 /*
 we use PTX code reduce
 */
-__global__
-void KernelReduceMaxOp(DTYPE * input, DTYPE * output,int stride, int strideNum, 
-                       int reducedStrideNum,int blockSize, int blockNum)
-{
-    __shared__ DTYPE iData[MAX_CUDA_THREAD_NUM_PER_BLOCK / 32];
-
-    unsigned int tid = threadIdx.y;
-    unsigned int j = blockIdx.y * blockDim.y + threadIdx.y;
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= stride * blockNum)
-        return;
-
-    /* first level reduction */
-    int k = i / stride;
-    int iOffset = i % stride;
-
-    DTYPE threadMax = FLOAT_MIN;
-
-    DTYPE * data = iData + threadIdx.x * blockDim.y;
-    DTYPE * inputData = input + k * blockSize;
-    for (int it = j; it < strideNum; it += blockDim.y){
-        threadMax = max(inputData[it * stride + iOffset], threadMax);
-    }
-
-    __syncthreads();
-    threadMax = shflDownReduceMax(threadMax);
-    if ((tid & 0x1f) == 0) 
-        data[tid / 32] = threadMax;
-
-    __syncthreads();
-    /* use one warp to reduce remaining data */
-    if (tid < 32){
-        if (tid < blockDim.y / 32)
-            threadMax = data[tid];
-        else threadMax = FLOAT_MIN;
-        threadMax = shflDownReduceMax(threadMax);
-        if (tid == 0 && blockIdx.y < reducedStrideNum)
-            output[(k * reducedStrideNum + blockIdx.y) * stride + iOffset] = threadMax;
-    }
+#define KERNELREDUCEFUN1(funName, opName, opFuncName, initData)                          \
+__global__                                                                               \
+void funName(DTYPE * input, DTYPE * output,int stride, int strideNum,                    \
+                       int reducedStrideNum,int blockSize, int blockNum)                 \
+{                                                                                        \
+    __shared__ DTYPE iData[MAX_CUDA_THREAD_NUM_PER_BLOCK / 32];                          \
+                                                                                         \
+    unsigned int tid = threadIdx.y;                                                      \
+    unsigned int j = blockIdx.y * blockDim.y + threadIdx.y;                              \
+    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;                              \
+    if (i >= stride * blockNum)                                                          \
+        return;                                                                          \
+                                                                                         \
+    /* first level reduction */                                                          \
+    int k = i / stride;                                                                  \
+    int iOffset = i % stride;                                                            \
+                                                                                         \
+    DTYPE threadMax = initData;                                                          \
+                                                                                         \
+    DTYPE * data = iData + threadIdx.x * blockDim.y;                                     \
+    DTYPE * inputData = input + k * blockSize;                                           \
+    for (int it = j; it < strideNum; it += blockDim.y){                                  \
+        threadMax = opName(inputData[it * stride + iOffset], threadMax);                 \
+    }                                                                                    \
+                                                                                         \
+    __syncthreads();                                                                     \
+    threadMax = opFuncName(threadMax);                                                   \
+    if ((tid & 0x1f) == 0)                                                               \
+        data[tid / 32] = threadMax;                                                      \
+                                                                                         \
+    __syncthreads();                                                                     \
+    /* use one warp to reduce remaining data */                                          \
+    if (tid < 32){                                                                       \
+        if (tid < blockDim.y / 32)                                                       \
+            threadMax = data[tid];                                                       \
+        else threadMax = initData;                                                       \
+        threadMax = opFuncName(threadMax);                                               \
+        if (tid == 0 && blockIdx.y < reducedStrideNum)                                   \
+            output[(k * reducedStrideNum + blockIdx.y) * stride + iOffset] = threadMax;  \
+    }                                                                                    \
 }
+
+KERNELREDUCEFUN1(KernelReduceMaxOp, MAX, shflDownReduceMax, FLOAT_MIN)
+KERNELREDUCEFUN1(KernelReduceMinOp, MIN, shflDownReduceMin, MAX_FLOAT)
 
 /* 
 get the max-valued items along a dimension of the tensor (cuda version). 
@@ -497,203 +520,207 @@ sum_i = max_{0<=j<strideNum} input_{i,j}
 >> output - the output tensor
 >> dim - which dimension to reduce
 */
-void _CudaReduceMax(const XTensor * input, XTensor * output, int dim)
-{
-    CheckNTErrors(input && output, "Empty input or output tensors!");
-    CheckNTErrors(input->order == output->order + 1, "Incorrect tensor sizes!");
-    CheckNTErrors(input->order > dim && dim >=0, "Illegal dimension to reduce!");
-    CheckNTErrors(input->dataType == output->dataType, "Unmatched data types!");
-
-	int dimRDI = input->order - dim - 1;
-    for(int i = 0; i < input->order; i++){
-        if(i < dimRDI){
-            CheckNTErrors(input->dimSizeRDI[i] == output->dimSizeRDI[i], "Unmatched tensors!");
-        }
-        else if(i > dimRDI){
-            CheckNTErrors(input->dimSizeRDI[i] == output->dimSizeRDI[i - 1], "Unmatched tensors!");
-        }
-    }
-
-    int cudaGridSize[3];
-    int cudaBlockSize[3];
-    int iter = 0;
-    int stride = 1;
-    int strideNum = input->dimSizeRDI[dimRDI];
-    int blockSize = 1;
-    int blockNum = 1;
-
-    for (int i = 0; i < input->order; i++) {
-        if (i < dimRDI)
-            stride *= input->dimSizeRDI[i];
-        else if (i > dimRDI)
-            blockNum *= input->dimSizeRDI[i];
-    }
-    blockSize = stride * strideNum;
-
-    int devID = input->devID;
-    XMem * mem = input->mem;
-
-    GDevs.GetCudaThread2D(devID, strideNum, stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);
-
-    int bufSize = sizeof(DTYPE) * cudaGridSize[0] * stride * blockNum * 2;
-    DTYPE * buf = mem != NULL ? (DTYPE*)mem->AllocBuf(mem->devID, bufSize) : (DTYPE*)XMemAlloc(input->devID, bufSize);
-    DTYPE * buf1 = buf;
-    DTYPE * buf2 = buf + cudaGridSize[0] * stride * blockNum;
-
-    int devIDBackup;
-    ProtectCudaDev(input->devID, devIDBackup);
-
-    if (stride == 1 && blockNum >= 10) {
-        dim3 grids;
-        dim3 blocks;
-        continuousStorageThreadAllocation(grids, blocks, (long long)blockNum, strideNum);
-        if (blocks.y >= 128) {
-            KernelReduceMaxOp <<<grids, blocks >>> ((DTYPE *)input->data, (DTYPE*)output->data, stride, strideNum, grids.y, blockSize, blockNum);
-        }
-        else {
-            if (blockNum % 4 != 0) blockNum = (int)(blockNum / 4) + 1;
-            else blockNum = blockNum / 4;
-            KernelReduceMaxOpLessBlocks <<<blockNum, 128 >>> ((DTYPE *)input->data, (DTYPE*)output->data, strideNum, blockNum);
-        }
-    }
-    else {
-        do {
-            if (input->dataType == DEFAULT_DTYPE) {
-                DTYPE * iData = NULL;
-                DTYPE * oData = NULL;
-                if (iter == 0) {
-                    iData = (DTYPE*)input->data;
-                    oData = buf1;
-                }
-                else if (iter % 2 == 1) {
-                    iData = buf1;
-                    oData = buf2;
-                }
-                else {
-                    iData = buf2;
-                    oData = buf1;
-                }
-
-                /* unroll the reduction procedure. The code is messy but it is faster. */
-                if (strideNum < 32) {
-                    GDevs.GetCudaThread2D(devID, strideNum, stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);
-                    dim3 blocks(cudaGridSize[1], cudaGridSize[0]), threads(cudaBlockSize[1], cudaBlockSize[0]);
-                    if (cudaGridSize[0] == 1)
-                        oData = (DTYPE*)output->data;
-                    KernelReduceMax <<<blocks, threads>>> (iData, oData, stride, strideNum, blocks.y, blockSize, blockNum);
-                }
-                else if (strideNum < 128) {
-                    GDevs.GetCudaThread2D(devID, MAX(strideNum / 2 + 1, 64), stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);
-                    dim3 blocks(cudaGridSize[1], cudaGridSize[0]), threads(cudaBlockSize[1], cudaBlockSize[0]);
-                    if (cudaGridSize[0] == 1)
-                        oData = (DTYPE*)output->data;
-                    CheckNTErrors(cudaBlockSize[0] >= 64, "Incorrect thread number when calling the cuda kernel!");
-                    adjustThreadForUseWarpOptimization(blocks, threads);
-                    KernelReduceMaxFast<64> <<<blocks, threads>>> (iData, oData, stride, strideNum, blocks.y, blockSize, blockNum);
-                }
-                else if (strideNum < 256) {
-                    GDevs.GetCudaThread2D(devID, MAX(strideNum / 2 + 1, 128), stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);
-                    dim3 blocks(cudaGridSize[1], cudaGridSize[0]), threads(cudaBlockSize[1], cudaBlockSize[0]);
-                    if (cudaGridSize[0] == 1)
-                        oData = (DTYPE*)output->data;
-                    CheckNTErrors(cudaBlockSize[0] >= 128, "Incorrect thread number when calling the cuda kernel!");
-                    adjustThreadForUseWarpOptimization(blocks, threads);
-                    KernelReduceMaxFast<128> <<<blocks, threads>>> (iData, oData, stride, strideNum, blocks.y, blockSize, blockNum);
-                }
-                else if (strideNum < 512) {
-                    GDevs.GetCudaThread2D(devID, MAX(strideNum / 2 + 1, 256), stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);
-                    dim3 blocks(cudaGridSize[1], cudaGridSize[0]), threads(cudaBlockSize[1], cudaBlockSize[0]);
-                    if (cudaGridSize[0] == 1)
-                        oData = (DTYPE*)output->data;
-                    CheckNTErrors(cudaBlockSize[0] >= 256, "Incorrect thread number when calling the cuda kernel!");
-                    adjustThreadForUseWarpOptimization(blocks, threads);
-                    KernelReduceMaxFast<256> <<<blocks, threads>>> (iData, oData, stride, strideNum, blocks.y, blockSize, blockNum);
-                }
-                else {
-                    GDevs.GetCudaThread2D(devID, MAX(strideNum / 2 + 1, 512), stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);
-                    dim3 blocks(cudaGridSize[1], cudaGridSize[0]), threads(cudaBlockSize[1], cudaBlockSize[0]);
-                    if (cudaGridSize[0] == 1)
-                        oData = (DTYPE*)output->data;
-                    CheckNTErrors(cudaBlockSize[0] >= 512, "Incorrect thread number when calling the cuda kernel!");
-                    adjustThreadForUseWarpOptimization(blocks, threads);
-                    KernelReduceMaxFast<512> <<<blocks, threads>>> (iData, oData, stride, strideNum, blocks.y, blockSize, blockNum);
-                }
-            }
-            else if (input->dataType == X_FLOAT16) {
-                __half * buf1ft16 = (__half *)buf1;
-                __half * buf2ft16 = (__half *)buf2;
-                __half * iData = NULL;
-                __half * oData = NULL;
-                if (iter == 0) {
-                    iData = (__half*)input->data;
-                    oData = buf1ft16;
-                }
-                else if (iter % 2 == 1) {
-                    iData = buf1ft16;
-                    oData = buf2ft16;
-                }
-                else {
-                    iData = buf2ft16;
-                    oData = buf1ft16;
-                }
-
-                /* unroll the reduction procedure. The code is messy but it is faster. */
-                if (strideNum < 32) {
-                    GDevs.GetCudaThread2D(devID, strideNum, stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);
-                    dim3 blocks(cudaGridSize[1], cudaGridSize[0]), threads(cudaBlockSize[1], cudaBlockSize[0]);
-                    if (cudaGridSize[0] == 1)
-                        oData = (__half*)output->data;
-                    KernelReduceMax <<<blocks, threads>>> (iData, oData, stride, strideNum, blocks.y, blockSize, blockNum);
-                }
-                else if (strideNum < 128) {
-                    GDevs.GetCudaThread2D(devID, MAX(strideNum / 2 + 1, 64), stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);
-                    dim3 blocks(cudaGridSize[1], cudaGridSize[0]), threads(cudaBlockSize[1], cudaBlockSize[0]);
-                    if (cudaGridSize[0] == 1)
-                        oData = (__half*)output->data;
-                    CheckNTErrors(cudaBlockSize[0] >= 64, "Incorrect thread number when calling the cuda kernel!");
-                    KernelReduceMaxFast<64> <<<blocks, threads>>> (iData, oData, stride, strideNum, blocks.y, blockSize, blockNum);
-                }
-                else if (strideNum < 256) {
-                    GDevs.GetCudaThread2D(devID, MAX(strideNum / 2 + 1, 128), stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);
-                    dim3 blocks(cudaGridSize[1], cudaGridSize[0]), threads(cudaBlockSize[1], cudaBlockSize[0]);
-                    if (cudaGridSize[0] == 1)
-                        oData = (__half*)output->data;
-                    CheckNTErrors(cudaBlockSize[0] >= 128, "Incorrect thread number when calling the cuda kernel!");
-                    KernelReduceMaxFast<128> <<<blocks, threads>>> (iData, oData, stride, strideNum, blocks.y, blockSize, blockNum);
-                }
-                else if (strideNum < 512) {
-                    GDevs.GetCudaThread2D(devID, MAX(strideNum / 2 + 1, 256), stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);
-                    dim3 blocks(cudaGridSize[1], cudaGridSize[0]), threads(cudaBlockSize[1], cudaBlockSize[0]);
-                    if (cudaGridSize[0] == 1)
-                        oData = (__half*)output->data;
-                    CheckNTErrors(cudaBlockSize[0] >= 256, "Incorrect thread number when calling the cuda kernel!");
-                    KernelReduceMaxFast<256> <<<blocks, threads>>> (iData, oData, stride, strideNum, blocks.y, blockSize, blockNum);
-                }
-                else {
-                    GDevs.GetCudaThread2D(devID, MAX(strideNum / 2 + 1, 512), stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);
-                    dim3 blocks(cudaGridSize[1], cudaGridSize[0]), threads(cudaBlockSize[1], cudaBlockSize[0]);
-                    if (cudaGridSize[0] == 1)
-                        oData = (__half*)output->data;
-                    CheckNTErrors(cudaBlockSize[0] >= 512, "Incorrect thread number when calling the cuda kernel!");
-                    KernelReduceMaxFast<512> <<<blocks, threads>>> (iData, oData, stride, strideNum, blocks.y, blockSize, blockNum);
-                }
-            }
-
-            strideNum = cudaGridSize[0];
-            blockSize = cudaGridSize[0];
-
-            iter++;
-
-        } while (strideNum > 1);
-    }
-
-    BacktoCudaDev(input->devID, devIDBackup);
-
-    if (mem != NULL)
-        mem->ReleaseBuf(mem->devID, bufSize);
-    else
-        XMemFree(input->devID, buf);
+#define _CUDAREDUCE(_funcName, _reduceFunc1, _reduceFunc2, _reduceFunc3, _reduceFun4)                                                         \
+void _funcName(const XTensor * input, XTensor * output, int dim)                                                                              \
+{                                                                                                                                             \
+    CheckNTErrors(input && output, "Empty input or output tensors!");                                                                         \
+    CheckNTErrors(input->order == output->order + 1, "Incorrect tensor sizes!");                                                              \
+    CheckNTErrors(input->order > dim && dim >=0, "Illegal dimension to reduce!");                                                             \
+    CheckNTErrors(input->dataType == output->dataType, "Unmatched data types!");                                                              \
+                                                                                                                                              \
+    for(int i = 0; i < input->order; i++){                                                                                                    \
+        if(i < dim){                                                                                                                          \
+            CheckNTErrors(input->dimSize[i] == output->dimSize[i], "Unmatched tensors!");                                                     \
+        }                                                                                                                                     \
+        else if(i > dim){                                                                                                                     \
+            CheckNTErrors(input->dimSize[i] == output->dimSize[i - 1], "Unmatched tensors!");                                                 \
+        }                                                                                                                                     \
+    }                                                                                                                                         \
+                                                                                                                                              \
+    int cudaGridSize[3];                                                                                                                      \
+    int cudaBlockSize[3];                                                                                                                     \
+    int iter = 0;                                                                                                                             \
+    int stride = 1;                                                                                                                           \
+    int strideNum = input->dimSize[dim];                                                                                                      \
+    int blockSize = 1;                                                                                                                        \
+    int blockNum = 1;                                                                                                                         \
+                                                                                                                                              \
+    for (int i = 0; i < input->order; i++) {                                                                                                  \
+        if (i < dim)                                                                                                                          \
+            blockNum *= input->dimSize[i];                                                                                                    \
+        else if (i > dim)                                                                                                                     \
+            stride *= input->dimSize[i];                                                                                                      \
+    }                                                                                                                                         \
+    blockSize = stride * strideNum;                                                                                                           \
+                                                                                                                                              \
+    int devID = input->devID;                                                                                                                 \
+    XMem * mem = input->mem;                                                                                                                  \
+                                                                                                                                              \
+    GDevs.GetCudaThread2D(devID, strideNum, stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);                                         \
+                                                                                                                                              \
+    int bufSize = sizeof(DTYPE) * cudaGridSize[0] * stride * blockNum * 2;                                                                    \
+    DTYPE * buf = mem != NULL ? (DTYPE*)mem->AllocBuf(mem->devID, bufSize) : (DTYPE*)XMemAlloc(input->devID, bufSize);                        \
+    DTYPE * buf1 = buf;                                                                                                                       \
+    DTYPE * buf2 = buf + cudaGridSize[0] * stride * blockNum;                                                                                 \
+                                                                                                                                              \
+    int devIDBackup;                                                                                                                          \
+    ProtectCudaDev(input->devID, devIDBackup);                                                                                                \
+                                                                                                                                              \
+    if (stride == 1 && blockNum >= 10) {                                                                                                      \
+        dim3 grids;                                                                                                                           \
+        dim3 blocks;                                                                                                                          \
+        continuousStorageThreadAllocation(grids, blocks, (long long)blockNum, strideNum);                                                     \
+        if (blocks.y >= 128) {                                                                                                                \
+            _reduceFunc1 <<<grids, blocks >>> ((DTYPE *)input->data, (DTYPE*)output->data, stride, strideNum, grids.y, blockSize, blockNum);  \
+        }                                                                                                                                     \
+        else {                                                                                                                                \
+            if (blockNum % 4 != 0) blockNum = (int)(blockNum / 4) + 1;                                                                        \
+            else blockNum = blockNum / 4;                                                                                                     \
+            _reduceFunc2 <<<blockNum, 128 >>> ((DTYPE *)input->data, (DTYPE*)output->data, strideNum, blockNum);                              \
+        }                                                                                                                                     \
+    }                                                                                                                                         \
+    else {                                                                                                                                    \
+        do {                                                                                                                                  \
+            if (input->dataType == DEFAULT_DTYPE) {                                                                                           \
+                DTYPE * iData = NULL;                                                                                                         \
+                DTYPE * oData = NULL;                                                                                                         \
+                if (iter == 0) {                                                                                                              \
+                    iData = (DTYPE*)input->data;                                                                                              \
+                    oData = buf1;                                                                                                             \
+                }                                                                                                                             \
+                else if (iter % 2 == 1) {                                                                                                     \
+                    iData = buf1;                                                                                                             \
+                    oData = buf2;                                                                                                             \
+                }                                                                                                                             \
+                else {                                                                                                                        \
+                    iData = buf2;                                                                                                             \
+                    oData = buf1;                                                                                                             \
+                }                                                                                                                             \
+                                                                                                                                              \
+                /* unroll the reduction procedure. The code is messy but it is faster. */                                                     \
+                if (strideNum < 32) {                                                                                                         \
+                    GDevs.GetCudaThread2D(devID, strideNum, stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);                         \
+                    dim3 blocks(cudaGridSize[1], cudaGridSize[0]), threads(cudaBlockSize[1], cudaBlockSize[0]);                               \
+                    if (cudaGridSize[0] == 1)                                                                                                 \
+                        oData = (DTYPE*)output->data;                                                                                         \
+                    _reduceFunc3 <<<blocks, threads>>> (iData, oData, stride, strideNum, blocks.y, blockSize, blockNum);                      \
+                }                                                                                                                             \
+                else if (strideNum < 128) {                                                                                                   \
+                    GDevs.GetCudaThread2D(devID, MAX(strideNum / 2 + 1, 64), stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);        \
+                    dim3 blocks(cudaGridSize[1], cudaGridSize[0]), threads(cudaBlockSize[1], cudaBlockSize[0]);                               \
+                    if (cudaGridSize[0] == 1)                                                                                                 \
+                        oData = (DTYPE*)output->data;                                                                                         \
+                    CheckNTErrors(cudaBlockSize[0] >= 64, "Incorrect thread number when calling the cuda kernel!");                           \
+                    adjustThreadForUseWarpOptimization(blocks, threads);                                                                      \
+                    _reduceFun4<64> <<<blocks, threads>>> (iData, oData, stride, strideNum, blocks.y, blockSize, blockNum);                   \
+                }                                                                                                                             \
+                else if (strideNum < 256) {                                                                                                   \
+                    GDevs.GetCudaThread2D(devID, MAX(strideNum / 2 + 1, 128), stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);       \
+                    dim3 blocks(cudaGridSize[1], cudaGridSize[0]), threads(cudaBlockSize[1], cudaBlockSize[0]);                               \
+                    if (cudaGridSize[0] == 1)                                                                                                 \
+                        oData = (DTYPE*)output->data;                                                                                         \
+                    CheckNTErrors(cudaBlockSize[0] >= 128, "Incorrect thread number when calling the cuda kernel!");                          \
+                    adjustThreadForUseWarpOptimization(blocks, threads);                                                                      \
+                    _reduceFun4<128> <<<blocks, threads>>> (iData, oData, stride, strideNum, blocks.y, blockSize, blockNum);                  \
+                }                                                                                                                             \
+                else if (strideNum < 512) {                                                                                                   \
+                    GDevs.GetCudaThread2D(devID, MAX(strideNum / 2 + 1, 256), stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);       \
+                    dim3 blocks(cudaGridSize[1], cudaGridSize[0]), threads(cudaBlockSize[1], cudaBlockSize[0]);                               \
+                    if (cudaGridSize[0] == 1)                                                                                                 \
+                        oData = (DTYPE*)output->data;                                                                                         \
+                    CheckNTErrors(cudaBlockSize[0] >= 256, "Incorrect thread number when calling the cuda kernel!");                          \
+                    adjustThreadForUseWarpOptimization(blocks, threads);                                                                      \
+                    _reduceFun4<256> <<<blocks, threads>>> (iData, oData, stride, strideNum, blocks.y, blockSize, blockNum);                  \
+                }                                                                                                                             \
+                else {                                                                                                                        \
+                    GDevs.GetCudaThread2D(devID, MAX(strideNum / 2 + 1, 512), stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);       \
+                    dim3 blocks(cudaGridSize[1], cudaGridSize[0]), threads(cudaBlockSize[1], cudaBlockSize[0]);                               \
+                    if (cudaGridSize[0] == 1)                                                                                                 \
+                        oData = (DTYPE*)output->data;                                                                                         \
+                    CheckNTErrors(cudaBlockSize[0] >= 512, "Incorrect thread number when calling the cuda kernel!");                          \
+                    adjustThreadForUseWarpOptimization(blocks, threads);                                                                      \
+                    _reduceFun4<512> <<<blocks, threads>>> (iData, oData, stride, strideNum, blocks.y, blockSize, blockNum);                  \
+                }                                                                                                                             \
+            }                                                                                                                                 \
+            else if (input->dataType == X_FLOAT16) {                                                                                          \
+                __half * buf1ft16 = (__half *)buf1;                                                                                           \
+                __half * buf2ft16 = (__half *)buf2;                                                                                           \
+                __half * iData = NULL;                                                                                                        \
+                __half * oData = NULL;                                                                                                        \
+                if (iter == 0) {                                                                                                              \
+                    iData = (__half*)input->data;                                                                                             \
+                    oData = buf1ft16;                                                                                                         \
+                }                                                                                                                             \
+                else if (iter % 2 == 1) {                                                                                                     \
+                    iData = buf1ft16;                                                                                                         \
+                    oData = buf2ft16;                                                                                                         \
+                }                                                                                                                             \
+                else {                                                                                                                        \
+                    iData = buf2ft16;                                                                                                         \
+                    oData = buf1ft16;                                                                                                         \
+                }                                                                                                                             \
+                                                                                                                                              \
+                /* unroll the reduction procedure. The code is messy but it is faster. */                                                     \
+                if (strideNum < 32) {                                                                                                         \
+                    GDevs.GetCudaThread2D(devID, strideNum, stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);                         \
+                    dim3 blocks(cudaGridSize[1], cudaGridSize[0]), threads(cudaBlockSize[1], cudaBlockSize[0]);                               \
+                    if (cudaGridSize[0] == 1)                                                                                                 \
+                        oData = (__half*)output->data;                                                                                        \
+                    KernelReduceMax <<<blocks, threads>>> (iData, oData, stride, strideNum, blocks.y, blockSize, blockNum);                      \
+                }                                                                                                                             \
+                else if (strideNum < 128) {                                                                                                   \
+                    GDevs.GetCudaThread2D(devID, MAX(strideNum / 2 + 1, 64), stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);        \
+                    dim3 blocks(cudaGridSize[1], cudaGridSize[0]), threads(cudaBlockSize[1], cudaBlockSize[0]);                               \
+                    if (cudaGridSize[0] == 1)                                                                                                 \
+                        oData = (__half*)output->data;                                                                                        \
+                    CheckNTErrors(cudaBlockSize[0] >= 64, "Incorrect thread number when calling the cuda kernel!");                           \
+                    KernelReduceMaxFast<64> <<<blocks, threads>>> (iData, oData, stride, strideNum, blocks.y, blockSize, blockNum);                   \
+                }                                                                                                                             \
+                else if (strideNum < 256) {                                                                                                   \
+                    GDevs.GetCudaThread2D(devID, MAX(strideNum / 2 + 1, 128), stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);       \
+                    dim3 blocks(cudaGridSize[1], cudaGridSize[0]), threads(cudaBlockSize[1], cudaBlockSize[0]);                               \
+                    if (cudaGridSize[0] == 1)                                                                                                 \
+                        oData = (__half*)output->data;                                                                                        \
+                    CheckNTErrors(cudaBlockSize[0] >= 128, "Incorrect thread number when calling the cuda kernel!");                          \
+                    KernelReduceMaxFast<128> <<<blocks, threads>>> (iData, oData, stride, strideNum, blocks.y, blockSize, blockNum);                  \
+                }                                                                                                                             \
+                else if (strideNum < 512) {                                                                                                   \
+                    GDevs.GetCudaThread2D(devID, MAX(strideNum / 2 + 1, 256), stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);       \
+                    dim3 blocks(cudaGridSize[1], cudaGridSize[0]), threads(cudaBlockSize[1], cudaBlockSize[0]);                               \
+                    if (cudaGridSize[0] == 1)                                                                                                 \
+                        oData = (__half*)output->data;                                                                                        \
+                    CheckNTErrors(cudaBlockSize[0] >= 256, "Incorrect thread number when calling the cuda kernel!");                          \
+                    KernelReduceMaxFast<256> <<<blocks, threads>>> (iData, oData, stride, strideNum, blocks.y, blockSize, blockNum);                  \
+                }                                                                                                                             \
+                else {                                                                                                                        \
+                    GDevs.GetCudaThread2D(devID, MAX(strideNum / 2 + 1, 512), stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);       \
+                    dim3 blocks(cudaGridSize[1], cudaGridSize[0]), threads(cudaBlockSize[1], cudaBlockSize[0]);                               \
+                    if (cudaGridSize[0] == 1)                                                                                                 \
+                        oData = (__half*)output->data;                                                                                        \
+                    CheckNTErrors(cudaBlockSize[0] >= 512, "Incorrect thread number when calling the cuda kernel!");                          \
+                    KernelReduceMaxFast<512> <<<blocks, threads>>> (iData, oData, stride, strideNum, blocks.y, blockSize, blockNum);                  \
+                }                                                                                                                             \
+            }                                                                                                                                 \
+                                                                                                                                              \
+            strideNum = cudaGridSize[0];                                                                                                      \
+            blockSize = cudaGridSize[0];                                                                                                      \
+                                                                                                                                              \
+            iter++;                                                                                                                           \
+                                                                                                                                              \
+        } while (strideNum > 1);                                                                                                              \
+    }                                                                                                                                         \
+                                                                                                                                              \
+    BacktoCudaDev(input->devID, devIDBackup);                                                                                                 \
+                                                                                                                                              \
+    if (mem != NULL)                                                                                                                          \
+        mem->ReleaseBuf(mem->devID, bufSize);                                                                                                 \
+    else                                                                                                                                      \
+        XMemFree(input->devID, buf);                                                                                                          \
 }
+
+_CUDAREDUCE(_CudaReduceMax, KernelReduceMaxOp, KernelReduceMaxOpLessBlocks, KernelReduceMax, KernelReduceMaxFast)
+_CUDAREDUCE(_CudaReduceMin, KernelReduceMinOp, KernelReduceMinOpLessBlocks, KernelReduceMin, KernelReduceMinFast)
+
 
 #endif // USE_CUDA
 

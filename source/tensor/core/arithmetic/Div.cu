@@ -122,7 +122,6 @@ where i is the item index
 */
 void _CudaDiv(const XTensor * a, const XTensor * b, XTensor * c, DTYPE alpha, int leadingDim)
 {
-	int leadingDimRDI = a->order - leadingDim - 1;
     CheckNTErrors((a->unitNum <= c->unitNum && b->unitNum <= c->unitNum),
                   "Unmatched tensors in multiplication!");
     CheckNTErrors((a->order == b->order && a->order == c->order), "Unmatched tensors!");
@@ -130,18 +129,18 @@ void _CudaDiv(const XTensor * a, const XTensor * b, XTensor * c, DTYPE alpha, in
     int stride = 1;
     int blockSizeA = 1;
     int blockNum = 1;
-    int dimensionSizeA = a->dimSizeRDI[leadingDimRDI];
-    int dimensionSizeB = b->dimSizeRDI[leadingDimRDI];
-    int dimensionSizeC = c->dimSizeRDI[leadingDimRDI];
+    int dimensionSizeA = a->dimSize[leadingDim];
+    int dimensionSizeB = b->dimSize[leadingDim];
+    int dimensionSizeC = c->dimSize[leadingDim];
 
     for (int i = 0; i < a->order; i++) {
-        if (i != leadingDimRDI) {
-            CheckNTErrors((a->dimSizeRDI[i] == b->dimSizeRDI[i] &&
-                           a->dimSizeRDI[i] == c->dimSizeRDI[i]),
+        if (i != leadingDim) {
+            CheckNTErrors((a->dimSize[i] == b->dimSize[i] &&
+                           a->dimSize[i] == c->dimSize[i]),
                           "Unmatched tensors!");
         }
-        if (i < leadingDimRDI)
-            stride *= a->dimSizeRDI[i];
+        if (i > leadingDim)
+            stride *= a->dimSize[i];
     }
 
     blockSizeA = stride * dimensionSizeA;

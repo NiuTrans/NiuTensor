@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2017, Natural Language Processing Lab, Northestern University. 
+ * Copyright (C) 2019, Natural Language Processing Lab, Northestern University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,32 +15,31 @@
  * limitations under the License.
  */
 
-/*
- * 
- * Implementation of list that keeps data items
- *
- * $Created by: XIAO Tong (xiaotong@mail.neu.edu.cn) 2018-04-17
- * The first coding job this year!
- *
- */
-
-#ifndef __XLIST_H__
-#define __XLIST_H__
+ /*
+  *
+  * Implementation of template list that keeps data items
+  *
+  * $Created by: HU Chi (huchinlp@foxmail.com)
+  *
+  */
 
 #include "XMem.h"
 #include "XGlobal.h"
 
+#ifndef __TensorList_H__
+#define __TensorList_H__
+
+
 /* the nts (NiuTrans.Tensor) namespace */
-namespace nts{
-
-typedef int (* ListCompare)(const void * item1, const void * item2);
-
-/* the XList class */
-class XList
-{
+namespace nts {
+    
+/* the TensorListBase class */
+template <typename T>
+struct TensorListBase {
 public:
+
     /* data items */
-    void ** items;
+    T *items;
 
     /* number of items */
     int count;
@@ -49,56 +48,105 @@ public:
     int maxNum;
 
     /* the memory pool for data array allocation */
-    XMem * mem;
-
-    /* indicates whether data items are integers */
-    bool isIntList;
+    XMem* mem;
 
 public:
     /* constructor */
-    XList();
+    TensorListBase();
 
     /* constructor */
-    XList(int myMaxNum, bool isIntListOrNot = false);
+    TensorListBase(int myMaxNum);
 
     /* constructor */
-    XList(int myMaxNum, XMem * myMem, bool isIntListOrNot = false);
+    TensorListBase(int myMaxNum, XMem* myMem);
 
     /* de-constructor */
-    ~XList();
+    ~TensorListBase();
 
-    /* utilities */
-    void Create(int myMaxNum, XMem * myMem);
-    void Add(const void * item);
-    void Add(void ** inputItems, int inputItemCount);
-    void AddList(XList * l);
-    void AddInt(int i);
-    void Insert(int pos, void * item);
-    void * GetItem(int i) const;   
-    int GetItemInt(int i);
-    void SetItem(int i, void * item);
-    void SetItemInt(int i, int item);
-    
-    int FindFirst(void * item);
+    /* add an item into the list */
+    void Add(T&& item);
+
+    /* return number of elements */
+    size_t Size();
+
+    /* add an item into the list */
+    void Add(const T& item);
+
+    /* add a number of items into the list */
+    void Add(const T* inputItems, int inputItemCount);
+
+    /* append a list to the current list */
+    void AddList(TensorListBase* l);
+
+    /* insert an item to the given position of the list */
+    void Insert(int pos, const T& item);
+
+    /* insert an item to the given position of the list */
+    void Insert(int pos, T&& item);
+
+    /* get the item at position i */
+    T& GetItem(int i) const;
+
+    /* set the item at position i */
+    void SetItem(int i, const T& item);
+
+    /* set the item at position i */
+    void SetItem(int i, T&& item);
+
+    /* find the position of the first matched item  */
+    int FindFirst(const T& item);
+
+    /* clear the data array */
     void Clear();
-    void ClearStringList();
-    void Sort(int itemSize, ListCompare comp);
+
+    /* sort the list */
+    void Sort(int itemSize);
+
+    /* reverse the list */
     void Reverse();
+
+    /* remove the item at position i */
     void Remove(int i);
-    XList * Copy(XMem * myMem);
+
+    /* reserve space for data entry */
+    void Reserve(int n);
+
+    /* copy the list */
+    TensorListBase* Copy(XMem* myMem);
+
+    /* shuffle the list */
     void Shuffle(int nround = 10, int beg = -1, int len = 0);
 
     /* short */
-    _XINLINE_ void * Get(int i) {return GetItem(i);};
-    _XINLINE_ int GetInt(int i) {return GetItemInt(i);};
-    _XINLINE_ void Set(int i, void * item) {SetItem(i, item);};
-    _XINLINE_ void SetInt(int i, int item) {SetItemInt(i, item);};
-
+    T& operator[] (int i) { return GetItem(i); };
+    T& Get(int i) { return GetItem(i); };
+    void Set(int i, T item) { SetItem(i, item); };
 };
 
-extern XList NULLList;
+struct XTensor;
 
-} 
-/* end of the nts (NiuTrans.Tensor) namespace */
+typedef TensorListBase<void*> XList;
+typedef TensorListBase<int> IntList;
+typedef TensorListBase<char> CharList;
+typedef TensorListBase<char*> StrList;
+typedef TensorListBase<long> LongList;
+typedef TensorListBase<float> FloatList;
+typedef TensorListBase<short> ShortList;
 
-#endif
+struct Example {
+    int id;
+    IntList data;
+};
+
+struct Result {
+    int id;
+    IntList data;
+};
+
+typedef TensorListBase<Result> ResultList;
+typedef TensorListBase<Example> ExampleList;
+typedef TensorListBase<XTensor*> TensorList;
+
+} /* end of the nts (NiuTrans.Tensor) namespace */
+
+#endif // __TensorList_H__

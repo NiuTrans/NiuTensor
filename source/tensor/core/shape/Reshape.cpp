@@ -22,6 +22,7 @@
 #include "../../XTensor.h"
 #include "../../XName.h"
 #include "../movement/CopyValues.h"
+#include "../shape/IsSameShaped.h"
 #include "Reshape.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
@@ -43,9 +44,26 @@ XTensor Reshape(XTensor &s, int order, int * dimSize)
     t.Reshape(order, dimSize);
 
     /* tensor connections */
-	XLink::MakeLink(&s, NULL, &t, SHAPE_RESHAPE);
+    if (s.enableGrad) {
+        XLink::MakeLink(&s, NULL, &t, SHAPE_RESHAPE);
+    }
 
-	return t;
+    return t;
+}
+
+void Reshape(XTensor &s, XTensor &t, int order, int * dimSize)
+{
+    if (!t.isInit || !IsSameShaped(t, s)) {
+        InitTensorV2(&t, &s);
+    }
+
+    /* call Reshape function */
+    t.Reshape(order, dimSize);
+
+    if (s.enableGrad) {
+        /* tensor connections */
+        XLink::MakeLink(&s, NULL, &t, SHAPE_RESHAPE);
+    }
 }
 
 } // namespace nts(NiuTrans.Tensor)

@@ -36,9 +36,6 @@ class T2TLN
 public:
     /* device id */
     int devID;
-    
-    /* memory pool */
-    XMem * mem;
 
     /* the transformation matrix w */
     XTensor w;
@@ -57,7 +54,7 @@ public:
     ~T2TLN();
     
     /* initialize the model */
-    void InitModel(int argc, char ** argv, int myDevID = -1, XMem * myMem = NULL);
+    void InitModel(int argc, char ** argv, int myDevID = -1);
     
     /* make the network */
     XTensor Make(XTensor &input);

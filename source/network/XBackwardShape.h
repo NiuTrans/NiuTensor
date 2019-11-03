@@ -54,6 +54,10 @@ private:
     static
     void GradGather(XTensor * node, bool isEfficent);
 
+    /* gradient computation for dropout with index: b = dropoutwithindex(a, index) */
+    static
+    void GradDropoutWithIndex(XTensor * node, bool isEfficent);
+
     /* gradient computation for merge: c = merge(a, b, ...) */
     static
     void GradMerge(XTensor * node, bool isEfficent);

@@ -89,6 +89,53 @@ void _Cuda##funcName(const XTensor * a, XTensor * b, DTYPE number)          \
 SIMPLE_COMPARE_FUNCTION_GPU(Equal, cudaIsEqual)
 SIMPLE_COMPARE_FUNCTION_GPU(NotEqual, cudaIsNotEqual)
 
+#define SIMPLE_MAX_MIN_FUNCTION_GPU(funcName, origFunc)                     \
+__global__                                                                  \
+void Kernel##funcName(DTYPE * a, DTYPE * b, DTYPE * c, int size)            \
+{                                                                           \
+    int i = blockDim.x * blockIdx.x + threadIdx.x;                          \
+                                                                            \
+    if (i < size)                                                           \
+        c[i] = (DTYPE)origFunc(a[i], b[i]);                                 \
+}                                                                           \
+__global__                                                                  \
+void Kernel##funcName(__half * a, __half * b, __half * c, int size)         \
+{                                                                           \
+    return;                                                                 \
+}                                                                           \
+void _Cuda##funcName(const XTensor * a, const XTensor * b, XTensor * c)     \
+{                                                                           \
+                                                                            \
+    int gridSize[3];                                                        \
+    int blockSize[3];                                                       \
+                                                                            \
+    GDevs.GetCudaThread(a->devID, a->unitNum, gridSize, blockSize);         \
+                                                                            \
+    dim3 blocks(gridSize[0]);                                               \
+    dim3 threads(blockSize[0]);                                             \
+                                                                            \
+    int devIDBackup;                                                        \
+    ProtectCudaDev(a->devID, devIDBackup);                                  \
+                                                                            \
+    if (a->dataType == DEFAULT_DTYPE) {                                     \
+        Kernel##funcName<<<blocks, threads>>>                               \
+                         ((DTYPE*)a->data, (DTYPE*)b->data,                 \
+                          (DTYPE*)c->data, a->unitNum);                     \
+    }                                                                       \
+    else if (a->dataType == X_FLOAT16) {                                    \
+        Kernel##funcName<<<blocks, threads>>>                               \
+                         ((__half*)a->data, (__half*)b->data,               \
+                          (__half*)c->data, a->unitNum);                    \
+    }                                                                       \
+    else {                                                                  \
+        ShowNTErrors("TODO!");                                              \
+    }                                                                       \
+                                                                            \
+    BacktoCudaDev(a->devID, devIDBackup);                                   \
+}    
+
+SIMPLE_MAX_MIN_FUNCTION_GPU(Max, max)
+SIMPLE_MAX_MIN_FUNCTION_GPU(Min, min)
 
 #endif // USE_CUDA
 

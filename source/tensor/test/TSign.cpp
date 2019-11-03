@@ -19,6 +19,7 @@
 * $Created by: Xu Chen (email: hello_master1954@163.com) 2018-07-12
 */
 
+#include "../core/utilities/CheckData.h"
 #include "TSign.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
@@ -29,84 +30,83 @@ Set every entry to its sign value.
 */
 bool TestSign1()
 {
-	/* a tensor of size (3, 2) */
-	int aOrder = 2;
-	int * aDimSize = new int[aOrder];
-	aDimSize[0] = 3;
-	aDimSize[1] = 2;
+    /* a tensor of size (3, 2) */
+    int aOrder = 2;
+    int * aDimSize = new int[aOrder];
+    aDimSize[0] = 3;
+    aDimSize[1] = 2;
 
-	int aUnitNum = 1;
-	for (int i = 0; i < aOrder; i++)
-		aUnitNum *= aDimSize[i];
+    int aUnitNum = 1;
+    for (int i = 0; i < aOrder; i++)
+        aUnitNum *= aDimSize[i];
 
-	DTYPE aData[3][2] = { {1.0F, -2.0F}, 
-	                      {0.0F, 4.0F},
-	                      {5.0F, -6.0F} };
-	DTYPE answer[3][2] = { {1.0F, -1.0F},
-	                       {0.0F, 1.0F},
-	                       {1.0F, -1.0F} };
+    DTYPE aData[3][2] = { {1.0F, -2.0F}, 
+                          {0.0F, 4.0F},
+                          {5.0F, -6.0F} };
+    DTYPE answer[3][2] = { {1.0F, -1.0F},
+                           {0.0F, 1.0F},
+                           {1.0F, -1.0F} };
 
-	/* CPU test */
-	bool cpuTest = true;
+    /* CPU test */
+    bool cpuTest = true;
 
-	/* create tensors */
-	XTensor * a = NewTensor(aOrder, aDimSize);
-	XTensor * b = NewTensor(aOrder, aDimSize);
-	XTensor * aMe = NewTensor(aOrder, aDimSize);
+    /* create tensors */
+    XTensor * a = NewTensorV2(aOrder, aDimSize);
+    XTensor * b = NewTensorV2(aOrder, aDimSize);
+    XTensor * aMe = NewTensorV2(aOrder, aDimSize);
     XTensor bUser;
 
-	/* initialize variables */
-	a->SetData(aData, aUnitNum);
+    /* initialize variables */
+    a->SetData(aData, aUnitNum);
     aMe->SetData(aData, aUnitNum);
 
-	/* call Sign function */
+    /* call Sign function */
     _Sign(a, b);
-	_SignMe(aMe);
+    _SignMe(aMe);
     bUser = Sign(*a);
 
-	/* check results */
-	cpuTest = b->CheckData(answer, aUnitNum, 1e-4F) && aMe->CheckData(answer, aUnitNum, 1e-4F) && bUser.CheckData(answer, aUnitNum, 1e-4F);
+    /* check results */
+    cpuTest = _CheckData(b, answer, aUnitNum, 1e-4F) && _CheckData(aMe, answer, aUnitNum, 1e-4F) && _CheckData(&bUser, answer, aUnitNum, 1e-4F);
     
 #ifdef USE_CUDA
-	/* GPU test */
-	bool gpuTest = true;
+    /* GPU test */
+    bool gpuTest = true;
 
-	/* create tensor */
-	XTensor * aGPU = NewTensor(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
-	XTensor * bGPU = NewTensor(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
-	XTensor * aMeGPU = NewTensor(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
+    /* create tensor */
+    XTensor * aGPU = NewTensorV2(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * bGPU = NewTensorV2(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * aMeGPU = NewTensorV2(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
     XTensor bUserGPU;
 
-	/* Initialize variables */
-	aGPU->SetData(aData, aUnitNum);
+    /* Initialize variables */
+    aGPU->SetData(aData, aUnitNum);
     aMeGPU->SetData(aData, aUnitNum);
 
-	/* call Sign function */
+    /* call Sign function */
     _Sign(aGPU, bGPU);
-	_SignMe(aMeGPU);
+    _SignMe(aMeGPU);
     bUserGPU = Sign(*aGPU);
 
-	/* check results */
-	gpuTest = bGPU->CheckData(answer, aUnitNum, 1e-4F) && aMeGPU->CheckData(answer, aUnitNum, 1e-4F) && bUserGPU.CheckData(answer, aUnitNum, 1e-4F);
-
-	/* destroy variables */
-	delete a;
-	delete b;
-	delete aMe;
+    /* check results */
+    gpuTest = _CheckData(bGPU, answer, aUnitNum, 1e-4F) && _CheckData(aMeGPU, answer, aUnitNum, 1e-4F) && _CheckData(&bUserGPU, answer, aUnitNum, 1e-4F);
+    /* destroy variables */
+    delete a;
+    delete b;
+    delete aMe;
     delete aGPU;
     delete bGPU;
     delete aMeGPU;
-	delete[] aDimSize;
+    delete[] aDimSize;
 
-	return cpuTest && gpuTest;
+    return cpuTest && gpuTest;
 #else
-	/* destroy variables */
-	delete a;
-	delete b;
-	delete aMe;
-	delete[] aDimSize;
+    /* destroy variables */
+    delete a;
+    delete b;
+    delete aMe;
+    delete[] aDimSize;
 
-	return cpuTest;
+    return cpuTest;
 #endif // USE_CUDA
 }
 
@@ -118,33 +118,33 @@ TODO!!
 /* test for Sign Function */
 bool TestSign()
 {
-	XPRINT(0, stdout, "[TEST Sign] set every entry to its sign value \n");
-	bool returnFlag = true, caseFlag = true;
+    XPRINT(0, stdout, "[TEST Sign] set every entry to its sign value \n");
+    bool returnFlag = true, caseFlag = true;
 
-	/* case 1 test */
-	caseFlag = TestSign1();
+    /* case 1 test */
+    caseFlag = TestSign1();
 
-	if (!caseFlag) {
-		returnFlag = false;
-		XPRINT(0, stdout, ">> case 1 failed!\n");
-	}
-	else
-		XPRINT(0, stdout, ">> case 1 passed!\n");
+    if (!caseFlag) {
+        returnFlag = false;
+        XPRINT(0, stdout, ">> case 1 failed!\n");
+    }
+    else
+        XPRINT(0, stdout, ">> case 1 passed!\n");
 
-	/* other cases test */
-	/*
-	TODO!!
-	*/
+    /* other cases test */
+    /*
+    TODO!!
+    */
 
-	if (returnFlag) {
-		XPRINT(0, stdout, ">> All Passed!\n");
-	}
-	else
-		XPRINT(0, stdout, ">> Failed!\n");
+    if (returnFlag) {
+        XPRINT(0, stdout, ">> All Passed!\n");
+    }
+    else
+        XPRINT(0, stdout, ">> Failed!\n");
 
-	XPRINT(0, stdout, "\n");
+    XPRINT(0, stdout, "\n");
 
-	return returnFlag;
+    return returnFlag;
 }
 
 } // namespace nts(NiuTrans.Tensor)

@@ -39,6 +39,12 @@ For a 1-dimensional data array a, variance = 1/n * \sum_i (a_i - mean)^2
 */
 XTensor ReduceVariance(const XTensor &input, int dim, const XTensor &mean);
 
+/* 
+variance of the items along a dimension of the tensor
+For a 1-dimensional data array a, variance = 1/n * \sum_i (a_i - mean)^2
+*/
+void ReduceVariance(const XTensor &input, XTensor &output, int dim, const XTensor &mean);
+
 } // namespace nts(NiuTrans.Tensor)
 
 #endif // __REDUCEVARIANCE_H__

@@ -20,6 +20,7 @@
 */
 
 #include "../XUtility.h"
+#include "../core/utilities/CheckData.h"
 #include "TIdentity.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
@@ -49,8 +50,8 @@ bool TestIdentity1()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * x = NewTensor(order, dimSize);
-    XTensor * y = NewTensor(order, dimSize);
+    XTensor * x = NewTensorV2(order, dimSize);
+    XTensor * y = NewTensorV2(order, dimSize);
     XTensor yUser;
 
     /* initialize variables */
@@ -62,15 +63,15 @@ bool TestIdentity1()
     yUser = Identity(*x);
     
     /* check result */
-	cpuTest = y->CheckData(answer, unitNum, 1e-4F) && yUser.CheckData(answer, unitNum, 1e-4F);
+    cpuTest = _CheckData(y, answer, unitNum, 1e-4F) && _CheckData(&yUser, answer, unitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensors */
-    XTensor * xGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * yGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * xGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * yGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
     XTensor yUserGPU;
 
     /* initialize variables */
@@ -82,7 +83,7 @@ bool TestIdentity1()
     yUserGPU = Identity(*xGPU);
     
     /* check result */
-	gpuTest = yGPU->CheckData(answer, unitNum, 1e-4F) && yUserGPU.CheckData(answer, unitNum, 1e-4F);
+    gpuTest = _CheckData(yGPU, answer, unitNum, 1e-4F) && _CheckData(&yUserGPU, answer, unitNum, 1e-4F);
 
     /* destroy variables */
     delete x;
@@ -120,77 +121,68 @@ bool TestIdentity2()
         unitNum *= dimSize[i];
 
     DTYPE xData[3] = {1.0F, 1.0F, 2.0F};
-    DTYPE gData[3] = {0.0F, 0.0F, 1.0F};
     DTYPE yAnswer[3] = {1.0F, 1.0F, 2.0F};
-    DTYPE dedyAnswer[3] = {0.0F, 0.0F, -0.5F};
+    DTYPE dedyData[3] = {0.0F, 0.0F, -0.5F};
     DTYPE dedxAnswer[3] = {0.0F, 0.0F, -0.5F};
 
     /* CPU test */
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * x = NewTensor(order, dimSize);
-    XTensor * y = NewTensor(order, dimSize);
-    XTensor * g = NewTensor(order, dimSize);
-    XTensor * dedy = NewTensor(order, dimSize);
-    XTensor * dedx = NewTensor(order, dimSize);
+    XTensor * x = NewTensorV2(order, dimSize);
+    XTensor * y = NewTensorV2(order, dimSize);
+    XTensor * dedy = NewTensorV2(order, dimSize);
+    XTensor * dedx = NewTensorV2(order, dimSize);
 
     /* initialize variables */
     x->SetData(xData, unitNum);
-    g->SetData(gData, unitNum);
     y->SetZeroAll();
     dedx->SetZeroAll();
-    dedy->SetZeroAll();
+    dedy->SetData(dedyData, unitNum);
 
     /* call Identity function */
     _Identity(x, y);
 
     /* call IdentityBackward function */
-    _IdentityBackward(g, y, x, dedy, dedx, CROSSENTROPY);
+    _IdentityBackward(y, x, dedy, dedx);
     
     /* check result */
-    cpuTest = y->CheckData(yAnswer, unitNum, 1e-4F)
-              && dedx->CheckData(dedxAnswer, unitNum, 1e-4F)
-              && dedy->CheckData(dedyAnswer, unitNum, 1e-4F);
+    cpuTest = _CheckData(y, yAnswer, unitNum, 1e-4F) &&
+              _CheckData(dedx, dedxAnswer, unitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
         /* create tensors */
-    XTensor * xGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * yGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * gGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * dedyGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * dedxGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * xGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * yGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * dedyGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * dedxGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
 
     /* initialize variables */
     xGPU->SetData(xData, unitNum);
-    gGPU->SetData(gData, unitNum);
     yGPU->SetZeroAll();
     dedxGPU->SetZeroAll();
-    dedyGPU->SetZeroAll();
+    dedyGPU->SetData(dedyData, unitNum);
 
     /* call Identity function */
     _Identity(xGPU, yGPU);
 
     /* call IdentityBackward function */
-    _IdentityBackward(gGPU, yGPU, xGPU, dedyGPU, dedxGPU, CROSSENTROPY);
+    _IdentityBackward(yGPU, xGPU, dedyGPU, dedxGPU);
     
     /* check result */
-    gpuTest = yGPU->CheckData(yAnswer, unitNum, 1e-4F)
-              && dedxGPU->CheckData(dedxAnswer, unitNum, 1e-4F)
-              && dedyGPU->CheckData(dedyAnswer, unitNum, 1e-4F);
+    gpuTest = _CheckData(yGPU, yAnswer, unitNum, 1e-4F) &&
+              _CheckData(dedxGPU, dedxAnswer, unitNum, 1e-4F);
 
     /* destroy variables */
     delete x;
     delete y;
-    delete g;
     delete dedx;
     delete dedy;
     delete xGPU;
     delete yGPU;
-    delete gGPU;
     delete dedxGPU;
     delete dedyGPU;
     delete[] dimSize;
@@ -200,7 +192,6 @@ bool TestIdentity2()
     /* destroy variables */
     delete x;
     delete y;
-    delete g;
     delete dedx;
     delete dedy;
     delete[] dimSize;

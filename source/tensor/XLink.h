@@ -33,7 +33,7 @@ namespace nts{ // namespace nts(NiuTrans.Tensor)
 /* cross reference */
 struct XTensor;
 
-#define MAX_OP_NAME_LENGTH 16
+#define MAX_OP_NAME_LENGTH 64
 #define PARAM_UNTI_SIZE    64
 
 /*
@@ -144,11 +144,11 @@ struct XLink
 
     /* create a hyper edge with a list of input tensors and a output tensor */
     static
-    void MakeLink(const XList * list, XTensor * h, int id);
+    void MakeLink(const TensorList * list, XTensor * h, int id);
 
     /* create a hyper edge with a input tensors and a list of output tensors */
     static
-    void MakeLink(XTensor * h, XList * list, int id);
+    void MakeLink(XTensor * h, TensorList * list, int id);
 
     /* add a parameter */
     static
@@ -174,6 +174,10 @@ struct XLink
     static 
     void Replace(const XTensor * oldOne, XTensor * newOne);
 
+    /* copy a node with another, i.e., we add the links to the new node */
+    static
+    void Copy(const XTensor * reference, XTensor * target);
+
     /* copy links of a given node */
     static
     void CopyIncoming(const XTensor * reference, XTensor * target);
@@ -185,6 +189,10 @@ struct XLink
     /* show a node */
     static
     void ShowNode(FILE * file, XTensor * node);
+
+    /* search a node in a top-down manner by its name */
+    static
+    XTensor * SearchNode(XTensor * top, const char * name);
 };
     
 } // namespace nts(NiuTrans.Tensor)

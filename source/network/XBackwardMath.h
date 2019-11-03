@@ -130,14 +130,26 @@ private:
     static
     void GradScaleAndShift(XTensor * node, bool isEfficient);
 
+    /* gradient for Scale */
+    static
+    void GradScale(XTensor * node, bool isEfficient);
+
+    /* gradient for Shift */
+    static
+    void GradShift(XTensor * node, bool isEfficient);
+
+    /* gradient for Descale */
+    static
+    void GradDescale(XTensor * node, bool isEfficient);
+
     /* gradient for Minus */
     static
     void GradSub(XTensor * node, bool isEfficient);
     
-	/* gradient for sub with one dimension: c = a - b * \beta
-	where the size of b is equal to that of one dimension of a */
-	static
-	void GradSubDim(XTensor * node, bool isEfficient);
+    /* gradient for sub with one dimension: c = a - b * \beta
+    where the size of b is equal to that of one dimension of a */
+    static
+    void GradSubDim(XTensor * node, bool isEfficient);
 
     /* gradient for sum: c =  a + b * \beta */
     static

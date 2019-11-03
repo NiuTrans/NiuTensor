@@ -16,8 +16,8 @@
  */
 
 /*
-* $Created by: XIAO Tong (email: xiaotong@mail.neu.edu.cn) 2018-04-25
-*/
+ * $Created by: XIAO Tong (email: xiaotong@mail.neu.edu.cn) 2018-04-25
+ */
 
 #ifndef __LOGSOFTMAX_H__
 #define __LOGSOFTMAX_H__
@@ -32,6 +32,9 @@ void _LogSoftmax(const XTensor * x, XTensor * y, int leadDim);
 
 /* log scale softmax y = log(e^x / \sum_{i} e^{x_i}) (return an XTensor structure) */
 XTensor LogSoftmax(const XTensor &x, int leadDim);
+
+/* log scale softmax y = log(e^x / \sum_{i} e^{x_i}) (with both argument of x and y) */
+void LogSoftmax(const XTensor &x, XTensor &y, int leadDim);
 
 /* log scale softmax y = log(e^x / \sum_{i} e^{x_i}) (with both argument of x and y) */
 void LogSoftmax(const XTensor &x, XTensor &y, int leadDim);

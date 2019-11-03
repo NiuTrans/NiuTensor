@@ -39,6 +39,15 @@
 #include <curand.h>
 #endif
 
+#ifdef __APPLE__
+#include <sys/types.h>
+#include <sys/sysctl.h>
+#elif WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
+
 /* the nts (NiuTrans.Tensor) namespace */
 namespace nts{
 
@@ -51,8 +60,10 @@ typedef long long          INT_64;
 #define CUDA_HOST_MALLOC 1
 #define MY_PITCH CUDA_PITCH
 #define BUF_PITCH 256
-#define MIN_BLOCK_SIZE_FOR_MEMPOOL 128 * 1024 * 1024
+#define MIN_BLOCK_SIZE_FOR_MEMPOOL 256 * 1024 * 1024
 #define MIN_BLOCK_NUM_FOR_MEMPOOL 1024
+#define MAX_CPU_MEM_NUM 16
+#define MAX_GPU_MEM_NUM 16
 
 /* 
 mode of runnig a memory pool 
@@ -201,6 +212,9 @@ public:
     int curBlockPin;
     MTYPE curUsedPin;
     MTYPE bufUsedPin;
+
+    /* indicates whether the memory pool is initialized */
+    bool isInitialized;
 
 #ifdef USE_CUDA
     /* handle used for cublas */
@@ -412,6 +426,61 @@ public:
 #endif
 
 };
+
+/*
+a class for the management of memory
+*/
+class XMemManager
+{
+private:
+    /* cpu memory pool information */
+    XMem CPUMems[MAX_CPU_MEM_NUM];
+
+    /* number of cpu memory pools */
+    int nCPUMem;
+
+    /* gpu memory pool information */
+    XMem GPUMems[MAX_GPU_MEM_NUM];
+
+    /* number of gpu memory pools */
+    int nGPUMem;
+
+public:
+    /* constructor */
+    XMemManager();
+
+    /* de-constructor */
+    ~XMemManager();
+
+    /* get memory size */
+    MTYPE GetAvailableMemory();
+
+    /* get GPU memory size */
+    MTYPE GetAvailableGPUMemory(int devID);
+
+    /* get buffer size */
+    void GetBufferSize(MTYPE freeMem, MTYPE * myBufSize);
+
+    /* initialize it and set the global memory information */
+    void Initialize();
+
+    /* free it */
+    void Free();
+
+    /* get global memory pool */
+    XMem * GetMem(const int devID);
+
+    /* get global memory size */
+    int GetMemSize(const int devID, MTYPE * myBlockSize, int * myBlockNum, MTYPE * myBufSize);
+
+    /* show memory information */
+    void ShowMemInfo();
+};
+
+/* managing the memories */
+extern XMemManager GMems;
+
+
 
 extern XMem * GMem;
 

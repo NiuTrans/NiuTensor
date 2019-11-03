@@ -21,6 +21,7 @@
 
 #include "OnehotAndIndex.h"
 #include "OnehotAndIndex.cuh"
+#include "SetData.h"
 
 namespace nts{ // namespace nts(NiuTrans.Tensor)
 
@@ -31,7 +32,7 @@ convert onehot tensor to index tensor
 >> index - index tensor, which value is an integer num
 >> size - the last dimension size of the onehot tensor
 */
-void _OnehotToIndex(XTensor * onehot, XTensor * index, int size)
+void _OnehotToIndex(const XTensor * onehot, XTensor * index, int size)
 {
     CheckNTErrors(onehot->GetDim(-1) == size, "Illegal tensor dimension!");
     CheckNTErrors(onehot->order == index->order + 1, "Illegal tensor order!");
@@ -78,13 +79,13 @@ make a new tensor to keep the result and return it
 >> size - the last dimension size of the onehot tensor
 << return - the index tensor
 */
-XTensor OnehotToIndex(XTensor & onehot, int size)
+XTensor OnehotToIndex(const XTensor & onehot, int size)
 {
     CheckNTErrors(onehot.GetDim(-1) == size, "Illegal tensor dimension!");
     CheckNTErrors(onehot.dataType == X_INT, "The onehot tensor must be in X_INT!")
 
     XTensor index;
-    InitTensor(&index, onehot.order - 1, onehot.dimSize, X_INT, 1.0F, onehot.devID, onehot.mem);
+    InitTensorV2(&index, onehot.order - 1, onehot.dimSize, X_INT, 1.0F, onehot.devID, onehot.mem);
     index.SetTMPFlag();
 
     _OnehotToIndex(&onehot, &index, size);
@@ -99,7 +100,8 @@ convert index tensor to onehot tensor
 >> onehot - onehot tensor, which value is 0 or 1
 >> size - the last dimension size of the onehot tensor
 */
-void _IndexToOnehot(XTensor * index, XTensor * onehot, int size, float labelSmoothingP)
+void _IndexToOnehot(const XTensor * index, XTensor * onehot, 
+                    int size, float labelSmoothingP)
 {
     CheckNTErrors(onehot->GetDim(-1) == size, "Illegal tensor dimension!");
     CheckNTErrors(onehot->order == index->order + 1, "Illegal tensor order!");
@@ -109,10 +111,12 @@ void _IndexToOnehot(XTensor * index, XTensor * onehot, int size, float labelSmoo
     for (int i = 0; i < index->order; i++)
         CheckNTErrors(index->GetDim(i) == onehot->GetDim(i), "Illegal tensor order!");
 
-    onehot->SetZeroAll();
+    //onehot->SetZeroAll();
 
     float confidence = 1 - labelSmoothingP;
     float lowconfidence = labelSmoothingP / size;
+
+    _SetDataFixedFloat(onehot, lowconfidence);
 
 #ifdef USE_CUDA
     if(onehot->devID >= 0 && index->devID >= 0) {
@@ -130,9 +134,49 @@ void _IndexToOnehot(XTensor * index, XTensor * onehot, int size, float labelSmoo
     for (int i = 0; i < blockNum; i++) {
         int id = indexData[i];
         DTYPE * od = onehotData + i * stride;
-        od[id] = 2;
-        //onehotData[i * stride + id] = 1;
+        od[id] = confidence;
     }
+
+}
+
+/*
+convert index tensor to onehot tensor
+
+>> index - index tensor, which value is an integer num
+>> onehot - onehot tensor, which value is 0 or 1
+>> size - the last dimension size of the onehot tensor
+*/
+void _IndexToOnehot(int * index, int n, XTensor * onehot, int size, float labelSmoothingP)
+{
+    /*CheckNTErrors(onehot->GetDim(-1) == size, "Illegal tensor dimension!");
+    CheckNTErrors(onehot->dataType == X_INT, "The onehot tensor must be in X_INT!")
+
+
+        onehot->SetZeroAll();
+
+#ifdef USE_CUDA
+    if (onehot->devID >= 0) {
+        
+        delete[] cudaIndex;
+        return;
+    }
+#endif
+
+    int blockNum = n;
+    int stride = size;
+
+    int * indexData = (int *)index;
+    int * onehotData = (int *)onehot->data;
+
+    for (int i = 0; i < blockNum; i++) {
+        int id = indexData[i];
+        int * od = onehotData + i * stride;
+        od[id] = 1;
+    }*/
+    XTensor* cudaIndex = NewTensor1DV2(n, X_INT, onehot->devID);
+    cudaIndex->SetData(index, n);
+    _IndexToOnehot(cudaIndex, onehot, size, labelSmoothingP);
+    delete[] cudaIndex;
 
 }
 
@@ -145,7 +189,7 @@ make a new tensor to keep the result and return it
 >> confidence - labelsmoothing
 << return - the onehot tensor
 */
-XTensor IndexToOnehot(XTensor & index, int size, float labelSmoothingP)
+XTensor IndexToOnehot(const XTensor & index, int size, float labelSmoothingP)
 {
     CheckNTErrors(index.dataType == X_INT, "The onehot tensor must be in X_INT!")
 
@@ -156,7 +200,7 @@ XTensor IndexToOnehot(XTensor & index, int size, float labelSmoothingP)
     int * dim = new int[order + 1];
     memcpy(dim, index.dimSize, order * sizeof(int));
     dim[order] = size;
-    InitTensor(&onehot, index.order + 1, dim, X_FLOAT, 1.0F, index.devID, index.mem);
+    InitTensorV2(&onehot, index.order + 1, dim, X_FLOAT, 1.0F, index.devID, index.mem);
 
     _IndexToOnehot(&index, &onehot, size, labelSmoothingP);
 

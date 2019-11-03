@@ -19,10 +19,12 @@
  * $Created by: JIANG Yufan (email: jiangyufan2018@outlook.com) 2018-08-14
  */
 
+#include <math.h>
 #include "Multiply.h"
 #include "MultiplyDim.h"
 #include "MultiplyDim.cuh"
 #include "../shape/Unsqueeze.h"
+#include "../shape/IsSameShaped.h"
 #include "../../XName.h"
 #include "../../XUtility.h"
 #include "../movement/CopyValues.h"
@@ -42,8 +44,10 @@ i.e., a is multiplied with b by broadcasting
 >> n - the dimension index
 >> alpha - the scaling factor
 */
-void _MultiplyDim(const XTensor * a, const XTensor * b, XTensor * c, int n, DTYPE alpha) {
-    
+void _MultiplyDim(const XTensor * a, const XTensor * b, XTensor * c, int n, DTYPE alpha) 
+{
+    n = MODX(n, a->order);
+
     CheckNTErrors(a && b && c, "Empty tensor input!");
     CheckNTErrors(a->unitNum == c->unitNum, "Unmatched tensors in multiplication!");
     CheckNTErrors(a->dataType == b->dataType && a->dataType == c->dataType,
@@ -52,7 +56,9 @@ void _MultiplyDim(const XTensor * a, const XTensor * b, XTensor * c, int n, DTYP
     CheckNTErrors(!a->isSparse && !b->isSparse && !c->isSparse, "Dense tensors are required!");
     CheckNTErrors(a->dimSize[n] == b->unitNum, "Wrong tensor size!");
 
-    if(XTensor::IsSameShaped(a, b)){
+    CheckDev(a->devID, b->devID);
+
+    if(_IsSameShaped(a, b)){
         _Multiply(a, b, c, alpha);
         return;
     }
@@ -134,6 +140,24 @@ void _MultiplyDimMe(XTensor * a, const XTensor * b, int n, DTYPE alpha)
 }
 
 /*
+tensor multiplication(do it on site)
+make a new tensor to keep the result and return it
+
+c = a * b + \alpha * c
+where the size of b is equal to the n-th dimension of a,
+i.e., a is multiplied with b by broadcasting
+
+>> a - a tensor
+>> b - another tensor whose size is equal to that of dimension n of a
+>> n - the dimension index
+>> alpha - the scaling factor
+*/
+void MultiplyDimMe(XTensor& a, const XTensor& b, int n, DTYPE alpha)
+{
+    _MultiplyDim(&a, &b, &a, n, alpha);
+}
+
+/*
 tensor multiplication (return an XTensor structure and make tensor connections)
 make a new tensor to keep the result and return it
 
@@ -151,15 +175,48 @@ XTensor MultiplyDim(const XTensor &a, const XTensor &b, int n)
     XTensor c(&a);
     c.SetTMPFlag();
 
+    n = MODX(n, a.order);
+
     /* call _Multiply function */
     _MultiplyDim(&a, &b, &c, n, 0);
 
     /* tensor connections */
-    XLink::MakeLink(&a, &b, &c, MATH_MULTIPLYDIM);
-    XLink::AddParamToHeadInt(&c, n);
-    XLink::AddParamToHead(&c, 0);
+    if (a.enableGrad && b.enableGrad) {
+        XLink::MakeLink(&a, &b, &c, MATH_MULTIPLYDIM);
+        XLink::AddParamToHeadInt(&c, n);
+        XLink::AddParamToHead(&c, 0);
+    }
 
     return c;
+}
+
+/*
+tensor multiplication
+
+c = a * b + \alpha * c
+where the size of b is equal to the n-th dimension of a,
+i.e., a is multiplied with b by broadcasting
+
+>> a - a tensor
+>> b - another tensor whose size is equal to that of dimension n of a
+>> c - where we put a * b + \alpha * c. we save it in a if c is NULL
+>> n - the dimension index
+*/
+void MultiplyDim(const XTensor &a, const XTensor &b, XTensor &c, int n)
+{
+    if (!c.isInit || !IsSameShaped(a, c)) {
+        InitTensorV2(&c, &a);
+    }
+
+    /* call _Multiply function */
+    _MultiplyDim(&a, &b, &c, n, 0);
+
+    if (a.enableGrad && b.enableGrad) {
+        /* tensor connections */
+        XLink::MakeLink(&a, &b, &c, MATH_MULTIPLYDIM);
+        XLink::AddParamToHeadInt(&c, n);
+        XLink::AddParamToHead(&c, 0);
+    }
 }
 
 /* 
@@ -224,8 +281,8 @@ void _MultiplyBroadcast(const XTensor * a, const XTensor * b, XTensor * c, DTYPE
             dimsS[0] = -dimsS[0];
             dimsT[0] = -dimsT[0];
             
-            XTensor * s = NewTensor(order - (j - i), dimsS, a->dataType, a->denseRatio, a->devID, a->mem);
-            XTensor * t = NewTensor(order - (j - i) + 1, dimsT, b->dataType, b->denseRatio, b->devID, b->mem);
+            XTensor * s = NewTensorV2(order - (j - i), dimsS, a->dataType, a->denseRatio, a->devID, a->mem);
+            XTensor * t = NewTensorV2(order - (j - i) + 1, dimsT, b->dataType, b->denseRatio, b->devID, b->mem);
             
             if(count == 0)
                 source = b->data;
@@ -296,10 +353,37 @@ XTensor MultiplyBroadcast(const XTensor &a, const XTensor &b)
     _MultiplyBroadcast(&a, &b, &c, 0);
     
     /* tensor connections */
-    XLink::MakeLink(&a, &b, &c, MATH_MULTIPLYBROADCAST);
-    XLink::AddParamToHead(&c, 0);
+    if (a.enableGrad && b.enableGrad) {
+        XLink::MakeLink(&a, &b, &c, MATH_MULTIPLYBROADCAST);
+        XLink::AddParamToHead(&c, 0);
+    }
     
     return c;
+}
+
+/* 
+tensor broadcast multiplication
+c = a * b + c * \beta 
+where some of dimensions of b can be of size 1
+
+>> a - a tensor
+>> b - another tensor that would be broadcasted
+>> c - the resulting tensor
+*/
+void MultiplyBroadcast(const XTensor &a, const XTensor &b, XTensor &c)
+{
+    if (!c.isInit || !IsSameShaped(a, c)) {
+        InitTensorV2(&c, &a);
+    }
+
+    /* call _SumBroadcast function */
+    _MultiplyBroadcast(&a, &b, &c, 0);
+
+    if (a.enableGrad && b.enableGrad) {
+        /* tensor connections */
+        XLink::MakeLink(&a, &b, &c, MATH_MULTIPLYBROADCAST);
+        XLink::AddParamToHead(&c, 0);
+    }
 }
 
 }

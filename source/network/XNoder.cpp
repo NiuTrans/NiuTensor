@@ -29,7 +29,7 @@ void XNoder::MakeGrad(XTensor * node)
     if(node == NULL)
         return;
 
-    if(!XTensor::IsSameShaped(node, node->grad)){
+    if(!_IsSameShaped(node, node->grad)){
         delete node->grad;
         node->grad = NewTensor(node);
         node->grad->SetZeroAll();

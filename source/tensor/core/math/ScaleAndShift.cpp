@@ -22,6 +22,7 @@
 #include "../../XTensor.h"
 #include "../../XName.h"
 #include "../../XUtility.h"
+#include "../shape/IsSameShaped.h"
 #include "ScaleAndShift.h"
 #include "ScaleAndShift.cuh"
 
@@ -92,6 +93,21 @@ void _ScaleAndShiftMe(XTensor * a, DTYPE scale, DTYPE shift)
 }
 
 /* 
+scale and shift all tensor entires (do it on site)
+keep the result in the input tensor a and return nothing
+
+a = a * scale + shift
+
+>> a - the input/output tensor
+>> scale - the scaler factor
+>> shift - the shift factor
+*/
+void ScaleAndShiftMe(XTensor& a, DTYPE scale, DTYPE shift)
+{
+    _ScaleAndShift(&a, &a, scale, shift);
+}
+
+/* 
 scale and shift all tensor entires (return an XTensor structure)
 make a new tensor to keep the result and return it
 
@@ -111,11 +127,41 @@ XTensor ScaleAndShift(const XTensor &a, DTYPE scale, DTYPE shift)
     _ScaleAndShift(&a, &b, scale, shift);
     
     /* tensor connections */
-    XLink::MakeLink(&a, NULL, &b, MATH_SCALEANDSHIFT);
-    XLink::AddParamToHead(&b, scale);
-    XLink::AddParamToHead(&b, shift);
+    if (a.enableGrad) {
+        XLink::MakeLink(&a, NULL, &b, MATH_SCALEANDSHIFT);
+        XLink::AddParamToHead(&b, scale);
+        XLink::AddParamToHead(&b, shift);
+    }
     
     return b;
 }
+
+/* 
+scale and shift all tensor entires
+
+b = a * scale + shift
+
+>> a - the input tensor
+>> b - the output tensor
+>> scale - the scaler factor
+>> shift - the shift factor
+*/
+void ScaleAndShift(const XTensor & a, XTensor & b, DTYPE scale, DTYPE shift)
+{
+    if (!b.isInit || !IsSameShaped(a, b)) {
+        InitTensorV2(&b, &a);
+    }
+
+    /* call _ScaleAndShift function */
+    _ScaleAndShift(&a, &b, scale, shift);
+
+    if (a.enableGrad) {
+        /* tensor connections */
+        XLink::MakeLink(&a, NULL, &b, MATH_SCALEANDSHIFT);
+        XLink::AddParamToHead(&b, scale);
+        XLink::AddParamToHead(&b, shift);
+    }
+}
+
 
 } // namespace nts(NiuTrans.Tensor)

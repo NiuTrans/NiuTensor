@@ -16,14 +16,14 @@
  */
 
 /*
-* $Created by: XIAO Tong (email: xiaotong@mail.neu.edu.cn) 2018-04-25
-*/
+ * $Created by: XIAO Tong (email: xiaotong@mail.neu.edu.cn) 2018-04-25
+ */
 
 #include <stdlib.h>
 #include "../XName.h"
+#include "../../tensor/core/shape/IsSameShaped.h"
 #include "HardTanH.h"
 #include "HardTanH.cuh"
-#include "CrossEntropy.h"
 
 namespace nts{ // namespace nts(NiuTrans.Tensor)
 
@@ -37,27 +37,27 @@ y =  1    if x > 1
 */
 void _HardTanH(const XTensor * x, XTensor * y)
 {
+    CheckNTErrors(_IsSameShaped(x, y), 
+                 "The input tensor and output tensor must have the same shape!")
+
 #ifdef USE_CUDA
     if(x->devID >= 0 || y->devID >= 0){
         _CudaHardTanH(x, y);
         return;
     }
 #endif
-    if(x->dataType == DEFAULT_DTYPE && y->dataType == DEFAULT_DTYPE){
-        int n = x->GetSize();
-        DTYPE * ip = (DTYPE*)x->data;
-        DTYPE * op = (DTYPE*)y->data;
-        for(int i = 0; i < n; i++){
-            DTYPE p = ip[i];
-            if(p > 1.0)
-                p = 1.0;
-            else if(p < -1.0)
-                p = -1.0;
-            op[i] = p;
-        }
+
+    int n = x->GetSize();
+    DTYPE * ip = (DTYPE*)x->data;
+    DTYPE * op = (DTYPE*)y->data;
+    for(int i = 0; i < n; i++){
+        DTYPE p = ip[i];
+        if(p > 1.0)
+            p = 1.0;
+        else if(p < -1.0)
+            p = -1.0;
+        op[i] = p;
     }
-    else
-        ShowNTErrors("TODO!");
 }
 
 /* 
@@ -79,9 +79,26 @@ XTensor HardTanH(const XTensor &x)
     _HardTanH(&x, &y);
 
     /* tensor connection */
-    XLink::MakeLink(&x, NULL, &y, FUNC_HARDTANH);
+    if (x.enableGrad) {
+        XLink::MakeLink(&x, NULL, &y, FUNC_HARDTANH);
+    }
 
     return y;
+}
+
+void HardTanH(const XTensor &x, XTensor &y)
+{
+    if (!y.isInit || !IsSameShaped(y, x)) {
+        InitTensorV2(&y, &x);
+    }
+
+    /* call _HardTanH function */
+    _HardTanH(&x, &y);
+
+    if (x.enableGrad) {
+        /* tensor connection */
+        XLink::MakeLink(&x, NULL, &y, FUNC_HARDTANH);
+    }
 }
 
 /*
@@ -96,50 +113,36 @@ hard tanh: y =  1    if x > 1
    and dy/dx =  1    if -1 <= x <= 1
                 0    otherwise
 
->> gold - gold standard to measure error (or loss)
->> y - output of the function
->> x - input of the function
+>> y - output of the hardtanh function
+>> x - input of the hardtanh function
 >> dedy - dE/dy
 >> dedx - dE/dx
->> lossName - type of loss function, e.g., cross entropy
 */
-void _HardTanHBackward(XTensor * gold, XTensor * y, XTensor * x, 
-                       XTensor * dedy, XTensor * dedx,
-                       LOSS_FUNCTION_NAME lossName)
+void _HardTanHBackward(XTensor * y, XTensor * x, 
+                       XTensor * dedy, XTensor * dedx)
 {
-    CheckNTErrors((gold == NULL || XTensor::IsSameShaped(gold, y)), 
-                   "The tensors must be of the same size!");
+    CheckNTErrors(x != NULL, "The input tensor x must be not NULL!")
 
 #ifdef USE_CUDA
-    if(x->devID >= 0 || y->devID >= 0){
-        _CudaHardTanHBackward(gold, y, x, dedy, dedx, lossName);
+    if(x->devID >= 0){
+        _CudaHardTanHBackward(y, x, dedy, dedx);
         return;
     }
 #endif
 
-    if(x->dataType == DEFAULT_DTYPE && y->dataType == DEFAULT_DTYPE){
-        /* calculate dE/dy */
-        if(lossName == CROSSENTROPY)
-            _CrossEntropyBackward(dedy, y, gold);
-        else if(lossName != NOLOSS)
-            _LossBackward(dedy, gold, y, lossName);
+    DTYPE * dedyp = (DTYPE*)dedy->data;
+    DTYPE * dedxp = (DTYPE*)dedx->data;
+    DTYPE * ip = (DTYPE*)x->data;
+    int size = x->unitNum;
 
-        DTYPE * dedyp = (DTYPE*)dedy->data;
-        DTYPE * dedxp = (DTYPE*)dedx->data;
-        DTYPE * ip = (DTYPE*)x->data;
-        int size = y->unitNum;
-
-        /* dE/dx = dE/dy * dy/dx */
-        for(int i = 0; i < size; i++){
-            DTYPE s =ip[i];
-            if(s > 1.0 || s < -1.0)
-                dedxp[i] = 0;
-            else
-                dedxp[i] = dedyp[i];
-        }
+    /* dE/dx = dE/dy * dy/dx */
+    for(int i = 0; i < size; i++){
+        DTYPE s =ip[i];
+        if(s > 1.0 || s < -1.0)
+            dedxp[i] = 0;
+        else
+            dedxp[i] = dedyp[i];
     }
-    else
-        ShowNTErrors("TODO!");
 }
 
 } // namespace nts(NiuTrans.Tensor)

@@ -36,9 +36,6 @@ public:
     /* device id */
     int devID;
 
-    /* memory pool */
-    XMem * mem;
-
     /* size of input vector */
     int inSize;
 
@@ -72,7 +69,7 @@ public:
     ~T2TFNN();
 
     /* initialize the model */
-    void InitModel(int argc, char ** argv, int myDevID = -1, XMem * myMem = NULL);
+    void InitModel(int argc, char ** argv, int myDevID = -1);
 
     /* make the network */
     XTensor Make(XTensor &input, bool isTraining);

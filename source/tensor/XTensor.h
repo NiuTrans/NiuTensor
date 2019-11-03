@@ -28,6 +28,7 @@
 #ifndef __XTENSOR_H__
 #define __XTENSOR_H__
 
+#include <math.h>
 #include "XGlobal.h"
 #include "XMem.h"
 #include "XPRunner.h"
@@ -37,6 +38,7 @@
 #include "XDataType.h"
 #include "XMem.h"
 #include "XLink.h"
+#include "XCall.h"
 
 /* the nts (NiuTrans.Tensor) namespace */
 namespace nts{
@@ -52,6 +54,7 @@ struct XLink;
 #define MIN_TENSOR_MERGE_NUM 0
 #define MIN_TENSOR_MERGE_LIST_NUM 1024
 #define MIN_TENSOR_CAT_NUM 8
+#define MAX_TENSOR_NAME_SIZE 32
 
 /* computation flags */
 #define UNSAFE_BUT_FAST_MEM
@@ -61,6 +64,9 @@ struct XLink;
 struct XTensor
 {
 public:
+    /* name */
+    char name[MAX_TENSOR_NAME_SIZE];
+
     /* id */
     int id;
 
@@ -74,7 +80,7 @@ public:
     void * data;
 
     /* copy of data on the host memory. It is only activated 
-       when the matrix is operated on GPUs */
+       when the tensor is operated on GPUs */
     void * dataHost;
     
     /* a pointer to data (i.e., a pointer to the address of "data".
@@ -95,13 +101,10 @@ public:
     /* size of each dimension */
     int dimSize[MAX_TENSOR_DIM_NUM];
 
-    /* size of each dimension by Reversed Dimension Indexing (RDI) Mode */
-    int dimSizeRDI[MAX_TENSOR_DIM_NUM];
-
     /* data unit - data type for every cell */
     TENSOR_DATA_TYPE dataType;
 
-    /* size of matrix unit, e.g., sizeof(int) */
+    /* size of tensor unit, e.g., sizeof(int) */
     int unitSize;
 
     /* number of units */
@@ -129,7 +132,7 @@ public:
     /* indicates whether the data array is shared with other tensors */
     bool isShared;
 
-    /* indicates whether the date type used in this matrix is in default type (i.e., DTYPE) */
+    /* indicates whether the date type used in this tensor is in default type (i.e., DTYPE) */
     bool isDefaultDType;
 
     /* indicates whether the data is allocated in the global memory rather than a memory pool */
@@ -146,6 +149,9 @@ public:
 
     /* indicates whether the tensor keeps the gradient when used as model parameters */
     bool isGrad;
+
+    /* indicates whether the gradient of the tensor should be computed */
+    bool enableGrad;
 
     /* indicates whether the tensor is used as paramters (or variables) */
     bool isVar;
@@ -189,8 +195,14 @@ public:
     /* copy constructor */
     XTensor(const XTensor &reference);
 
+    /* copy constructor (with right value reference) */
+    XTensor(const XTensor &&reference);
+
     /* de-constructor */
     ~XTensor();
+
+    /* set the name of the tensor */
+    void SetName(const char * myName);
 
     /* initialize member variables */
     void Init();
@@ -204,40 +216,45 @@ public:
     /* overloading of the equal-sign */
     XTensor& operator= (const XTensor &tensor);
 
+    /* overloading of the equal-sign (with right value reference) */
+    XTensor& operator= (const XTensor &&tensor);
+
     /* overloading of the plus-sign */
-    XTensor  operator+ (const XTensor &tensor);
+    XTensor  operator+ (const XTensor &tensor) const;
     
     /* overloading of the plus-sign */
-    XTensor  operator+ (const DTYPE shift);
+    XTensor  operator+ (const DTYPE shift) const;
 
     /* overloading of the multiply-sign */
-    XTensor  operator* (const XTensor &tensor);
+    XTensor  operator* (const XTensor &tensor) const;
     
     /* overloading of the multiply-sign */
-    XTensor  operator* (const DTYPE scale);
+    XTensor  operator* (const DTYPE scale) const;
 
     /* overloading of the minus-sign */
-    XTensor  operator- (const XTensor &tensor);
+    XTensor  operator- (const XTensor &tensor) const;
     
     /* overloading of the minus-sign */
-    XTensor  operator- (const DTYPE shift);
+    XTensor  operator- (const DTYPE shift) const;
+
+    /* overloading of the minus-sign */
+    XTensor  operator- () const;
 
     /* overloading of the division-sign */
-    XTensor  operator/ (const XTensor &tensor);
+    XTensor  operator/ (const XTensor &tensor) const;
     
     /* overloading of the division-sign */
-    XTensor  operator/ (const DTYPE scale);
+    XTensor  operator/ (const DTYPE scale) const;
 
     /* linear transformation */
-    XTensor Lin(DTYPE scale, DTYPE shift = 0);
+    XTensor Lin(DTYPE scale, DTYPE shift = 0) const;
 
-    /* judge whether the two matrices are in the same type and size */
-    static
-    bool IsSameShaped(const XTensor * a, const XTensor * b);
+    /* relocate the data on the target device */
+    void SetDevice(int myDevId, XMem * myMem = NULL);
 
-    /* judge whether the three matrices are in the same type and size */
+    /* judge whether b is the reduced shape of a ?? */
     static
-    bool IsSameShaped(const XTensor * a, const XTensor * b, const XTensor * c);
+    bool IsReduceShaped(const XTensor * a, const XTensor * b, int dim);
 
     /* set the size of each dimension */
     void SetDim(int * myDimSize);
@@ -254,26 +271,38 @@ public:
     /* reshape the tensor to a matrix */
     void Reshape(const int rowNum, const int colNum);
 
+    /* reshape the tensor by merging two consecutive dimensions */
+    void ReshapeMerged(const int i, const int j = -1);
+
+    /* return a tensor that datatype is same as the special tensor */
+    XTensor TypeAs(const XTensor input);
+
     /* get the number of items in the data array */
     int GetSize() const;
 
     /* get size of the memory used */
-    int GetDataSizeInChar();
+    int GetDataSizeInChar() const;
 
     /* get unit size in terms of "dataType" */
-    int GetUnitSize(TENSOR_DATA_TYPE myDataType);
+    int GetUnitSize(TENSOR_DATA_TYPE myDataType) const;
 
     /* get offset (2D) */
-    MTYPE GetOffset2D(int row, int col);
+    MTYPE GetOffset2D(int row, int col) const;
 
     /* get offset (3D) */
-    MTYPE GetOffset3D(int d0, int d1, int d2);
+    MTYPE GetOffset3D(int d0, int d1, int d2) const;
 
     /* a tensor with all entries of 0 */
     void SetZeroAll(XStream * stream = NULL);
 
     /* set the tensor with an data array */
     void SetData(const void * d, int num, int beg = 0);
+
+    /* generate data items with a uniform distribution in [0, 1] */
+    void Rand(int rNum, int cNum);
+
+    /* generate data items with a range by start, end and the step */
+    void Range(DTYPE lower, DTYPE upper, DTYPE step);
 
     /* set tensor items by a uniform distribution */
     void SetDataRand(DTYPE lower = 0.0F, DTYPE upper = 1.0F);
@@ -286,51 +315,51 @@ public:
 
     /* set tensor items with an array of values */
     void SetDataBatchedWithValues(MTYPE * offsets, void * values, int num);
-
-    /* check whether the data array is the same as the answer */
-    bool CheckData(const void * answer, int num, int beg = 0);
-
-    /* check whether the data array is the same as the answer */
-    bool CheckData(const void * answer, int num, float tolerance, int beg = 0);
     
     /* set the pointer to "data" */
     void SetDataPointer();
 
-    /* set the cell to the ascending order along a given dimension */
-    void SetAscendingOrder(int dim);
-
     /* get the value of a cell with the index */
-    DTYPE Get(int index[], int size = -1);
+    DTYPE Get(int index[], int size = -1) const;
+    
+    /* get the value of a cell with the offset */
+    DTYPE Get(int offset) const;
 
     /* get the pointer to a cell */
     void * GetCell(int index[], int size = -1) const;
 
     /* get the default type value of a cell in a 1d tensor */
-    DTYPE Get1D(int i);
+    DTYPE Get1D(int i) const;
 
     /* get the default type value of a cell in a 2d tensor */
     DTYPE Get2D(int ni, int mi) const;
     
     /* get the default type value of a cell in a 3d tensor */
-    DTYPE Get3D(int d0, int d1, int d2);
+    DTYPE Get3D(int d0, int d1, int d2) const;
 
+    /* get the int value of a cell by its offset */
+    int GetInt(int offset) const;
+    
     /* get the int value of a cell in a 1d tensor */
-    int Get1DInt(int i);
+    int Get1DInt(int i) const;
 
     /* get the int value of a cell in a 2d tensor */
-    int Get2DInt(int ni, int mi);
+    int Get2DInt(int ni, int mi) const;
     
     /* get the int value of a cell in a 3d tensor */
-    int Get3DInt(int d0, int d1, int d2);
+    int Get3DInt(int d0, int d1, int d2) const;
 
     /* get the value of a cell in a sparse tensor */
-    DTYPE GetInSparse(int i);
+    DTYPE GetInSparse(int i) const;
 
     /* get the key value of a tuple in a sparse tensor */
-    int GetKeyInSparse(int i);
+    int GetKeyInSparse(int i) const;
 
     /* set the value of a cell */
     bool Set(DTYPE value, int index[], int size = -1);
+
+    /* set the value of a cell with its offset in the array */
+    bool Set(DTYPE value, int offset);
 
     /* set the value of a cell in a 1d tensor */
     bool Set1D(DTYPE value, int i);
@@ -340,6 +369,9 @@ public:
 
     /* set the value of a cell in a 3d tensor */
     bool Set3D(DTYPE value, int d0, int d1, int d2);
+    
+    /* set the integer value of a cell by its offset */
+    bool SetInt(int value, int offset);
     
     /* set the integer value of a cell */
     bool SetInt(int value, int index[], int size = -1);
@@ -357,7 +389,7 @@ public:
     bool Add2D(DTYPE value, int ni, int mi);
 
     /* get the number of non-zero elements (in a sparse tensor) */
-    int GetNonzeroSize();
+    int GetNonzeroSize() const;
 
     /* set the tensor as "temporary" */
     void SetTMPFlag(bool myIsTmp = true);
@@ -368,12 +400,12 @@ public:
     /* set the tensor as "variable" */
     void SetVarFlag(bool myIsVar = true);
 
-    /* resize a matrix with a specified matrix size */
+    /* resize a tensor with a specified tensor size */
     bool Resize(const int myOrder, const int * myDimSize,
                 const TENSOR_DATA_TYPE myDataType = DEFAULT_DTYPE,
                 const float myDenseRatio = 1.0F);
 
-    /* resize a matrix by another one */
+    /* resize a tensor by another one */
     bool Resize(const XTensor * myTensor);
 
     /* binary search to find an element in a sparse matrix*/
@@ -386,19 +418,25 @@ public:
     static
     void Dump(const XTensor * tensor, FILE * file, const char * label = NULL, const int n = -1, const int beg = 0, const int verbose = 0);
 
+    /* dump data to a binary file */
+    void BinaryDump(FILE * file);
+
     /* read data from a file */
     void Read(FILE * file, const char * label = NULL);
+
+    /* read data from a binary file */
+    void BinaryRead(FILE * file, size_t offset);
 
     /* flush the data to the target device */
     void FlushToMem(XMem * targetMem);
 
-    /* allocate the memory space of the matrix (in the global memory) */
+    /* allocate the memory space of the tensor (in the global memory) */
     static
-    void AllocateData(XTensor * matrix, XMem * myMem = NULL, bool useBuf = false);
+    void AllocateData(XTensor * tensor, XMem * myMem = NULL, bool useBuf = false);
 
-    /* free the memory space of the matrix (in the global memory) */
+    /* free the memory space of the tensor (in the global memory) */
     static
-    void FreeData(XTensor * matrix, XMem * myMem = NULL, bool useBuf = false);
+    void FreeData(XTensor * tensor, XMem * myMem = NULL, bool useBuf = false);
 };
 
 /* we make a unique id for every tensor */
@@ -407,82 +445,18 @@ extern MUTEX_HANDLE tensorMutex;
 extern XTensor NULLTensor;
 extern int MakeTensorID();
 
-/************************************************
-* we define the "new and delete" functions below
-*/
 
-/* initialize a XTensor */
-void InitTensor(XTensor * tensor,
-                const int myOrder, const int * myDimSize, const TENSOR_DATA_TYPE myDataType = X_FLOAT,
-                const float myDenseRatio = 1.0F, const int myDevID = -1, XMem * myMem = NULL);
+/* overloading of the plus-sign */
+XTensor  operator+ (const DTYPE shift, const XTensor &tensor);
 
-/* initialize a dense vector */
-void InitTensor1D(XTensor * tensor, const int num, 
-                  const TENSOR_DATA_TYPE myDataType = X_FLOAT, const int myDevID = -1, XMem * myMem = NULL);
+/* overloading of the minus-sign */
+XTensor  operator- (const DTYPE shift, const XTensor &tensor);
 
-/* initialize a dense matrix */
-void InitTensor2D(XTensor * tensor, const int rowNum, const int colNum,
-                  const TENSOR_DATA_TYPE myDataType = X_FLOAT, const int myDevID = -1, XMem * myMem = NULL);
+/* overloading of the multiply-sign */
+XTensor  operator* (const DTYPE scale, const XTensor &tensor);
 
-/* initialize a dense 3d tensor */
-void InitTensor3D(XTensor * tensor, const int d0, const int d1, const int d2,
-                  const TENSOR_DATA_TYPE myDataType = X_FLOAT, const int myDevID = -1, XMem * myMem = NULL);
-    
-/* initialize a dense 4d tensor */
-void InitTensor4D(XTensor * tensor, const int d0, const int d1, const int d2, const int d3,
-                  const TENSOR_DATA_TYPE myDataType = X_FLOAT, const int myDevID = -1, XMem * myMem = NULL);
-
-/* initialize a dense 5d tensor */
-void InitTensor5D(XTensor * tensor, const int d0, const int d1, const int d2, const int d3, const int d4,
-                  const TENSOR_DATA_TYPE myDataType = X_FLOAT, const int myDevID = -1, XMem * myMem = NULL);
-
-/* initialize a tensor with a reference tensor */
-void InitTensor(XTensor * tensor, const XTensor * reference);
-
-/* generate a XTensor */
-XTensor * NewTensor(const int myOrder, const int * myDimSize, const TENSOR_DATA_TYPE myDataType = X_FLOAT,
-                    const float myDenseRatio = 1.0F, const int myDevID = -1, XMem * myMem = NULL);
-
-/* generate a XTensor which allocates data on the buffer */
-XTensor * NewTensorBuf(const int myOrder, const int * myDimSize,
-                       const TENSOR_DATA_TYPE myDataType = X_FLOAT, const float myDenseRatio = 1.0F,
-                       const int myDevID = -1, XMem * myMem = NULL);
-
-/* generate a XTensor which allocates data on the buffer */
-XTensor * NewTensorBuf(const XTensor * reference, int devID, XMem * myMem);
-
-/* generate a dense vector */
-XTensor * NewTensor1D(const int num, const TENSOR_DATA_TYPE myDataType = X_FLOAT, const int myDevID = -1, 
-                      XMem * myMem = NULL);
-
-/* generate a dense matrix */
-XTensor * NewTensor2D(const int rowNum, const int colNum, 
-                      const TENSOR_DATA_TYPE myDataType = X_FLOAT, 
-                      const int myDevID = -1, XMem * myMem = NULL);
-
-/* generate a dense 3d tensor */
-XTensor * NewTensor3D(const int d0, const int d1, const int d2, 
-                      const TENSOR_DATA_TYPE myDataType = X_FLOAT, 
-                      const int myDevID = -1, XMem * myMem = NULL);
-
-/* generate a dense 4d tensor */
-XTensor * NewTensor4D(const int d0, const int d1, const int d2, const int d3,
-                      const TENSOR_DATA_TYPE myDataType = X_FLOAT, 
-                      const int myDevID = -1, XMem * myMem = NULL);
-
-/* generate a dense 5d tensor */
-XTensor * NewTensor5D(const int d0, const int d1, const int d2, const int d3, const int d4,
-                      const TENSOR_DATA_TYPE myDataType = X_FLOAT, 
-                      const int myDevID = -1, XMem * myMem = NULL);
-
-/* generate a copy of XTensor (with a reference to a given tensor) */
-XTensor * NewTensor(const XTensor * a, bool isFilledData = true);
-
-/* free the data space of a given tensor */
-void DelTensor(XTensor * tensor);
-
-/* free the data space of a given tensor (on the buffer) */
-void DelTensorBuf(XTensor * tensor);
+/* overloading of the division-sign */
+XTensor  operator/ (const DTYPE scale, const XTensor &tensor);
 
 } /* end of the nts (NiuTrans.Tensor) namespace */
 

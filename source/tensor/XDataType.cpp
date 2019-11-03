@@ -60,7 +60,7 @@ TENSOR_DATA_TYPE GetDataType(const char * typeName)
     }
 }
 
-/****************************************************
+/*
 Below is for calling CPU BLAS for fast matrix operations
 I'm not sure how fast it is. But it seems that other
 guys are crazy about this. So I decided to have a try.
@@ -79,37 +79,6 @@ _XINLINE_ float Float16ToFloat(unsigned short h)
 {
     float f = float(((h&0x8000)<<16) | (((h&0x7c00)+0x1C000)<<13) | ((h&0x03FF)<<13));
     return f;
-}
-
-/* 
-data type conversion
->> devID - device id
->> s - source data array
->> typeS - source data type
->> t - target data array
->> typeT - target data type
->> size - number of the items in s (and t)
-*/
-void ConvertDataType(int devID, void * s, TENSOR_DATA_TYPE typeS, void * t, TENSOR_DATA_TYPE typeT, int size)
-{
-    CheckNTErrors((devID < 0), "This code must be run on CPUs!");
-
-    if(typeS == typeT)
-        return;
-
-    if(typeS == X_FLOAT && typeT == X_FLOAT16){
-        for(int i = 0; i < size; i++){
-            ((unsigned short*)t)[i] = FloatToFloat16(((float*)s)[i]);
-        }
-    }
-    else if(typeS == X_FLOAT16 && typeT == X_FLOAT){
-        for(int i = 0; i < size; i++){
-            ((float*)t)[i] = Float16ToFloat(((unsigned short*)s)[i]);
-        }
-    }
-    else{
-        ShowNTErrors("Unsupported data types for conversion!");
-    }
 }
 
 } /* end of the nts (NiuTrans.Tensor) namespace */

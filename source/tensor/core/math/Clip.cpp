@@ -21,6 +21,7 @@
 
 #include "../../XTensor.h"
 #include "../../XName.h"
+#include "../shape/IsSameShaped.h"
 #include "Clip.h"
 #include "Clip.cuh"
 
@@ -36,26 +37,26 @@ set every entry to its clip value
 void _Clip(const XTensor * a, XTensor * b, DTYPE lower, DTYPE upper)
 {
 #ifdef USE_CUDA
-	/* run it on GPUs */
-	if (a->devID >= 0) {
-		_CudaClip(a, b, lower, upper);
-		return;
-	}
+    /* run it on GPUs */
+    if (a->devID >= 0) {
+        _CudaClip(a, b, lower, upper);
+        return;
+    }
 #endif
 
-	CheckNTErrors((XTensor::IsSameShaped(a, b)), "Input tensors should have the same type!");
-	CheckNTErrors((a->dataType == DEFAULT_DTYPE), "TODO!");
+    CheckNTErrors((_IsSameShaped(a, b)), "Input tensors should have the same type!");
+    CheckNTErrors((a->dataType == DEFAULT_DTYPE), "TODO!");
 
-	DTYPE * d = (DTYPE*)a->data;
-	DTYPE * db = (DTYPE*)b->data;
-	for (int i = 0; i < a->unitNum; i++) {
-		if (d[i] > upper)
-			db[i] = upper;
-		else if (d[i] < lower)
-			db[i] = lower;
-		else
-			db[i] = d[i];
-	}
+    DTYPE * d = (DTYPE*)a->data;
+    DTYPE * db = (DTYPE*)b->data;
+    for (int i = 0; i < a->unitNum; i++) {
+        if (d[i] > upper)
+            db[i] = upper;
+        else if (d[i] < lower)
+            db[i] = lower;
+        else
+            db[i] = d[i];
+    }
 }
 
 /*
@@ -68,6 +69,18 @@ keep the result in the input tensor a and return nothing
 void _ClipMe(XTensor * a, DTYPE lower, DTYPE upper)
 {
 	_Clip(a, a, lower, upper);
+}
+
+/*
+set every entry to its clip value (do it on site)
+keep the result in the input tensor a and return nothing
+>> a - the tensor we are processing
+>> lower - the lower border
+>> upper - the upper border
+*/
+void ClipMe(XTensor& a, DTYPE lower, DTYPE upper)
+{
+    _Clip(&a, &a, lower, upper);
 }
 
 /*
@@ -87,11 +100,30 @@ XTensor Clip(const XTensor & a, DTYPE lower, DTYPE upper)
 	_Clip(&a, &b, lower, upper);
 
 	/* tensor connections */
-	XLink::MakeLink(&a, NULL, &b, MATH_CLIP);
-	XLink::AddParamToHead(&b, lower);
-	XLink::AddParamToHead(&b, upper);
+	if (a.enableGrad) {
+	    XLink::MakeLink(&a, NULL, &b, MATH_CLIP);
+	    XLink::AddParamToHead(&b, lower);
+	    XLink::AddParamToHead(&b, upper);
+	}
 
 	return b;
+}
+
+void Clip(const XTensor & a, XTensor & b, DTYPE lower, DTYPE upper)
+{
+    if (!b.isInit || !IsSameShaped(a, b)) {
+        InitTensorV2(&b, &a);
+    }
+
+    /* call _Clip function */
+    _Clip(&a, &b, lower, upper);
+
+    /* tensor connections */
+    if (a.enableGrad) {
+        XLink::MakeLink(&a, NULL, &b, MATH_CLIP);
+        XLink::AddParamToHead(&b, lower);
+        XLink::AddParamToHead(&b, upper);
+    }
 }
 
 /*

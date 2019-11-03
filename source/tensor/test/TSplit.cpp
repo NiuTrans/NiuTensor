@@ -19,6 +19,7 @@
 * $Created by: Lin Ye (email: linye2015@outlook.com) 2018-06-13
 */
 
+#include "../core/utilities/CheckData.h"
 #include "TSplit.h"
 
 namespace nts { // namespace nt(NiuTrans.Tensor)
@@ -54,17 +55,17 @@ bool TestSplit1()
                           {3.0F, 4.0F, 5.0F},
                           {0.1F, 1.1F, 2.1F},
                           {3.1F, 4.1F, 5.1F} };
-	DTYPE answer[2][2][3] = { { {0.0F, 1.0F, 2.0F},
-	                            {3.0F, 4.0F, 5.0F} },
-							  { {0.1F, 1.1F, 2.1F},
-	                            {3.1F, 4.1F, 5.1F} } };
+    DTYPE answer[2][2][3] = { { {0.0F, 1.0F, 2.0F},
+                                {3.0F, 4.0F, 5.0F} },
+                              { {0.1F, 1.1F, 2.1F},
+                                {3.1F, 4.1F, 5.1F} } };
   
     /* CPU test */
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s = NewTensor(sOrder, sDimSize);
-    XTensor * t = NewTensor(tOrder, tDimSize);
+    XTensor * s = NewTensorV2(sOrder, sDimSize);
+    XTensor * t = NewTensorV2(tOrder, tDimSize);
     XTensor tUser;
 
     /* initialize variables */
@@ -76,45 +77,45 @@ bool TestSplit1()
     tUser = Split(*s, 0, 2);
 
     /* check results */
-    cpuTest = t->CheckData(answer, tUnitNum) && tUser.CheckData(answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensor */
-    XTensor * sGPU = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
-	XTensor * tGPU = NewTensor(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
     XTensor tUserGPU;
 
     /* Initialize variables */
-	sGPU->SetData(sData, sUnitNum);
-	tGPU->SetZeroAll();
+    sGPU->SetData(sData, sUnitNum);
+    tGPU->SetZeroAll();
 
     /* call sum function */
-	_Split(sGPU, tGPU, 0, 2);
+    _Split(sGPU, tGPU, 0, 2);
     tUserGPU = Split(*sGPU, 0, 2);
 
     /* check results */
-    gpuTest = tGPU->CheckData(answer, tUnitNum) && tUserGPU.CheckData(answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
 
     /* destroy variables */
-	delete s;
+    delete s;
     delete t;
     delete sGPU;
     delete tGPU;
-	delete[] sDimSize;
+    delete[] sDimSize;
     delete[] tDimSize;
 
-	return cpuTest && gpuTest;
+    return cpuTest && gpuTest;
 #else
     /* destroy variables */
-	delete s;
+    delete s;
     delete t;
-	delete[] sDimSize;
+    delete[] sDimSize;
     delete[] tDimSize;
 
-	return cpuTest;
+    return cpuTest;
 #endif // USE_CUDA
 }
 
@@ -148,19 +149,19 @@ bool TestSplit2()
     DTYPE sData[3][4] = { {0.0F, 1.0F, 2.0F, 3.0F},
                           {4.0F, 5.0F, 0.1F, 1.1F},
                           {2.1F, 3.1F, 4.1F, 5.1F} };
-	DTYPE answer[2][3][2] = { { {0.0F, 1.0F},
-								{4.0F, 5.0F},
-								{2.1F, 3.1F} },
-	                          { {2.0F, 3.0F},
-							    {0.1F, 1.1F},
-								{4.1F, 5.1F} } };
+    DTYPE answer[2][3][2] = { { {0.0F, 1.0F},
+                                {4.0F, 5.0F},
+                                {2.1F, 3.1F} },
+                              { {2.0F, 3.0F},
+                                {0.1F, 1.1F},
+                                {4.1F, 5.1F} } };
 
     /* CPU test */
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s = NewTensor(sOrder, sDimSize);
-    XTensor * t = NewTensor(tOrder, tDimSize);
+    XTensor * s = NewTensorV2(sOrder, sDimSize);
+    XTensor * t = NewTensorV2(tOrder, tDimSize);
     XTensor tUser;
 
     /* initialize variables */
@@ -172,7 +173,7 @@ bool TestSplit2()
     tUser = Split(*s, 1, 2);
 
     /* check results */
-    cpuTest = t->CheckData(answer, tUnitNum) && tUser.CheckData(answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
 
 
 #ifdef USE_CUDA
@@ -180,38 +181,38 @@ bool TestSplit2()
     bool gpuTest = true;
 
     /* create tensor */
-	XTensor * sGPU = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
-	XTensor * tGPU = NewTensor(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
     XTensor tUserGPU;
 
     /* Initialize variables */
-	sGPU->SetData(sData, sUnitNum);
-	tGPU->SetZeroAll();
+    sGPU->SetData(sData, sUnitNum);
+    tGPU->SetZeroAll();
 
     /* call sum function */
-	_Split(sGPU, tGPU, 1, 2);
+    _Split(sGPU, tGPU, 1, 2);
     tUserGPU = Split(*sGPU, 1, 2);
 
     /* check results */
-    gpuTest = tGPU->CheckData(answer, tUnitNum) && tUserGPU.CheckData(answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
 
     /* destroy variables */
-	delete s;
+    delete s;
     delete t;
     delete sGPU;
     delete tGPU;
-	delete[] sDimSize;
-	delete[] tDimSize;
+    delete[] sDimSize;
+    delete[] tDimSize;
 
-	return cpuTest && gpuTest;
+    return cpuTest && gpuTest;
 #else
     /* destroy variables */
-	delete s;
+    delete s;
     delete t;
-	delete[] sDimSize;
-	delete[] tDimSize;
+    delete[] sDimSize;
+    delete[] tDimSize;
 
-	return cpuTest;
+    return cpuTest;
 #endif // USE_CUDA
 }
 
@@ -221,9 +222,9 @@ In this case, (3, 4) -> 2 * (3, 2) , whereToSplit=1, splitNum=2.
 */
 bool TestSplit3()
 {
-	/* create list */
-    XList * tList = new XList();
-    XList tUserList;
+    /* create list */
+    TensorList * tList = new TensorList();
+    TensorList tUserList;
 
     /* a source tensor of size (3, 4) */
     int sOrder = 2;
@@ -269,18 +270,18 @@ bool TestSplit3()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s = NewTensor(sOrder, sDimSize);
-    XTensor * t1 = NewTensor(tOrder1, tDimSize1);
-    XTensor * t2 = NewTensor(tOrder2, tDimSize2);
-    XTensor * t3 = NewTensor(tOrder2, tDimSize2);
-    XTensor * t4 = NewTensor(tOrder2, tDimSize2);
+    XTensor * s = NewTensorV2(sOrder, sDimSize);
+    XTensor * t1 = NewTensorV2(tOrder1, tDimSize1);
+    XTensor * t2 = NewTensorV2(tOrder2, tDimSize2);
+    XTensor * t3 = NewTensorV2(tOrder2, tDimSize2);
+    XTensor * t4 = NewTensorV2(tOrder2, tDimSize2);
 
     /* initialize variables */
     s->SetData(sData, sUnitNum);
     t1->SetZeroAll();
     t2->SetZeroAll();
 
-	/* add tensors to list */
+    /* add tensors to list */
     tList->Add(t1);
     tList->Add(t2);
 
@@ -292,46 +293,46 @@ bool TestSplit3()
     Split(*s, tUserList, 1, 2);
 
     /* check results */
-    cpuTest = t1->CheckData(answer1, tUnitNum1) && ((XTensor *)tUserList.Get(0))->CheckData(answer1, tUnitNum1) &&
-              t2->CheckData(answer2, tUnitNum2) && ((XTensor *)tUserList.Get(1))->CheckData(answer2, tUnitNum2);
+    cpuTest = _CheckData(t1, answer1, tUnitNum1) && _CheckData((XTensor *)tUserList.Get(0), answer1, tUnitNum1) &&
+              _CheckData(t2, answer2, tUnitNum2) && _CheckData((XTensor *)tUserList.Get(1), answer2, tUnitNum2);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
-	/* clear list */
-	tList->Clear();
+    /* clear list */
+    tList->Clear();
     tUserList.Clear();
 
     /* create tensor */
-	XTensor * sGPU = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
-	XTensor * tGPU1 = NewTensor(tOrder1, tDimSize1, X_FLOAT, 1.0F, 0);
-	XTensor * tGPU2 = NewTensor(tOrder2, tDimSize2, X_FLOAT, 1.0F, 0);
-	XTensor * tGPU3 = NewTensor(tOrder2, tDimSize2, X_FLOAT, 1.0F, 0);
-	XTensor * tGPU4 = NewTensor(tOrder2, tDimSize2, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU1 = NewTensorV2(tOrder1, tDimSize1, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU2 = NewTensorV2(tOrder2, tDimSize2, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU3 = NewTensorV2(tOrder2, tDimSize2, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU4 = NewTensorV2(tOrder2, tDimSize2, X_FLOAT, 1.0F, 0);
 
     /* Initialize variables */
-	sGPU->SetData(sData, sUnitNum);
-	tGPU1->SetZeroAll();
-	tGPU2->SetZeroAll();
+    sGPU->SetData(sData, sUnitNum);
+    tGPU1->SetZeroAll();
+    tGPU2->SetZeroAll();
 
-	/* add tensors to list */
-	tList->Add(tGPU1);
-	tList->Add(tGPU2);
+    /* add tensors to list */
+    tList->Add(tGPU1);
+    tList->Add(tGPU2);
 
-	tUserList.Add(tGPU3);
-	tUserList.Add(tGPU4);
+    tUserList.Add(tGPU3);
+    tUserList.Add(tGPU4);
 
-	/* call Split function */
-	_Split(sGPU, tList, 1, 2);
+    /* call Split function */
+    _Split(sGPU, tList, 1, 2);
     Split(*sGPU, tUserList, 1, 2);
 
     /* check results */
-	gpuTest = tGPU1->CheckData(answer1, tUnitNum1) && ((XTensor *)tUserList.Get(0))->CheckData(answer1, tUnitNum1) &&
-              tGPU2->CheckData(answer2, tUnitNum2) && ((XTensor *)tUserList.Get(1))->CheckData(answer2, tUnitNum2);
+    gpuTest = _CheckData(tGPU1, answer1, tUnitNum1) && _CheckData((XTensor *)tUserList.Get(0), answer1, tUnitNum1) &&
+              _CheckData(tGPU2, answer2, tUnitNum2) && _CheckData((XTensor *)tUserList.Get(1), answer2, tUnitNum2);
 
     /* destroy variables */
-	delete s;
+    delete s;
     delete t1;
     delete t2;
     delete t3;
@@ -341,25 +342,25 @@ bool TestSplit3()
     delete tGPU2;
     delete tGPU3;
     delete tGPU4;
-	delete[] sDimSize;
-	delete[] tDimSize1;
-	delete[] tDimSize2;
+    delete[] sDimSize;
+    delete[] tDimSize1;
+    delete[] tDimSize2;
     delete tList;
 
-	return cpuTest && gpuTest;
+    return cpuTest && gpuTest;
 #else
     /* destroy variables */
-	delete s;
+    delete s;
     delete t1;
     delete t2;
     delete t3;
     delete t4;
-	delete[] sDimSize;
-	delete[] tDimSize1;
-	delete[] tDimSize2;
+    delete[] sDimSize;
+    delete[] tDimSize1;
+    delete[] tDimSize2;
     delete tList;
 
-	return cpuTest;
+    return cpuTest;
 #endif // USE_CUDA
 }
 

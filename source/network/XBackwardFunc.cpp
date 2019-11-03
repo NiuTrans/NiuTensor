@@ -43,18 +43,18 @@ void XFuncGrad::MakeGrad(XTensor * node, bool isEfficient)
     XNoder::MakeGrad(input);
 
     if(operID == FUNC_HARDTANH)
-        _HardTanHBackward(NULL, output, input, output->grad, input->grad, NOLOSS);
+        _HardTanHBackward(output, input, output->grad, input->grad);
     else if(operID == FUNC_IDENTITY)
-        _IdentityBackward(NULL, output, input, output->grad, input->grad, NOLOSS);
+        _IdentityBackward(output, input, output->grad, input->grad);
     else if(operID == FUNC_LOGSOFTMAX){
         int leadDim = income.GetParamInt(0);
         CheckNTErrors(leadDim >= 0 && leadDim < input->order, "wrong leading dimension in logsoftmax!");
         _LogSoftmaxBackward(NULL, output, input, output->grad, input->grad, NULL, leadDim, NOLOSS);
     }
     else if(operID == FUNC_RECTIFY)
-        _RectifyBackward(NULL, output, input, output->grad, input->grad, NOLOSS);
+        _RectifyBackward(output, input, output->grad, input->grad);
     else if(operID == FUNC_SIGMOID)
-        _SigmoidBackward(NULL, output, input, output->grad, input->grad, NOLOSS);
+        _SigmoidBackward(output, input, output->grad, input->grad);
     else if(operID == FUNC_SOFTMAX){
         int leadDim = income.GetParamInt(0);
         CheckNTErrors(leadDim >= 0 && leadDim < input->order, "wrong leading dimension in softmax!");

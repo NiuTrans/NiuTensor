@@ -31,7 +31,7 @@ flush a list of XTensor to GPU memory
 >> devID - target GPU id
 >> GPUMem - memory pool for the GPU
 */
-void CPUToGPUFlush(XList * mList, int devID, XMem * GPUMem)
+void CPUToGPUFlush(TensorList * mList, int devID, XMem * GPUMem)
 {
 #ifdef USE_CUDA
     CudaCPUToGPUFlush(mList, devID, GPUMem);

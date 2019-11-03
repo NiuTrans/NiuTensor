@@ -22,6 +22,7 @@
 #include "../../XUtility.h"
 #include "../../XDevice.h"
 #include "../../XTensor.h"
+#include "../shape/IsSameShaped.h"
 #include "XTensorBLAS.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
@@ -201,9 +202,9 @@ void _CudaBLASMatrixMULBatchedStrided(cublasHandle_t * handle,
 matrix multiplication via cuda version BLAS
 */
 void _CudaBLASMatrixMULList(cublasHandle_t * handle,
-                            const XList * a, MATRIX_TRANS_TYPE transposedA,
-                            const XList * b, MATRIX_TRANS_TYPE transposedB,
-                            XList * c,
+                            const TensorList * a, MATRIX_TRANS_TYPE transposedA,
+                            const TensorList * b, MATRIX_TRANS_TYPE transposedB,
+                            TensorList * c,
                             int count, DTYPE alpha, DTYPE beta)
 {
     CheckNTErrors((a && b && c), "Empty input lists!");
@@ -224,9 +225,9 @@ void _CudaBLASMatrixMULList(cublasHandle_t * handle,
         XTensor * ai = (XTensor*)a->GetItem(i);
         XTensor * bi = (XTensor*)b->GetItem(i);
         XTensor * ci = (XTensor*)c->GetItem(i);
-        if (!XTensor::IsSameShaped(aim, ai) ||
-            !XTensor::IsSameShaped(bim, bi) ||
-            !XTensor::IsSameShaped(cim, ci))
+        if (!_IsSameShaped(aim, ai) ||
+            !_IsSameShaped(bim, bi) ||
+            !_IsSameShaped(cim, ci))
         {
             isUniform = false;
             break;

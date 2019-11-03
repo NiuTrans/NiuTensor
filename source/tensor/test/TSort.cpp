@@ -19,6 +19,7 @@
 * $Created by: LI Yinqiao (li.yin.qiao.2012@hotmail.com) 2018-04-30
 */
 
+#include "../core/utilities/CheckData.h"
 #include "TSort.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
@@ -45,10 +46,10 @@ bool TestSort1()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * a = NewTensor(order, dimSize);
-    XTensor * b = NewTensor(order, dimSize);
-    XTensor * aMe = NewTensor(order, dimSize);
-    XTensor * index = NewTensor(order, dimSize, X_INT);
+    XTensor * a = NewTensorV2(order, dimSize);
+    XTensor * b = NewTensorV2(order, dimSize);
+    XTensor * aMe = NewTensorV2(order, dimSize);
+    XTensor * index = NewTensorV2(order, dimSize, X_INT);
     XTensor bUser(order, dimSize, X_FLOAT, 1.0F, -1, NULL);
 
     /* initialize variables */
@@ -61,19 +62,19 @@ bool TestSort1()
     _SortMe(aMe, index, 0);
     Sort(*a, bUser, *index, 0);
 
-    cpuTest = b->CheckData(answer, unitNum) && 
-              aMe->CheckData(answer, unitNum) && 
-              bUser.CheckData(answer, unitNum);
+    cpuTest = _CheckData(b, answer, unitNum) &&
+              _CheckData(aMe, answer, unitNum) &&
+              _CheckData(&bUser, answer, unitNum);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensor */
-    XTensor * aGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * bGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * aMeGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * indexGPU = NewTensor(order, dimSize, X_INT, 1.0F, 0);
+    XTensor * aGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * bGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * aMeGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * indexGPU = NewTensorV2(order, dimSize, X_INT, 1.0F, 0);
     XTensor bUserGPU(order, dimSize, X_FLOAT, 1.0F, 0, NULL);
 
     /* Initialize variables */
@@ -87,9 +88,9 @@ bool TestSort1()
     Sort(*aGPU, bUserGPU, *indexGPU, 0);
 
     /* check results */
-    gpuTest = bGPU->CheckData(answer, unitNum) && 
-              aMeGPU->CheckData(answer, unitNum) && 
-              bUserGPU.CheckData(answer, unitNum);
+    gpuTest = _CheckData(bGPU, answer, unitNum) &&
+              _CheckData(aMeGPU, answer, unitNum) &&
+              _CheckData(&bUserGPU, answer, unitNum);
 
     /* destroy variables */
     delete a;
@@ -136,10 +137,10 @@ bool TestSort2()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * a = NewTensor(order, dimSize);
-    XTensor * b = NewTensor(order, dimSize);
-    XTensor * aMe = NewTensor(order, dimSize);
-    XTensor * index = NewTensor(order, dimSize, X_INT);
+    XTensor * a = NewTensorV2(order, dimSize);
+    XTensor * b = NewTensorV2(order, dimSize);
+    XTensor * aMe = NewTensorV2(order, dimSize);
+    XTensor * index = NewTensorV2(order, dimSize, X_INT);
     XTensor bUser(order, dimSize, X_FLOAT, 1.0F, -1, NULL);
 
     /* initialize variables */
@@ -153,19 +154,19 @@ bool TestSort2()
     Sort(*a, bUser, *index, 1);
 
     /* check results */
-    cpuTest = b->CheckData(answer, unitNum) && 
-              aMe->CheckData(answer, unitNum) && 
-              bUser.CheckData(answer, unitNum);
+    cpuTest = _CheckData(b, answer, unitNum) &&
+              _CheckData(aMe, answer, unitNum) &&
+              _CheckData(&bUser, answer, unitNum);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensor */
-    XTensor * aGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * bGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * aMeGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * indexGPU = NewTensor(order, dimSize, X_INT, 1.0F, 0);
+    XTensor * aGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * bGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * aMeGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * indexGPU = NewTensorV2(order, dimSize, X_INT, 1.0F, 0);
     XTensor bUserGPU(order, dimSize, X_FLOAT, 1.0F, 0, NULL);
 
     /* Initialize variables */
@@ -179,9 +180,9 @@ bool TestSort2()
     Sort(*aGPU, bUserGPU, *indexGPU, 1);
 
     /* check results */
-    gpuTest = bGPU->CheckData(answer, unitNum) && 
-              aMeGPU->CheckData(answer, unitNum) && 
-              bUserGPU.CheckData(answer, unitNum);
+    gpuTest = _CheckData(bGPU, answer, unitNum) &&
+              _CheckData(aMeGPU, answer, unitNum) &&
+              _CheckData(&bUserGPU, answer, unitNum);
 
     /* destroy variables */
     delete a;

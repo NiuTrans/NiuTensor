@@ -23,7 +23,6 @@
 #define __SIGMOID_CUH__
 
 #include "../XTensor.h"
-#include "Loss.h"
 
 namespace nts{ // namespace nts(NiuTrans.Tensor)
 
@@ -33,9 +32,8 @@ namespace nts{ // namespace nts(NiuTrans.Tensor)
 void _CudaSigmoid(const XTensor * input, XTensor * output);
 
 /* de/dx (Cuda version) */
-void _CudaSigmoidBackward(XTensor * gold, XTensor * y, XTensor * x, 
-                          XTensor * dedy, XTensor * dedx,
-                          LOSS_FUNCTION_NAME lossName);
+void _CudaSigmoidBackward(XTensor * y, XTensor * x, 
+                          XTensor * dedy, XTensor * dedx);
 
 #endif // USE_CUDA
 

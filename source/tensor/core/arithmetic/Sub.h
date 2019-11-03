@@ -35,12 +35,16 @@ tensor subtraction a = a - b * \beta
 keep the result in the input tensor a and return nothing
 */
 void _SubMe(XTensor * a, const XTensor * b, DTYPE beta = (DTYPE)1.0);
+void SubMe(XTensor & a, const XTensor & b, DTYPE beta = (DTYPE)1.0);
     
 /*
 tensor subtraction c = a - b * \beta
 make a new tensor c to keep the result and return it
 */
 XTensor Sub(const XTensor &a, const XTensor &b, DTYPE beta = (DTYPE)1.0);
+
+/* tensor subtraction c = a - b * \beta */
+void Sub(const XTensor &a, const XTensor &b, XTensor &c, DTYPE beta = (DTYPE)1.0);
 
 } // namespace nts(NiuTrans.Tensor)
 

@@ -27,10 +27,10 @@
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
 /* gather selected sub-tensors */
-void _Gather(XTensor * s, XTensor * t, int dim, int * srcIndex, int indexSize);
-
-/* gather selected sub-tensors */
 void _Gather(const XTensor * s, XTensor * t, XTensor * srcIndex);
+
+/* gather selected sub-tensors accoding to the dimension */
+void _Gather(const XTensor * s, XTensor * t, XTensor * srcIndex, int dim);
 
 /* gather selected sub-tensors (return an XTensor structure)
    make a new tensor to keep the result and return it */

@@ -168,6 +168,17 @@ void SetDataFixed(XTensor &tensor, DTYPE p)
 {
     _SetDataFixed(&tensor, &p);
 }
+    
+/*
+generate data items with a fixed value p (in integer)
+>> tensor - the tensor whose data array would be initialized
+>> p - an integer
+*/
+void SetDataFixedInt(XTensor &tensor, int p)
+{
+    CheckNTErrors(tensor.dataType == X_INT, "An integer tensor is required!");
+    _SetDataFixed(&tensor, &p);
+}
 
 /* 
 generate data items with a fixed value p (in integer) 
@@ -212,6 +223,80 @@ void _SetDataFixedDouble(XTensor * tensor, double p)
         tensor->SetZeroAll();
     else
         _SetDataFixed(tensor, &p);
+}
+
+/* 
+generate data items with a fixed value p only if 
+the condition entry is non-zero 
+>> tensor - the tensor whose data array would be initialized
+>> condition - the condition tensor whose entries would be checked
+               for set the corresponding entries in "tensor"
+>> p - a given value
+*/
+void _SetDataFixedCond(XTensor * tensor, XTensor * condition, DTYPE p)
+{
+    int num = tensor->unitNum;
+
+    CheckNTErrors(num == condition->unitNum, "Wrong size of the condition tensor!");
+    CheckNTErrors(condition->unitSize == sizeof(float), "TODO!");
+
+    if(tensor->dataType == DEFAULT_DTYPE){
+        if(tensor->devID < 0){
+            DTYPE * data = (DTYPE*)tensor->data;
+            DTYPE * cond = (DTYPE*)condition->data;
+            for(int i = 0; i < num; i++){
+                if(cond[i] != 0)
+                    data[i] = p;
+            }
+        }
+        else{
+#ifdef USE_CUDA
+            _CudaSetDataFixedCondFloat(tensor, condition, p);
+#else
+            ShowNTErrors("Please specify USE_CUDA and recompile the code");
+#endif
+        }
+    }
+    else{
+        ShowNTErrors("the tensor should be in integer typed!");
+    }
+}
+
+/* 
+generate data items with a fixed value p only if 
+the condition entry is non-zero 
+>> tensor - the tensor whose data array would be initialized
+>> condition - the condition tensor whose entries would be checked
+               for set the corresponding entries in "tensor"
+>> p - a given value
+*/
+void _SetDataFixedCondInt(XTensor * tensor, XTensor * condition, int p)
+{
+    int num = tensor->unitNum;
+
+    CheckNTErrors(num == condition->unitNum, "Wrong size of the condition tensor!");
+    CheckNTErrors(condition->unitSize == sizeof(float), "TODO!");
+
+    if(tensor->dataType == DEFAULT_DTYPE){
+        if(tensor->devID < 0){
+            int * data = (int*)tensor->data;
+            int * cond = (int*)condition->data;
+            for(int i = 0; i < num; i++){
+                if(cond[i] != 0)
+                    data[i] = p;
+            }
+        }
+        else{
+#ifdef USE_CUDA
+            _CudaSetDataFixedCondInt(tensor, condition, p);
+#else
+            ShowNTErrors("Please specify USE_CUDA and recompile the code");
+#endif
+        }
+    }
+    else{
+        ShowNTErrors("TODO!");
+    }
 }
 
 /* 
@@ -381,13 +466,23 @@ void _SetDataLowTri(XTensor * tensor, DTYPE p, int shift)
     }
 }
 
+/* generate data items with a uniform distribution in [0, 1] */
+void _SetDataRand(XTensor * tensor, int rNum, int cNum)
+{
+    if (tensor == NULL || tensor->isInit == false || tensor->order !=2 ) {
+        InitTensor2DV2(tensor, rNum, cNum);
+    }
+
+    _SetDataRand(tensor, 0.0F, 1.0F);
+}
+
 /*
 generate data items with a uniform distribution in [lower, upper]
 >> tensor - the tensor whose data array would be initialized
 >> lower - lower value of the range
 >> upper - upper value of the range
 */
-void _SetDataRand(const XTensor * tensor, DTYPE lower, DTYPE upper)
+void _SetDataRand(XTensor * tensor, DTYPE lower, DTYPE upper)
 {
     CheckNTErrors(upper > lower, "the high value must be greater than low value!");
 
@@ -424,11 +519,48 @@ void _SetDataRand(const XTensor * tensor, DTYPE lower, DTYPE upper)
 #ifdef USE_CUDA
         _CudaSetDataRand(tensor, lower, upper);
 #endif
-        //XTensor * t2 = NewTensor(tensor->order, tensor->dimSize, tensor->dataType, tensor->denseRatio, -1);
+        //XTensor * t2 = NewTensorV2(tensor->order, tensor->dimSize, tensor->dataType, tensor->denseRatio, -1);
         //_SetDataRand(t2, low, high);
         //_CopyValues(t2, tensor);
         //delete t2;
     }
+}
+
+/* generate data items with a range by start, end and the step
+>> tensor - the tensor whose data array would be initialized
+>> start - the begin of the array
+>> end - the end of the array (not included self)
+>> step - the step of two items
+*/
+void _SetDataRange(XTensor * tensor, DTYPE lower, DTYPE upper, DTYPE step)
+{
+    CheckNTErrors((tensor->order == 1), "Tensor must be 1 dimension!");
+
+    /* compute the true length according to the (start, end, step) */
+    DTYPE size = fabs(upper - lower);
+    int num = ceil(size / fabs(step));
+    CheckNTErrors((tensor->unitNum == num), "Unit number of the tensor is not matched.");
+
+    /* init a integer array to store the sequence */
+    void * data = NULL;
+    if (tensor->dataType == X_INT) {
+        data = new int[num];
+        for (int i = 0; i < num; i++)
+            *((int*)data + i) = lower + i * step;
+    }
+    else if (tensor->dataType == X_FLOAT) {
+        data = new float[num];
+        for (int i = 0; i < num; i++)
+            *((float*)data + i) = lower + i * step;
+    }
+    else {
+        ShowNTErrors("TODO!");
+    }
+
+    /* set the data from the array */
+    tensor->SetData(data, num);
+
+    delete[] data;
 }
 
 /* 
@@ -440,7 +572,7 @@ the item to a pre-defined value if the item >= p, set the item to 0 otherwise
 >> p - the threshold
 >> value - the value we intend to assign to the item
 */
-void _SetDataRandP(const XTensor * tensor, DTYPE lower, DTYPE upper, DTYPE p, DTYPE value)
+void _SetDataRandP(XTensor * tensor, DTYPE lower, DTYPE upper, DTYPE p, DTYPE value)
 {
     CheckNTErrors(tensor->dataType == DEFAULT_DTYPE, "TODO");
 

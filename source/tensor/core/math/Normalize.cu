@@ -95,15 +95,14 @@ void _CudaNormalize(const XTensor * input, XTensor * output, int dim,
 {
     CheckNTErrors((input->dataType == DEFAULT_DTYPE), "TODO!");
 
-	int dimRDI = input->order - dim - 1;
-	int stride = 1;
-    int strideNum = input->dimSizeRDI[dimRDI];
+    int stride = 1;
+    int strideNum = input->dimSize[dim];
     int blockNum = 1;
     for (int i = 0; i < input->order; i++) {
-        if (i < dimRDI)
-            stride *= input->dimSizeRDI[i];
-        else if (i > dimRDI)
-            blockNum *= input->dimSizeRDI[i];
+        if (i > dim)
+            stride *= input->dimSize[i];
+        else if (i < dim)
+            blockNum *= input->dimSize[i];
     }
 
     int cudaGridSize[3];

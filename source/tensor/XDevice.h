@@ -236,6 +236,18 @@ extern XDevManager GDevs;
         cudaSetDevice(devIDBackup); \
 } \
 
+#define CheckDev(a, b) \
+{ \
+    if((a < 0 && b >= 0) || (a >= 0 && b < 0)){ \
+        fprintf(stderr, "[ERROR] (%s line %d): we must run the code on the same device (%d vs %d)\n", __FILENAME__, __LINE__, a, b); \
+        exit(1); \
+    } \
+    else if (a >= 0 && b >= 0 && a != b) { \
+        fprintf(stderr, "[ERROR] (%s line %d): we must run the code on the same device (%d vs %d)\n", __FILENAME__, __LINE__, a, b); \
+        exit(1); \
+    } \
+} \
+
 } /* end of the nts (NiuTrans.Tensor) namespace */
 
 #endif

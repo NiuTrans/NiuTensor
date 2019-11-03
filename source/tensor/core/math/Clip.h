@@ -33,9 +33,15 @@ void _Clip(const XTensor * a, XTensor * b, DTYPE lower, DTYPE upper);
    keep the result in the input tensor a and return nothing */
 void _ClipMe(XTensor * a, DTYPE lower, DTYPE upper);
 
+/* set every entry to its clip value (do it on site)
+keep the result in the input tensor a and return nothing */
+void ClipMe(XTensor & a, DTYPE lower, DTYPE upper);
+
 /* set every entry to its clip value  (return an XTensor structure)
    make a new tensor to keep the result and return it */
 XTensor Clip(const XTensor & a, DTYPE lower, DTYPE upper);
+
+void Clip(const XTensor & a, XTensor & b, DTYPE lower, DTYPE upper);
 
 /*
 backward of Clip function

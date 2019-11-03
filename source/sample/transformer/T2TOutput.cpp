@@ -31,7 +31,6 @@ namespace transformer
 T2TOutput::T2TOutput()
 {
     devID = -1;
-    mem = NULL;
     vSize = -1;
     inSize = -1;
     hSize = -1;
@@ -47,12 +46,10 @@ initialize the model
 >> argc - number of arguments
 >> argv - list of pointers to the arguments
 >> myDevID - device id
->> myMem - the memory pool
 */
-void T2TOutput::InitModel(int argc, char ** argv, int myDevID, XMem * myMem)
+void T2TOutput::InitModel(int argc, char ** argv, int myDevID)
 {
     devID = myDevID;
-    mem = myMem;
 
     float minmax = 0;
 
@@ -61,7 +58,7 @@ void T2TOutput::InitModel(int argc, char ** argv, int myDevID, XMem * myMem)
     LoadParamInt(argc, argv, "d", &hSize, DEFAULT_EMBEDDING_SIZE);
     LoadParamFloat(argc, argv, "outputminmax", &minmax, 0.08F);
 
-    InitTensor2D(&w, hSize, vSize, X_FLOAT, devID, mem);
+    InitTensor2D(&w, hSize, vSize, X_FLOAT, devID);
     
     float scale = 1.0F;
     float finfout = (float)sqrt(6.0F * scale/(hSize + vSize));
@@ -93,8 +90,9 @@ void T2TOutput::Make(XTensor &input, XTensor &output)
 {
     XTensor &x = input;
 
-    output = LogSoftmax(MMul(x, w), -1);
-    //output = Softmax(MMul(x, w), -1);
+    //output = LogSoftmax(MMul(x, w), -1);
+    output = Softmax(MMul(x, w), -1);
+    output.SetName(OUTPUT_NAME);
 }
 
 }

@@ -45,10 +45,23 @@ void _ScaleAndShiftMe(XTensor * a, DTYPE scale, DTYPE shift = 0);
 
 /*
 scale and shift all tensor entires
+keep the result in the input tensor a and return nothing
+a = a * scale + shift 
+*/
+void ScaleAndShiftMe(XTensor & a, DTYPE scale, DTYPE shift = 0);
+
+/*
+scale and shift all tensor entires
 make a new tensor to keep the result and return it
 b = a * scale + shift 
 */
 XTensor ScaleAndShift(const XTensor &a, DTYPE scale, DTYPE shift = 0);
+
+/* 
+scale and shift all tensor entires 
+b = a * scale + shift 
+*/
+void ScaleAndShift(const XTensor &a, XTensor &b, DTYPE scale, DTYPE shift = 0);
 
 } // namespace nts(NiuTrans.Tensor)
 

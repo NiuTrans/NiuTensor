@@ -23,34 +23,13 @@
 #define __T2TTRAINER_H__
 
 #include "T2TModel.h"
-
+#include "T2TBatchLoader.h"
 #include "../../tensor/function/FHeader.h"
-
-#define MAX_SEQUENCE_LENGTH 1024 * 4
 
 using namespace nts;
 
 namespace transformer
 {
-
-/* node to keep batch information */
-struct BatchNode
-{
-    /* begining position */
-    int beg;
-
-    /* end position */
-    int end;
-
-    /* maximum word number on the encoder side */
-    int maxEnc;
-
-    /* maximum word number on the decoder side */
-    int maxDec;
-
-    /* a key for sorting */
-    int key;
-};
 
 /* trainer of the T2T model */
 class T2TTrainer
@@ -61,42 +40,6 @@ public:
 
     /* parameter array */
     char ** argArray;
-
-    /* buffer for loading words */
-    int * buf;
-
-    /* another buffer */
-    int * buf2;
-
-    /* batch buf */
-    BatchNode * bufBatch;
-
-    /* buffer size */
-    int bufSize;
-
-    /* size of batch buffer */
-    int bufBatchSize;
-
-    /* length of each sequence */
-    int * seqLen;
-
-    /* another array */
-    int * seqLen2;
-
-    /* offset of the first word for each sequence */
-    int * seqOffset;
-
-    /* number of sequences in the buffer */
-    int nseqBuf;
-
-    /* offset for next sequence in the buffer */
-    int nextSeq;
-
-    /* offset for next batch */
-    int nextBatch;
-    
-    /* indicates whether the sequence is sorted by length */
-    bool isLenSorted;
     
     /* dimension size of each inner layer */
     int d;
@@ -139,10 +82,10 @@ public:
     float adamBeta2T;
 
     /* list of the moment of the parameter matrics */
-    XList moments;
+    TensorList moments;
 
     /* list of the 2nd order moment of the parameter matrics */
-    XList moments2nd;
+    TensorList moments2nd;
 
     /* indicates whether the data file is shuffled for training */
     bool isShuffled;
@@ -158,26 +101,15 @@ public:
     
     /* number of batches on which we do model update */
     int updateStep;
-    
-    /* indicates whether we double the </s> symbol for the output of lms */
-    bool isDoubledEnd;
-    
-    /* indicates whether we use batchsize = max * sc
-       rather rather than batchsize = word-number, where max is the maximum
-       length and sc is the sentence number */
-    bool isSmallBatch;
-
-    /* counterpart of "isSmallBatch" */
-    bool isBigBatch;
-
-    /* randomize batches */
-    bool isRandomBatch;
 
     /* indicates whether we intend to debug the net */
     bool isDebugged;
 
-    /* bucket size */
-    int bucketSize;
+    /* indicates whether the sequence is sorted by length */
+    bool isLenSorted;
+
+    /* for batching */
+    T2TBatchLoader batchLoader;
 
 public:
     /* constructor */
@@ -197,46 +129,6 @@ public:
 
     /* make a checkpoint */
     void MakeCheckpoint(T2TModel * model, const char * validFN, const char * modelFN, const char * label, int id);
-
-    /* load data to buffer */
-    int LoadBuf(FILE * file, bool isSorted, int step);
-
-    /* clear data buffer */
-    void ClearBuf();
-
-    /* load a batch of sequences */
-    int LoadBatch(FILE * file, bool isLM,
-                  XTensor * batchEnc, XTensor * paddingEnc, 
-                  XTensor * batchDec, XTensor * paddingDec,
-                  XTensor * gold, XTensor * label,
-                  int * seqs,
-                  int vsEnc, int vsDec, int sBatch, int wBatch, 
-                  bool isSorted, int &ws, int &wCount,
-                  int devID, XMem * mem, 
-				  bool isTraining);
-
-    /* load a batch of sequences (for language modeling) */
-    int LoadBatchLM(FILE * file, 
-                    XTensor * batchEnc, XTensor * paddingEnc,
-                    XTensor * batchDec, XTensor * paddingDec,
-                    XTensor * gold, XTensor * label,
-                    int * seqs, int vs, int sBatch, int wBatch, 
-                    bool isSorted, int &wCount,
-                    int devID, XMem * mem, 
-					bool isTraining);
-
-    /* load a batch of sequences (for machine translation) */
-    int LoadBatchMT(FILE * file, 
-                    XTensor * batchEnc, XTensor * paddingEnc, 
-                    XTensor * batchDec, XTensor * paddingDec,
-                    XTensor * gold, XTensor * label,
-                    int * seqs, int vsEnc, int vsDec, int sBatch, int wBatch, 
-                    bool isSorted, int &ws, int &wCount,
-                    int devID, XMem * mem, 
-					bool isTraining);
-
-    /* shuffle the data file */
-    void Shuffle(const char * srcFile, const char * tgtFile);
     
     /* get word probabilities for a batch of sequences */
     float GetProb(XTensor * output, XTensor * gold, XTensor * wordProbs);

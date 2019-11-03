@@ -22,8 +22,6 @@
 #ifndef __TEST_CROSSENTROPY_H__
 #define __TEST_CROSSENTROPY_H__
 
-#include "../function/CrossEntropy.h"
-
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
 /* test for CrossEntropy Function */

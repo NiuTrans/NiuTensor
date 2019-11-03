@@ -19,6 +19,7 @@
 * $Created by: Xu Chen (email: hello_master1954@163.com) 2018-06-14
 */
 
+#include "../core/utilities/CheckData.h"
 #include "TMatrixMul.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
@@ -72,9 +73,9 @@ bool TestMatrixMul1()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s1 = NewTensor(sOrder1, sDimSize1);
-    XTensor * s2 = NewTensor(sOrder2, sDimSize2);
-    XTensor * t = NewTensor(tOrder, tDimSize);
+    XTensor * s1 = NewTensorV2(sOrder1, sDimSize1);
+    XTensor * s2 = NewTensorV2(sOrder2, sDimSize2);
+    XTensor * t = NewTensorV2(tOrder, tDimSize);
     XTensor tUser;
 
     /* initialize variables */
@@ -87,16 +88,16 @@ bool TestMatrixMul1()
     tUser = MatrixMul(*s1, X_NOTRANS, *s2, X_NOTRANS);
     
     /* check results */
-    cpuTest = t->CheckData(answer, tUnitNum) && tUser.CheckData(answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensor */
-    XTensor * sGPU1 = NewTensor(sOrder1, sDimSize1, X_FLOAT, 1.0F, 0);
-    XTensor * sGPU2 = NewTensor(sOrder2, sDimSize2, X_FLOAT, 1.0F, 0);
-    XTensor * tGPU = NewTensor(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU1 = NewTensorV2(sOrder1, sDimSize1, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU2 = NewTensorV2(sOrder2, sDimSize2, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
     XTensor tUserGPU;
 
     /* Initialize variables */
@@ -109,7 +110,7 @@ bool TestMatrixMul1()
     tUserGPU = MatrixMul(*sGPU1, X_NOTRANS, *sGPU2, X_NOTRANS);
 
     /* check results */
-    gpuTest = tGPU->CheckData(answer, tUnitNum) && tUserGPU.CheckData(answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
 
     /* destroy variables */
     delete s1;
@@ -186,9 +187,9 @@ bool TestMatrixMul2()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s1 = NewTensor(sOrder1, sDimSize1);
-    XTensor * s2 = NewTensor(sOrder2, sDimSize2);
-    XTensor * t = NewTensor(tOrder, tDimSize);
+    XTensor * s1 = NewTensorV2(sOrder1, sDimSize1);
+    XTensor * s2 = NewTensorV2(sOrder2, sDimSize2);
+    XTensor * t = NewTensorV2(tOrder, tDimSize);
     XTensor tUser;
 
     /* initialize variables */
@@ -201,16 +202,16 @@ bool TestMatrixMul2()
     tUser = MatrixMul(*s1, X_TRANS, *s2, X_NOTRANS);
 
     /* check results */
-    cpuTest = t->CheckData(answer, tUnitNum) && tUser.CheckData(answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensor */
-    XTensor * sGPU1 = NewTensor(sOrder1, sDimSize1, X_FLOAT, 1.0F, 0);
-    XTensor * sGPU2 = NewTensor(sOrder2, sDimSize2, X_FLOAT, 1.0F, 0);
-    XTensor * tGPU = NewTensor(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU1 = NewTensorV2(sOrder1, sDimSize1, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU2 = NewTensorV2(sOrder2, sDimSize2, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
     XTensor tUserGPU;
 
     /* Initialize variables */
@@ -223,7 +224,7 @@ bool TestMatrixMul2()
     tUserGPU = MatrixMul(*sGPU1, X_TRANS, *sGPU2, X_NOTRANS);
 
     /* check results */
-    gpuTest = tGPU->CheckData(answer, tUnitNum) && tUserGPU.CheckData(answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
 
     /* destroy variables */
     delete s1;
@@ -320,9 +321,9 @@ bool TestMatrixMul3()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s1 = NewTensor(sOrder1, sDimSize1);
-    XTensor * s2 = NewTensor(sOrder2, sDimSize2);
-    XTensor * t = NewTensor(tOrder, tDimSize);
+    XTensor * s1 = NewTensorV2(sOrder1, sDimSize1);
+    XTensor * s2 = NewTensorV2(sOrder2, sDimSize2);
+    XTensor * t = NewTensorV2(tOrder, tDimSize);
     XTensor tUser;
 
     /* initialize variables */
@@ -335,16 +336,16 @@ bool TestMatrixMul3()
     tUser = MatrixMul(*s1, X_NOTRANS, *s2, X_NOTRANS);
 
     /* check results */
-    cpuTest = t->CheckData(answer, tUnitNum) && tUser.CheckData(answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensor */
-    XTensor * sGPU1 = NewTensor(sOrder1, sDimSize1, X_FLOAT, 1.0F, 0);
-    XTensor * sGPU2 = NewTensor(sOrder2, sDimSize2, X_FLOAT, 1.0F, 0);
-    XTensor * tGPU = NewTensor(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU1 = NewTensorV2(sOrder1, sDimSize1, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU2 = NewTensorV2(sOrder2, sDimSize2, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
     XTensor tUserGPU;
 
     /* Initialize variables */
@@ -357,7 +358,7 @@ bool TestMatrixMul3()
     tUserGPU = MatrixMul(*sGPU1, X_NOTRANS, *sGPU2, X_NOTRANS);
 
     /* check results */
-    gpuTest = tGPU->CheckData(answer, tUnitNum) && tUserGPU.CheckData(answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
 
     /* destroy variables */
     delete s1;
@@ -443,9 +444,9 @@ bool TestMatrixMul4()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s1 = NewTensor(sOrder1, sDimSize1);
-    XTensor * s2 = NewTensor(sOrder2, sDimSize2);
-    XTensor * t = NewTensor(tOrder, tDimSize);
+    XTensor * s1 = NewTensorV2(sOrder1, sDimSize1);
+    XTensor * s2 = NewTensorV2(sOrder2, sDimSize2);
+    XTensor * t = NewTensorV2(tOrder, tDimSize);
     XTensor tUser;
 
     /* initialize variables */
@@ -458,16 +459,16 @@ bool TestMatrixMul4()
     tUser = MatrixMul(*s1, X_NOTRANS, *s2, X_NOTRANS);
 
     /* check results */
-    cpuTest = t->CheckData(answer, tUnitNum) && tUser.CheckData(answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensor */
-    XTensor * sGPU1 = NewTensor(sOrder1, sDimSize1, X_FLOAT, 1.0F, 0);
-    XTensor * sGPU2 = NewTensor(sOrder2, sDimSize2, X_FLOAT, 1.0F, 0);
-    XTensor * tGPU = NewTensor(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU1 = NewTensorV2(sOrder1, sDimSize1, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU2 = NewTensorV2(sOrder2, sDimSize2, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
     XTensor tUserGPU;
 
     /* Initialize variables */
@@ -480,7 +481,7 @@ bool TestMatrixMul4()
     tUserGPU = MatrixMul(*sGPU1, X_NOTRANS, *sGPU2, X_NOTRANS);
 
     /* check results */
-    gpuTest = tGPU->CheckData(answer, tUnitNum) && tUserGPU.CheckData(answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
 
     /* destroy variables */
     delete s1;

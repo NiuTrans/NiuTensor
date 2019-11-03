@@ -201,7 +201,8 @@ void XDevice::SetGPUDevice(int devID)
     cudaError_t error = cudaSetDevice(devID);
 
     if (error != cudaSuccess){
-        fprintf(stderr, "Error! Calling cudaSetDevice(%d) fails(%d:%s)\n", devID, error, cudaGetErrorString(error));
+        fprintf(stderr, "Error! Calling cudaSetDevice(%d) fails(%d:%s)\n",
+                devID, error, cudaGetErrorString(error));
         exit(1);
     }
 #else
@@ -216,7 +217,7 @@ void XDevice::SetGPUDeviceFast(int devID)
     SetFastFlags();
 }
 
-/* switch to a get current dev */
+/* get the id of the current GPU device */
 int XDevice::GetGPUDevice()
 {
 #ifdef USE_CUDA
@@ -224,7 +225,8 @@ int XDevice::GetGPUDevice()
     cudaError_t error = cudaGetDevice(&devID);
 
     if (error != cudaSuccess){
-        fprintf(stderr, "Error! Calling cudaGetDevice(%d) fails(%d:%s)\n", devID, error, cudaGetErrorString(error));
+        fprintf(stderr, "Error! Calling cudaGetDevice(%d) fails(%d:%s)\n",
+                devID, error, cudaGetErrorString(error));
         exit(1);
     }
 
@@ -248,7 +250,7 @@ void XDevice::SetFastFlags()
 #endif
 }
 
-/* reset cuda flag for more efficient cuda execution (all devices) */
+/* reset the cuda flag for more efficient cuda execution (all devices) */
 void XDevice::SetFastFlagsAllDevices()
 {
  #ifdef USE_CUDA
@@ -274,7 +276,7 @@ XDevManager::~XDevManager()
 }
 
 
-/* initialize it and get the CPU and GPU information */
+/* initialization */
 void XDevManager::Init()
 {
     srand((unsigned int)time(NULL));
@@ -318,7 +320,7 @@ void XDevManager::Clear()
 
 #ifdef USE_CUDA
 
-/* get the handle of GPU */
+/* get the handle of a given GPU */
 cublasHandle_t * XDevManager::GetCudaHandle(const int devID)
 {
     CheckNTErrors(devID < nGPU, "index of GPU is out of range.");
@@ -326,7 +328,7 @@ cublasHandle_t * XDevManager::GetCudaHandle(const int devID)
     return GPUs[devID].GetCublasHandle();
 }
 
-/* get the stream of cuda */
+/* get the stream of a given GPU */
 cudaStream_t * XDevManager::GetCudaStream(const int devID)
 {
     CheckNTErrors(devID < nGPU, "index of GPU is out of range.");
@@ -474,7 +476,7 @@ split a string
 >> items - splitting result
 << return - how many items are there
 */
-int SplitALine(char * inputString, const char * seperator, XList * items)
+int SplitALine(char * inputString, const char * seperator, StrList* items)
 {
     items->Clear();
 
@@ -523,12 +525,12 @@ get device ids for the given device information
              devInfo = "0:CPU-1 1:GPU-0 2:CPU-1"
              means that the first device is CPU, the second device
              is GPU-0, the third device is CPU.
->> devIDs - device sequence specified by devInfo
+>> devIDs - device IDs specified by devInfo
 << return - number of devices
 */
 int XDevManager::GetDeviceIDs(char * devInfo, int * devIDs)
 {
-    XList * terms = new XList(1);
+	StrList* terms = new StrList(1);
     SplitALine(devInfo, " ", terms);
 
     for(int i = 0; i < terms->count; i++){
@@ -565,7 +567,7 @@ int XDevManager::GetDeviceIDs(char * devInfo, int * devIDs)
     return devCount;
 }
 
-/* show id sequence */
+/* show device IDs */
 void XDevManager::ShowDeviceIDs(char * devInfo, char * msg)
 {
     msg[0] = 0;

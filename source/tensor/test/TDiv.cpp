@@ -19,6 +19,7 @@
  * $Created by: Xu Chen (email: hello_master1954@163.com) 2018-08-01
  */
 
+#include "../core/utilities/CheckData.h"
 #include "TDiv.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
@@ -30,97 +31,97 @@ In this case, (2, 2) ¡¤ (2, 2) -> (2, 2), leadingDim=0, alpha=0.
 */
 bool TestDiv1()
 {
-	/* a source tensor of size (2, 2) */
-	int sOrder1 = 2;
-	int * sDimSize1 = new int[sOrder1];
-	sDimSize1[0] = 2;
-	sDimSize1[1] = 2;
+    /* a source tensor of size (2, 2) */
+    int sOrder1 = 2;
+    int * sDimSize1 = new int[sOrder1];
+    sDimSize1[0] = 2;
+    sDimSize1[1] = 2;
 
-	int sUnitNum1 = 1;
-	for (int i = 0; i < sOrder1; i++)
-		sUnitNum1 *= sDimSize1[i];
+    int sUnitNum1 = 1;
+    for (int i = 0; i < sOrder1; i++)
+        sUnitNum1 *= sDimSize1[i];
 
-	/* a source tensor of size (2, 2) */
-	int sOrder2 = 2;
-	int * sDimSize2 = new int[sOrder2];
-	sDimSize2[0] = 2;
-	sDimSize2[1] = 2;
+    /* a source tensor of size (2, 2) */
+    int sOrder2 = 2;
+    int * sDimSize2 = new int[sOrder2];
+    sDimSize2[0] = 2;
+    sDimSize2[1] = 2;
 
-	int sUnitNum2 = 1;
-	for (int i = 0; i < sOrder2; i++)
-		sUnitNum2 *= sDimSize2[i];
+    int sUnitNum2 = 1;
+    for (int i = 0; i < sOrder2; i++)
+        sUnitNum2 *= sDimSize2[i];
 
-	/* a target tensor of size (2, 2) */
-	int tOrder = 2;
-	int * tDimSize = new int[tOrder];
-	tDimSize[0] = 2;
-	tDimSize[1] = 2;
+    /* a target tensor of size (2, 2) */
+    int tOrder = 2;
+    int * tDimSize = new int[tOrder];
+    tDimSize[0] = 2;
+    tDimSize[1] = 2;
 
-	int tUnitNum = 1;
-	for (int i = 0; i < tOrder; i++)
-		tUnitNum *= tDimSize[i];
+    int tUnitNum = 1;
+    for (int i = 0; i < tOrder; i++)
+        tUnitNum *= tDimSize[i];
 
-	DTYPE sData1[2][2] = { {0.0F, 1.0F},
-	                       {2.0F, 3.0F} };
-	DTYPE sData2[2][2] = { {1.0F, 1.0F},
-	                       {4.0F, 9.0F} };
-	DTYPE answer[2][2] = { {0.0F, 1.0F},
-	                       {0.5F, 0.3333F} };
+    DTYPE sData1[2][2] = { {0.0F, 1.0F},
+                           {2.0F, 3.0F} };
+    DTYPE sData2[2][2] = { {1.0F, 1.0F},
+                           {4.0F, 9.0F} };
+    DTYPE answer[2][2] = { {0.0F, 1.0F},
+                           {0.5F, 0.3333F} };
 
-	/* CPU test */
-	bool cpuTest = true;
+    /* CPU test */
+    bool cpuTest = true;
 
-	/* create tensors */
-	XTensor * s1 = NewTensor(sOrder1, sDimSize1);
-	XTensor * s2 = NewTensor(sOrder2, sDimSize2);
-	XTensor * t = NewTensor(tOrder, tDimSize);
-    XTensor * tMe = NewTensor(tOrder, tDimSize);
+    /* create tensors */
+    XTensor * s1 = NewTensorV2(sOrder1, sDimSize1);
+    XTensor * s2 = NewTensorV2(sOrder2, sDimSize2);
+    XTensor * t = NewTensorV2(tOrder, tDimSize);
+    XTensor * tMe = NewTensorV2(tOrder, tDimSize);
     XTensor tUser;
 
-	/* initialize variables */
-	s1->SetData(sData1, sUnitNum1);
-	tMe->SetData(sData1, sUnitNum1);
-	s2->SetData(sData2, sUnitNum2);
-	t->SetZeroAll();
+    /* initialize variables */
+    s1->SetData(sData1, sUnitNum1);
+    tMe->SetData(sData1, sUnitNum1);
+    s2->SetData(sData2, sUnitNum2);
+    t->SetZeroAll();
 
-	/* call Div function */
-	_Div(s1, s2, t, 0, 0);
-	_DivMe(tMe, s2, 0, 0);
+    /* call Div function */
+    _Div(s1, s2, t, 0, 0);
+    _DivMe(tMe, s2, 0, 0);
     tUser = Div(*s1, *s2, 0);
 
-	/* check results */
-	cpuTest = t->CheckData(answer, tUnitNum, 1e-4F) && 
-              tMe->CheckData(answer, tUnitNum, 1e-4F) && 
-              tUser.CheckData(answer, tUnitNum, 1e-4F);
+    /* check results */
+    cpuTest = _CheckData(t, answer, tUnitNum, 1e-4F) &&
+              _CheckData(tMe, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUser, answer, tUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
-	/* GPU test */
-	bool gpuTest = true;
+    /* GPU test */
+    bool gpuTest = true;
 
-	/* create tensor */
-	XTensor * sGPU1 = NewTensor(sOrder1, sDimSize1, X_FLOAT, 1.0F, 0);
-	XTensor * sGPU2 = NewTensor(sOrder2, sDimSize2, X_FLOAT, 1.0F, 0);
-	XTensor * tGPU = NewTensor(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * tMeGPU = NewTensor(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    /* create tensor */
+    XTensor * sGPU1 = NewTensorV2(sOrder1, sDimSize1, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU2 = NewTensorV2(sOrder2, sDimSize2, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tMeGPU = NewTensorV2(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
     XTensor tUserGPU;
 
-	/* Initialize variables */
-	sGPU1->SetData(sData1, sUnitNum1);
-	tMeGPU->SetData(sData1, sUnitNum1);
-	sGPU2->SetData(sData2, sUnitNum2);
-	tGPU->SetZeroAll();
+    /* Initialize variables */
+    sGPU1->SetData(sData1, sUnitNum1);
+    tMeGPU->SetData(sData1, sUnitNum1);
+    sGPU2->SetData(sData2, sUnitNum2);
+    tGPU->SetZeroAll();
 
-	/* call Div function */
-	_Div(sGPU1, sGPU2, tGPU, 0, 0);
-	_DivMe(tMeGPU, sGPU2, 0, 0);
+    /* call Div function */
+    _Div(sGPU1, sGPU2, tGPU, 0, 0);
+    _DivMe(tMeGPU, sGPU2, 0, 0);
     tUserGPU = Div(*sGPU1, *sGPU2, 0);
 
-	/* check results */
-	gpuTest = tGPU->CheckData(answer, tUnitNum, 1e-4F) && 
-              tMeGPU->CheckData(answer, tUnitNum, 1e-4F) && 
-              tUserGPU.CheckData(answer, tUnitNum, 1e-4F);
+    /* check results */
+    gpuTest = _CheckData(tGPU, answer, tUnitNum, 1e-4F) && 
+              _CheckData(tMeGPU, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUserGPU, answer, tUnitNum, 1e-4F);
 
-	/* destroy variables */
+    /* destroy variables */
     delete s1;
     delete s2;
     delete t;
@@ -133,7 +134,7 @@ bool TestDiv1()
     delete[] sDimSize2;
     delete[] tDimSize;
 
-	return cpuTest && gpuTest;
+    return cpuTest && gpuTest;
 #else
     /* destroy variables */
     delete s1;
@@ -144,7 +145,7 @@ bool TestDiv1()
     delete[] sDimSize2;
     delete[] tDimSize;
 
-	return cpuTest;
+    return cpuTest;
 #endif // USE_CUDA
 }
 
@@ -156,33 +157,33 @@ TODO!!
 /* test for Div Function */
 bool TestDiv()
 {
-	XPRINT(0, stdout, "[TEST Div] element-wise division of two tensors \n");
-	bool returnFlag = true, caseFlag = true;
+    XPRINT(0, stdout, "[TEST Div] element-wise division of two tensors \n");
+    bool returnFlag = true, caseFlag = true;
 
-	/* case 1 test */
-	caseFlag = TestDiv1();
+    /* case 1 test */
+    caseFlag = TestDiv1();
 
-	if (!caseFlag) {
-		returnFlag = false;
-		XPRINT(0, stdout, ">> case 1 failed!\n");
-	}
-	else
-		XPRINT(0, stdout, ">> case 1 passed!\n");
+    if (!caseFlag) {
+        returnFlag = false;
+        XPRINT(0, stdout, ">> case 1 failed!\n");
+    }
+    else
+        XPRINT(0, stdout, ">> case 1 passed!\n");
 
-	/* other cases test */
-	/*
-	TODO!!
-	*/
+    /* other cases test */
+    /*
+    TODO!!
+    */
 
-	if (returnFlag) {
-		XPRINT(0, stdout, ">> All Passed!\n");
-	}
-	else
-		XPRINT(0, stdout, ">> Failed!\n");
+    if (returnFlag) {
+        XPRINT(0, stdout, ">> All Passed!\n");
+    }
+    else
+        XPRINT(0, stdout, ">> Failed!\n");
 
-	XPRINT(0, stdout, "\n");
+    XPRINT(0, stdout, "\n");
 
-	return returnFlag;
+    return returnFlag;
 }
 
 } // namespace nts(NiuTrans.Tensor)

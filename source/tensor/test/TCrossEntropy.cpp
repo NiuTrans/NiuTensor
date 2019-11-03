@@ -20,8 +20,10 @@
  */
 
 #include <math.h>
-#include "TCrossEntropy.h"
+#include "../core/utilities/CheckData.h"
+#include "../loss/CrossEntropy.h"
 #include "../core/math/ScaleAndShift.h"
+#include "TCrossEntropy.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
@@ -52,9 +54,9 @@ bool TestCrossEntropy1()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * output = NewTensor(order, dimSize);
-    XTensor * gold = NewTensor(order, dimSize);
-    XTensor * loss = NewTensor1D(1);
+    XTensor * output = NewTensorV2(order, dimSize);
+    XTensor * gold = NewTensorV2(order, dimSize);
+    XTensor * loss = NewTensor1DV2(1);
 
     /* initialize variables */
     output->SetData(outputData, unitNum);
@@ -74,9 +76,9 @@ bool TestCrossEntropy1()
     bool gpuTest = true;
 
     /* create tensor */
-    XTensor * outputGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * goldGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * lossGPU = NewTensor1D(1, X_FLOAT, 0);
+    XTensor * outputGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * goldGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * lossGPU = NewTensor1DV2(1, X_FLOAT, 0);
 
     /* Initialize variables */
     outputGPU->SetData(outputData, unitNum);
@@ -149,8 +151,8 @@ bool TestCrossEntropy2()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * output = NewTensor(order, dimSize);
-    XTensor * gold = NewTensor(order, dimSize);
+    XTensor * output = NewTensorV2(order, dimSize);
+    XTensor * gold = NewTensorV2(order, dimSize);
 
     /* initialize variables */
     output->SetData(outputData, unitNum);
@@ -177,8 +179,8 @@ bool TestCrossEntropy2()
     bool gpuTest = true;
 
     /* create tensor */
-    XTensor * outputGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * goldGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * outputGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * goldGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
 
     /* Initialize variables */
     outputGPU->SetData(outputData, unitNum);
@@ -257,10 +259,10 @@ bool TestCrossEntropy3()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * output = NewTensor(order, dimSize);
-    XTensor * gold = NewTensor(order, dimSize);
-    XTensor * loss = NewTensor1D(4);
-    XTensor * weight = NewTensor(wOrder, wDimSize);
+    XTensor * output = NewTensorV2(order, dimSize);
+    XTensor * gold = NewTensorV2(order, dimSize);
+    XTensor * loss = NewTensor1DV2(4);
+    XTensor * weight = NewTensorV2(wOrder, wDimSize);
 
     /* initialize variables */
     output->SetData(outputData, unitNum);
@@ -275,17 +277,17 @@ bool TestCrossEntropy3()
     _CrossEntropyFast(output, gold, loss, weight);
 
     /* check results */
-    cpuTest = loss->CheckData(answer, 4, 1e-4F);
+    cpuTest = _CheckData(loss, answer, 4, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensor */
-    XTensor * outputGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * goldGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * lossGPU = NewTensor1D(4, X_FLOAT, 0);
-    XTensor * weightGPU = NewTensor(wOrder, wDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * outputGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * goldGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * lossGPU = NewTensor1DV2(4, X_FLOAT, 0);
+    XTensor * weightGPU = NewTensorV2(wOrder, wDimSize, X_FLOAT, 1.0F, 0);
 
     /* Initialize variables */
     outputGPU->SetData(outputData, unitNum);
@@ -300,7 +302,7 @@ bool TestCrossEntropy3()
     _CrossEntropyFast(outputGPU, goldGPU, lossGPU, weightGPU);
 
     /* check results */
-    gpuTest = lossGPU->CheckData(answer, 4, 1e-4F);
+    gpuTest = _CheckData(lossGPU, answer, 4, 1e-4F);
 
     /* destroy variables */
     delete output;
@@ -352,8 +354,8 @@ bool TestCrossEntropy4()
     DTYPE error;
 
     /* create tensors */
-    XTensor * output = NewTensor(order, dimSize);
-    XTensor * gold = NewTensor(order, dimSize);
+    XTensor * output = NewTensorV2(order, dimSize);
+    XTensor * gold = NewTensorV2(order, dimSize);
 
     /* initialize variables */
     output->SetZeroAll();
@@ -372,8 +374,8 @@ bool TestCrossEntropy4()
     bool gpuTest = true;
 
     /* create tensor */
-    XTensor * outputGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-    XTensor * goldGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * outputGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * goldGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
 
     /* Initialize variables */
     outputGPU->SetZeroAll();

@@ -52,15 +52,12 @@ initialize the model
 >> argv - list of pointers to the arguments
 >> myIsMasked - indicates whether the masked attention is employed
 >> myIgnored - number of positions ignored in attention (from the start)
->> myDevID - device id
->> myMem - the memory pool
-*/
+>> myDevID - device id*/
 void AttEncoder::InitModel(int argc, char ** argv, 
                            bool myIsMasked, int myIgnored, 
-                           int myDevID, XMem * myMem)
+                           int myDevID)
 {
     devID = myDevID;
-    mem = myMem;
     ignored = myIgnored;
     
     LoadParamInt(argc, argv, "nlayer", &nlayer, 6);
@@ -73,7 +70,7 @@ void AttEncoder::InitModel(int argc, char ** argv,
     CheckNTErrors(vSize > 1, "set vocabulary size by \"-vsize\"");
 
     /* embedding model */
-    embedder.InitModel(argc, argv, devID, mem);
+    embedder.InitModel(argc, argv, devID);
 
     attentions = new T2TAttention[nlayer];
     fnns = new T2TFNN[nlayer];
@@ -82,10 +79,10 @@ void AttEncoder::InitModel(int argc, char ** argv,
 
     /* initialize the stacked layers */
     for(int i = 0; i < nlayer; i++){
-        attentions[i].InitModel(argc, argv, myIsMasked, myIgnored, myDevID, myMem);
-        fnns[i].InitModel(argc, argv, myDevID, myMem);
-        attLayerNorms[i].InitModel(argc, argv, myDevID, myMem);
-        fnnLayerNorms[i].InitModel(argc, argv, myDevID, myMem);
+        attentions[i].InitModel(argc, argv, myIsMasked, myIgnored, myDevID);
+        fnns[i].InitModel(argc, argv, myDevID);
+        attLayerNorms[i].InitModel(argc, argv, myDevID);
+        fnnLayerNorms[i].InitModel(argc, argv, myDevID);
     }
 }
 
@@ -114,7 +111,7 @@ XTensor AttEncoder::Make(XTensor &input, XTensor &mask, XTensor &maskEncDec, boo
         XTensor res;
 
         /* self attention */
-        att = attentions[i].Make(x, x, x, mask, isTraining, true);
+        att = attentions[i].MakeBig(x, mask, isTraining);
         
         /* dropout */
         if(isTraining && dropoutP > 0)
@@ -139,6 +136,9 @@ XTensor AttEncoder::Make(XTensor &input, XTensor &mask, XTensor &maskEncDec, boo
         /* layer normalization */
         x = fnnLayerNorms[i].Make(res);
     }
+    
+    x.SetName(ENCODING_NAME);
+    input.SetName(ENCODING_INPUT_NAME);
 
     return x;
 }

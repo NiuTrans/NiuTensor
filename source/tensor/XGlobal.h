@@ -49,7 +49,7 @@ namespace nts {
 
 #ifdef DOUBELPRICSION
 #define DTYPE double
-#define DTYPE_MIN (DTYPE)1.79E+308
+#define DTYPE_MIN (DTYPE)-1.79E+308
 #else
 #define DTYPE float
 #define DTYPE_MIN (DTYPE)-3.40E+38
@@ -135,8 +135,6 @@ extern bool CONST_TRUE;
 #define NIUTRANSNNDEBUG
 
 extern int verboseLevel;
-extern bool useBLAS;
-extern bool useCUDA;
 
 #define FFLUSH(FILEH) \
 { \
@@ -153,13 +151,17 @@ extern bool useCUDA;
 #define XPRINT7(VERBOSE,FILEH,STR,ARG,ARG2,ARG3,ARG4,ARG5,ARG6,ARG7) {if(VERBOSE<=verboseLevel) {fprintf(FILEH,STR,ARG,ARG2,ARG3,ARG4,ARG5,ARG6,ARG7);FFLUSH(FILEH);}}
 #define XPRINT8(VERBOSE,FILEH,STR,ARG,ARG2,ARG3,ARG4,ARG5,ARG6,ARG7,ARG8) {if(VERBOSE<=verboseLevel) {fprintf(FILEH,STR,ARG,ARG2,ARG3,ARG4,ARG5,ARG6,ARG7,ARG8);FFLUSH(FILEH);}}
 
-#define B2I(V) V==0?false:true
+#define B2I(V) V == 0 ? false : true
+
+#define MODX(a, b) int(b == 0 ? a : a - floor(double(a)/b) * b)
 
 /* BLAS interfaces */
 #ifdef DOUBELPRICSION
 #define GEMM XBLAS_DGEMM
+#define AXPY XBLAS_DAXPY
 #else
 #define GEMM XBLAS_SGEMM
+#define AXPY XBLAS_SAXPY
 #endif
 
 extern void InitGlobalAll();

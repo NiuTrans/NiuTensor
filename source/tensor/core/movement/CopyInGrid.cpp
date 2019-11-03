@@ -20,6 +20,7 @@
 */
 
 #include "../../XTensor.h"
+#include "../shape/IsSameShaped.h"
 #include "CopyInGrid.h"
 #include "CopyBlocksInGrid.h"
 
@@ -38,14 +39,13 @@ in the k-th grid
 */
 void _CopyInGrid(const XTensor * s, XTensor * t, int * index, int blockDim, int blockNumInGrid, bool isIndexOnDev)
 {
-    CheckNTErrors((XTensor::IsSameShaped(s, t)), "Unmatched tensors!");
+    CheckNTErrors((_IsSameShaped(s, t)), "Unmatched tensors!");
 
-    int blockDimRDI = s->order - blockDim - 1;
     int blockSize = 1;
     int blockNum = blockNumInGrid;
     int gridNum = 1;
-    for (int i = 0; i < blockDimRDI; i++)
-        blockSize *= s->dimSizeRDI[i];
+    for (int i = blockDim; i < s->order; i++)
+        blockSize *= s->dimSize[i];
 
     CheckNTErrors((s->unitNum % (blockSize * blockNum) == 0), "Illegal block number!");
     gridNum = s->unitNum / (blockSize * blockNum);

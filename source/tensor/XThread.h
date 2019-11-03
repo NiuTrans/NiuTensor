@@ -85,7 +85,7 @@ namespace nts{
 
 #endif
 
-typedef void (*TFunction) (volatile XList*);
+typedef void (*TFunction) (volatile TensorList*);
 
 /*
 This is a class that wraps the standard implementation of threading
@@ -133,7 +133,7 @@ public:
 
     /* arguments (for the function to run) */
     volatile
-    XList * argv;
+    TensorList * argv;
 
     /* a flag to break */
     volatile

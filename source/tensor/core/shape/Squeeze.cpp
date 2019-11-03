@@ -21,6 +21,7 @@
 
 #include "Squeeze.h"
 #include "../movement/CopyValues.h"
+#include "../shape/IsSameShaped.h"
 #include "../../XName.h"
 
 namespace nts{ // namespace nts(NiuTrans.Tensor)
@@ -37,7 +38,7 @@ void _Squeeze(XTensor * source, XTensor * target, int leadingDim)
 {
     int order = target->order;
 
-    CheckNTErrors(XTensor::IsSameShaped(source, target), 
+    CheckNTErrors(_IsSameShaped(source, target), 
                  "The source and target tensor must be of the same size!");
     CheckNTErrors(leadingDim >= -1 && leadingDim < order,
                   "Wrong leading dimension");
@@ -89,6 +90,20 @@ void _SqueezeMe(XTensor * source, int leadingDim)
 }
 
 /*
+squeeze the tensor along the specified dimension  (do it on site)
+keep the result in the input tensor a and return nothing
+
+>> source - the input tensor
+>> leadingDim - the dimension that we would squeeze
+                if leadingDim = -1, squeeze all dimensions that are 1
+                else, squeeze the specified dimension
+*/
+void SqueezeMe(XTensor& source, int leadingDim)
+{
+    _Squeeze(&source, &source, leadingDim);
+}
+
+/*
 squeeze the tensor along the specified dimension (return an XTensor structure)
 make a new tensor to keep the result and return it
 
@@ -107,9 +122,26 @@ XTensor Squeeze(XTensor & source, int leadingDim)
     _Squeeze(&source, &target, leadingDim);
 
     /* tensor connections */
-    XLink::MakeLink(&source, NULL, &target, SHAPE_SQUEEZE);
+    if (source.enableGrad) {
+        XLink::MakeLink(&source, NULL, &target, SHAPE_SQUEEZE);
+    }
 
     return target;
+}
+
+void Squeeze(XTensor & source, XTensor & target, int leadingDim)
+{
+    if (!target.isInit || !IsSameShaped(source, target)) {
+        InitTensorV2(&target, &source);
+    }
+
+    /* call _Squeeze function */
+    _Squeeze(&source, &target, leadingDim);
+
+    if (source.enableGrad) {
+        /* tensor connections */
+        XLink::MakeLink(&source, NULL, &target, SHAPE_SQUEEZE);
+    }
 }
 
 } // namespace nts(NiuTrans.Tensor)

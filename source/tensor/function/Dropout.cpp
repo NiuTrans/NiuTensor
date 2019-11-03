@@ -21,12 +21,14 @@
 
 #include "../XName.h"
 #include <time.h>
+#include <math.h>
 #include "Dropout.h"
 #include "Dropout.cuh"
 #include "../core/arithmetic/Multiply.h"
 #include "../core/arithmetic/MultiplyDim.h"
 #include "../core/math/ScaleAndShift.h"
 #include "../core/getandset/SetData.h"
+#include "DropoutWithIndex.h"
 
 namespace nts{ // namespace nts(NiuTrans.Tensor
 
@@ -66,7 +68,7 @@ void _Dropout(const XTensor * x, XTensor * y, unsigned int seed, DTYPE dropProb,
     for (int i = 0; i < unitNum; i++)
         maskArray[i] = RandomBernoulli(dropProb, scaleFactor);
 
-    XTensor * mask = NewTensor1D(unitNum, x->dataType, x->devID, x->mem);
+    XTensor * mask = NewTensor1DV2(unitNum, x->dataType, x->devID, x->mem);
     mask->SetData(maskArray, unitNum);
 
     /* call Multiply function for mask */
@@ -111,7 +113,7 @@ void _DropoutBackward(const XTensor * y, const XTensor * x,
         for (int i = 0; i < unitNum; i++)
             maskArray[i] = RandomBernoulli(dropProb, scaleFactor);
 
-        XTensor * mask = NewTensor1D(unitNum, x->dataType, x->devID, x->mem);
+        XTensor * mask = NewTensor1DV2(unitNum, x->dataType, x->devID, x->mem);
         mask->SetData(maskArray, unitNum);
 
         /* call MultiplyDim function for mask */
@@ -152,11 +154,28 @@ XTensor Dropout(const XTensor &x, DTYPE dropProb, int leadingDim, int leadingDim
 
     if(leadingDim < 0 && leadingDim2 < 0){
         XTensor mask;
-        InitTensor(&mask, &x);
+        InitTensorV2(&mask, &x);
 
         _SetDataRandP(&mask, 0, 1.0F, dropProb, scaleFactor);
 
         return Multiply(x, mask);
+
+        /* dropout with index */
+        /*int unitNum = floor(x.unitNum*dropProb);
+        maskArrayInt = new int[unitNum];
+
+        for (int i = 0; i < unitNum; i++)
+            maskArrayInt[i] = rand() % x.unitNum;
+
+        XTensor maskindex;
+        InitTensor1DV2(&maskindex, unitNum, X_INT, x.devID, x.mem);
+
+        maskindex.SetData(maskArrayInt, unitNum);
+
+        delete[] maskArrayInt;
+
+        return DropoutWithIndex(x, maskindex, scaleFactor);*/
+
     }
     else if(leadingDim2 < 0){
         int n = leadingDim;
@@ -172,7 +191,7 @@ XTensor Dropout(const XTensor &x, DTYPE dropProb, int leadingDim, int leadingDim
             maskArray[i] = RandomBernoulli(dropProb, scaleFactor);
     
         XTensor mask;
-        InitTensor1D(&mask, unitNum, x.dataType, x.devID, x.mem);
+        InitTensor1DV2(&mask, unitNum, x.dataType, x.devID, x.mem);
         mask.SetData(maskArray, unitNum);
 
         delete[] maskArray;
@@ -201,7 +220,7 @@ XTensor Dropout(const XTensor &x, DTYPE dropProb, int leadingDim, int leadingDim
         dims[n] = x.GetDim(n);
         dims[m] = x.GetDim(m);
     
-        InitTensor(&mask, x.order, dims, x.dataType, x.denseRatio,x.devID, x.mem);
+        InitTensorV2(&mask, x.order, dims, x.dataType, x.denseRatio,x.devID, x.mem);
         mask.SetData(maskArray, unitNum);
 
         delete[] maskArray;
@@ -209,7 +228,6 @@ XTensor Dropout(const XTensor &x, DTYPE dropProb, int leadingDim, int leadingDim
         return MultiplyBroadcast(x, mask);
     }
 
-    
 }
 
 /* 
@@ -232,7 +250,7 @@ XTensor DropoutWithoutBroadcast(const XTensor &x, DTYPE dropProb)
         maskArray[i] = RandomBernoulli(dropProb, scaleFactor);
     
     XTensor mask;
-    InitTensor(&mask, x.order, x.dimSize, x.dataType, x.denseRatio, x.devID, x.mem);
+    InitTensorV2(&mask, x.order, x.dimSize, x.dataType, x.denseRatio, x.devID, x.mem);
     mask.SetData(maskArray, unitNum);
 
     delete[] maskArray;

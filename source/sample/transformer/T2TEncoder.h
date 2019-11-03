@@ -32,6 +32,9 @@ using namespace nts;
 
 namespace transformer
 {
+    
+#define ENCODING_NAME "encoding"
+#define ENCODING_INPUT_NAME "encoding_input"
 
 /* 
 base class of the encoder 
@@ -61,9 +64,6 @@ class AttEncoder : T2TEncoder
 public:
     /* device id */
     int devID;
-
-    /* memory pool */
-    XMem * mem;
 
     /* layer number */
     int nlayer;
@@ -115,7 +115,7 @@ public:
     /* initialize the model */
     void InitModel(int argc, char ** argv, 
                    bool myIsMasked, int myIgnored, 
-                   int myDevID = -1, XMem * myMem = NULL);
+                   int myDevID = -1);
 
     /* make the encoding network */
     XTensor Make(XTensor &input, XTensor &mask, XTensor &maskEncDec, bool isTraining);

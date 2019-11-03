@@ -19,11 +19,14 @@
  * $Created by: Xu Chen (email: hello_master1954@163.com) 2018-08-15
  */
 
+#include <math.h>
 #include "Div.h"
 #include "DivDim.h"
 #include "DivDim.cuh"
 #include "../../XName.h"
+#include "../../XUtility.h"
 #include "../movement/CopyValues.h"
+#include "../shape/IsSameShaped.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
@@ -42,6 +45,8 @@ i.e., a is divided with b by broadcasting
 */
 void _DivDim(const XTensor * a, const XTensor * b, XTensor * c, int n, DTYPE alpha)
 {
+    n = MODX(n, a->order);
+
     CheckNTErrors(a && b && c, "Empty tensor input!");
     CheckNTErrors(a->unitNum == c->unitNum, "Unmatched tensors in division!");
     CheckNTErrors(a->dataType == b->dataType && a->dataType == c->dataType,
@@ -50,7 +55,9 @@ void _DivDim(const XTensor * a, const XTensor * b, XTensor * c, int n, DTYPE alp
     CheckNTErrors(!a->isSparse && !b->isSparse && !c->isSparse, "Dense tensors are required!");
     CheckNTErrors(a->dimSize[n] == b->unitNum, "Wrong tensor size!");
 
-    if(XTensor::IsSameShaped(a, b)){
+    CheckDev(a->devID, b->devID);
+
+    if(_IsSameShaped(a, b)){
         _Div(a, b, c, alpha);
         return;
     }
@@ -151,16 +158,50 @@ XTensor DivDim(const XTensor &a, const XTensor &b, int n, DTYPE alpha)
 {
     XTensor c(&a);
     c.SetTMPFlag();
+
+    n = MODX(n, a.order);
     
     /* call _Div function */
     _DivDim(&a, &b, &c, n, alpha);
     
     /* tensor connections */
-    XLink::MakeLink(&a, &b, &c, MATH_DIVDIM);
-    XLink::AddParamToHeadInt(&c, n);
-    XLink::AddParamToHead(&c, alpha);
-    
+    if (a.enableGrad && b.enableGrad) {
+        XLink::MakeLink(&a, &b, &c, MATH_DIVDIM);
+        XLink::AddParamToHeadInt(&c, n);
+        XLink::AddParamToHead(&c, alpha);
+    }
+
     return c;
+}
+
+/*
+tensor division
+
+c = a / b + \alpha * c
+where the size of b is equal to the n-th dimension of a, 
+i.e., a is divided with b by broadcasting 
+
+>> a - a tensor
+>> b - another tensor whose size is equal to that of dimension n of a
+>> c - where we put result. we save it in a if c is NULL
+>> n - the dimension index
+>> alpha - the scaling factor
+*/
+void DivDim(const XTensor &a, const XTensor &b, XTensor &c, int n, DTYPE alpha)
+{
+    if (!c.isInit || !IsSameShaped(a, c)) {
+        InitTensorV2(&c, &a);
+    }
+
+    /* call _Div function */
+    _DivDim(&a, &b, &c, n, alpha);
+
+    if (a.enableGrad && b.enableGrad) {
+        /* tensor connections */
+        XLink::MakeLink(&a, &b, &c, MATH_DIVDIM);
+        XLink::AddParamToHeadInt(&c, n);
+        XLink::AddParamToHead(&c, alpha);
+    }
 }
     
 }

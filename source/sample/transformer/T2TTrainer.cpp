@@ -24,6 +24,7 @@
 #include "T2TUtility.h"
 #include "../../tensor/XUtility.h"
 #include "../../tensor/core/CHeader.h"
+#include "../../tensor/loss/LHeader.h"
 #include "../../network/XNoder.h"
 
 #ifndef WIN32
@@ -37,32 +38,13 @@ namespace transformer
 /* constructor */
 T2TTrainer::T2TTrainer()
 {
-    seqLen = NULL;
-    seqLen2 = NULL;
-    nseqBuf = 0;
-    nextSeq = -1;
-    nextBatch = -1;
-
     argNum = 0;
     argArray = NULL;
-    buf = NULL;
-    buf2 = NULL;
-    bufBatch = NULL;
-    bufSize = 0;
-    bufBatchSize = 0;
-    seqOffset = NULL;
 }
 
 /* de-constructor */
 T2TTrainer::~T2TTrainer()
 {
-    delete[] buf;
-    delete[] buf2;
-    delete[] bufBatch;
-    delete[] seqLen;
-    delete[] seqLen2;
-    delete[] seqOffset;
-
     for(int i = 0; i < moments.count; i++){
         XTensor * m = (XTensor*)moments.Get(i);
         delete m;
@@ -93,9 +75,6 @@ void T2TTrainer::Init(int argc, char ** argv)
         strcpy(argArray[i], argv[i]);
     }
 
-    bool useMem = false;
-
-    LoadParamBool(argc, argv, "mem", &useMem, useMem);
     LoadParamFloat(argc, argv, "lrate", &lrate, 1.0F);
     LoadParamFloat(argc, argv, "lrbias", &lrbias, 0);
     LoadParamInt(argc, argv, "sbatch", &sBatchSize, 1);
@@ -106,8 +85,6 @@ void T2TTrainer::Init(int argc, char ** argv)
     LoadParamInt(argc, argv, "nwarmup", &nwarmup, 4000);
     LoadParamInt(argc, argv, "vsize", &vSize, 1);
     LoadParamInt(argc, argv, "vsizetgt", &vSizeTgt, vSize);
-    LoadParamBool(argc, argv, "sorted", &isLenSorted, false);
-    LoadParamInt(argc, argv, "bufsize", &bufSize, 50000);
     LoadParamBool(argc, argv, "adam", &useAdam, false);
     LoadParamFloat(argc, argv, "adambeta1", &adamBeta1, 0.9F);
     LoadParamFloat(argc, argv, "adambeta2", &adamBeta2, 0.98F);
@@ -117,22 +94,13 @@ void T2TTrainer::Init(int argc, char ** argv)
     LoadParamInt(argc, argv, "nstepcheckpoint", &nStepCheckpoint, -1);
     LoadParamBool(argc, argv, "epochcheckpoint", &useEpochCheckpoint, false);
     LoadParamInt(argc, argv, "updatestep", &updateStep, 1);
-    LoadParamBool(argc, argv, "doubledend", &isDoubledEnd, false);
-    LoadParamBool(argc, argv, "smallbatch", &isSmallBatch, true);
-    LoadParamBool(argc, argv, "bigbatch", &isBigBatch, false);
     LoadParamBool(argc, argv, "debug", &isDebugged, false);
-    LoadParamBool(argc, argv, "randbatch", &isRandomBatch, false);
-    LoadParamInt(argc, argv, "bucketsize", &bucketSize, 0);
-
-    buf  = new int[bufSize];
-    buf2 = new int[bufSize];
-    bufBatch = new BatchNode[bufSize];
-    seqLen  = new int[bufSize];
-    seqLen2 = new int[bufSize];
-    seqOffset = new int[bufSize];
+    LoadParamBool(argc, argv, "sorted", &isLenSorted, false);
 
     adamBeta1T = 1.0F;
     adamBeta2T = 1.0F;
+
+    batchLoader.Init(argc, argv);
 }
 
 int tc = 0;
@@ -150,7 +118,6 @@ void T2TTrainer::Train(const char * fn, const char * validFN, const char * model
     int wc = 0;
     int ws =0;
     int wordCount = 0;
-    int totalW;
     int wordCountTotal = 0;
     int wordCountBatch = 0;
     bool isEnd = false;
@@ -172,7 +139,6 @@ void T2TTrainer::Train(const char * fn, const char * validFN, const char * model
 #endif
 
     int devID = model->devID;
-    XMem * mem = model->mem;
     XNet net;
 
     if(isDebugged)
@@ -185,7 +151,7 @@ void T2TTrainer::Train(const char * fn, const char * validFN, const char * model
     for(epoch = 1; epoch <= nepoch; epoch++){
 #ifndef WIN32
         if(isShuffled)
-            Shuffle(fn, trainFN);
+            batchLoader.Shuffle(fn, trainFN);
 #endif
         
         FILE * file = fopen(trainFN, "rb");
@@ -211,9 +177,10 @@ void T2TTrainer::Train(const char * fn, const char * validFN, const char * model
         /* label smoothed gold standard (if needed) */
         XTensor goldSmoothed;
         
-        while (LoadBatch(file, model->isLM, &batchEnc, &paddingEnc, &batchDec, &paddingDec, &gold, &label,
-                         NULL, vSize, vSizeTgt,
-                         sBatchSize, wBatchSize, isLenSorted, ws, wc, devID, mem, true)) 
+        while (batchLoader.LoadBatch(file, model->isLM, 
+                                     &batchEnc, &paddingEnc, &batchDec, &paddingDec, &gold, &label,
+                                     NULL, vSize, vSizeTgt,
+                                     sBatchSize, wBatchSize, isLenSorted, ws, wc, devID, true)) 
         {
 
             CheckNTErrors(batchEnc.order == 2, "wrong tensor order of the sequence batch");
@@ -239,13 +206,16 @@ void T2TTrainer::Train(const char * fn, const char * validFN, const char * model
             labelOnehot = IndexToOnehot(label, vSizeTgt, labelSmoothingP);
             
             /* make paddings for the output */
-            if (output.GetDim(0) > 0)
-                PadOutput(&output, &labelOnehot, &paddingDec);
+            //if (output.GetDim(0) > 0)
+                //PadOutput(&output, &labelOnehot, &paddingDec);
 
             /* get probabilities */
-            float prob = GetProb(&output, &labelOnehot, NULL);
+            //float prob = GetProb(&output, &labelOnehot, NULL);
+            XTensor lossTensor;
+            lossTensor = CrossEntropy(output, labelOnehot, paddingDec);
+            float prob = ReduceSumAll(lossTensor);
 
-            DTYPE lossLocal = -prob / wc;
+            DTYPE lossLocal = prob / wc;
             bool doUpdate = (!IsNAN(lossLocal) && !IsINF(lossLocal) && lossLocal < 1e3F);
           
             //XTensor &g = labelSmoothingP > 0 ? goldSmoothed : gold;  
@@ -253,14 +223,15 @@ void T2TTrainer::Train(const char * fn, const char * validFN, const char * model
             if (doUpdate) {
                 
                 /* recale the output for normalized loss */
-                RescaleOutput(&output, &labelOnehot, &paddingDec);
+                //RescaleOutput(&output, &labelOnehot, &paddingDec);
                 
                 /* back-propagation */
-                net.Backward(output, labelOnehot, paddingDec, CROSSENTROPY);
+                net.Backward(lossTensor);
+                //net.Backward(output, labelOnehot, paddingDec, CROSSENTROPY);
                 //net.Backward(output, label, labelSmoothingP, CROSSENTROPY);
                 
                 gradStep += 1;
-                loss += -prob;
+                loss += prob;
                 wordCount += wc;
                 wordCountTotal += wc;
                 
@@ -290,7 +261,7 @@ void T2TTrainer::Train(const char * fn, const char * validFN, const char * model
             if (step % 100 == 0) {
                 double elapsed = GetClockSec() - startT;
                 XPRINT8(0, stderr, "[INFO] elapsed=%.1fs, step=%d, epoch=%d, tword=%d, sword=%d, loss=%.3f, ppl=%.3f, sppl=%.3f",
-                        elapsed, step, epoch, wordCountTotal, wordCountBatch, loss/wordCount, exp(loss/wordCount), exp(-prob/wc));
+                        elapsed, step, epoch, wordCountTotal, wordCountBatch, loss/wordCount, exp(loss/wordCount), exp(prob/wc));
                 if (!doUpdate)
                     XPRINT(0, stderr, " (no update)");
                 XPRINT(0, stderr, "\n");
@@ -346,7 +317,6 @@ void T2TTrainer::Test(const char * fn, const char * ofn, T2TModel * model)
     CheckNTErrors(ofile, "Cannot open the output file");
 
     int devID = model->devID;
-    XMem * mem = model->mem;
 
     XNet net;
     
@@ -371,11 +341,12 @@ void T2TTrainer::Test(const char * fn, const char * ofn, T2TModel * model)
     /* an array that keeps the sequences */
     int * seqs = new int[MILLION];
     
-    ClearBuf();
+    batchLoader.ClearBuf();
 
-    while(LoadBatch(file, model->isLM, &batchEnc, &paddingEnc, &paddingDec, &paddingDec, &gold, &label,
-                    seqs, vSize, vSizeTgt,
-                    1, 1, false, ws, wc, devID, mem, false))
+    while(batchLoader.LoadBatch(file, model->isLM, 
+                                &batchEnc, &paddingEnc, &batchDec, &paddingDec, &gold, &label,
+                                seqs, vSize, vSizeTgt,
+                                1, 1, false, ws, wc, devID, false))
     {
         CheckNTErrors(batchEnc.order == 2, "wrong tensor order of the sequence batch");
             
@@ -398,8 +369,12 @@ void T2TTrainer::Test(const char * fn, const char * ofn, T2TModel * model)
         XTensor probs;
         InitTensor1D(&probs, bSize * length);
 
+        XTensor labelOnehot;
+
+        labelOnehot = IndexToOnehot(label, vSizeTgt, 0);
+
         /* get probabilities */
-        float prob = GetProb(&output, &gold, &probs);
+        float prob = GetProb(&output, &labelOnehot, &probs);
 
         /* dump the test result */
         for(int s = 0; s < bSize; s++){
@@ -468,614 +443,6 @@ void T2TTrainer::MakeCheckpoint(T2TModel * model, const char * validFN, const ch
     delete[] fn2;
 }
 
-char line[MAX_SEQUENCE_LENGTH];
-
-struct SampleNode
-{
-    int id;
-    int offset;
-    int * p;
-    int size;
-    int value;
-	int key;
-};
-
-int CompareSampleNode(const void * a, const void * b)
-{
-   return ((SampleNode*)b)->value - ((SampleNode*)a)->value;
-}
-
-int CompareSampleNodeV2(const void * a, const void * b)
-{
-    return ((SampleNode*)b)->key - ((SampleNode*)a)->key;
-}
-
-/* 
-load data to buffer 
->> file - where to load data
->> isSorted - indicates whether the samples are sorted by length
->> step - the number of sequences we go over when move to the next sample
-*/
-int T2TTrainer::LoadBuf(FILE * file, bool isSorted, int step)
-{
-    int lineCount = 0;
-    int seqCount = 0;
-    int wordCount = 0;
-    while(fgets(line, MAX_SEQUENCE_LENGTH - 1, file)){
-        int len = (int)strlen(line);
-
-        while(line[len - 1] == '\r' || line[len - 1] == '\n'){
-            line[len - 1] = 0;
-            len--;
-        }
-
-        len = (int)strlen(line);
-        if(len == 0)
-            continue;
-        
-        /* how many characters are in a word */
-        int wSize = 0;
-        
-        /* how many words are in the sentence */
-        int wNum = 0;
-        int wNumLocal = 0;
-        int i = 0;
-
-        for(i = 0; i < len; i++){
-            /* load word (id) seperated by space or tab */
-            if((line[i] == ' ' || line[i] == '\t') && wSize > 0){
-                line[i] = 0;
-
-                if(wSize == 3 && line[i - 1] == '|' && line[i - 2] == '|' && line[i - 3] == '|'){
-                    seqLen[seqCount] = wNumLocal;
-                    seqOffset[seqCount] = wordCount + wNum - wNumLocal;
-                    seqCount++;
-                    wNumLocal = 0;
-                }
-                else{
-                    buf[wordCount + wNum++] = atoi(line + i - wSize);
-                    wNumLocal++;
-                }
-
-                wSize = 0;
-            }
-            else
-                wSize++;
-        }
-
-        if(wSize > 0){
-            buf[wordCount + wNum++] = atoi(line + i - wSize);
-            wNumLocal++;
-        }
-
-        seqLen[seqCount] = wNumLocal;
-        seqOffset[seqCount] = wordCount + wNum - wNumLocal;
-        seqCount++;
-
-        wordCount += wNum;
-        lineCount++;
-
-        if(wordCount >= bufSize - MAX_SEQUENCE_LENGTH)
-            break;
-    }
-
-    nseqBuf = seqCount;
-    nextSeq = 0;
-
-    /* sort the sequences by length */
-    if (isSorted) {
-        CheckNTErrors(seqCount % step == 0, "Wrong number of sequences!");
-        SampleNode * nodes = new SampleNode[seqCount];
-        int count = 0;
-        int offset = 0;
-        for (int i = 0; i < seqCount; i += step) {
-            SampleNode &node = nodes[count];
-            node.id = count;
-            node.offset = i;
-            node.p = buf + offset;
-            node.size = 0;
-            int max = 0;
-            for (int j = 0; j < step; j++) {
-                node.size += seqLen[i + j];
-                max = MAX(max, seqLen[i + j]);
-            }
-            node.value = max;
-            node.key = rand();
-            count++;
-            offset += node.size;
-        }
-
-        qsort(nodes, count, sizeof(SampleNode), CompareSampleNode);
-
-        /* distribute samples into buckets. In each bucket, sequences have
-           similar a length */
-        if (bucketSize > 0) {
-            int bucketCount = 0;
-            int low = 0;
-            int high = low + bucketSize;
-            int n = count - 1;
-            int m = n;
-            int num = 0;
-            while (num < count) {
-                for (m = n; m >= 0; m--) {
-                    if (nodes[m].value > high)
-                        break;
-                }
-
-                qsort(nodes + m + 1, n - m, sizeof(SampleNode), CompareSampleNodeV2);
-                num += (n - m);
-                n = m;
-                low += bucketSize;
-                high = low + bucketSize;
-            }
-        }
-
-        count = 0;
-        offset = 0;
-        for(int i = 0; i < seqCount; i += step){
-            SampleNode &node = nodes[count];
-            memcpy(buf2 + offset, node.p, sizeof(int) * node.size);
-            for(int j = 0; j < step; j++){
-                seqLen2[i + j] = seqLen[node.offset + j];
-                seqOffset[i + j] = offset + (j > 0 ? seqLen[node.offset + j - 1] : 0);
-            }
-            count += 1;
-            offset += node.size;
-        }
-
-        int * tmp = buf;
-        buf = buf2;
-        buf2 = tmp;
-        tmp = seqLen;
-
-        seqLen = seqLen2;
-        seqLen2 = tmp;
-
-        delete[] nodes;
-    }
-
-    return lineCount;
-}
-
-/* clear the data buffer */
-void T2TTrainer::ClearBuf()
-{
-    nseqBuf = 0;
-    nextSeq = -1;
-}
-
-/*
-load a batch of sequences 
->> file - the handle to the data file
->> isLM - indicates whether the data is used for training lms
->> batchEnc - the batch of the input sequences
->> paddingEnc - padding of the input sequences
->> batchDec - the batch of the output sequences
->> paddingDec - padding of the output sequences
->> gold - gold standard
->> seqs - keep the sequences in an array
->> vsEnc - size of the encoder vocabulary
->> vsDec - size of the decoder vocabulary
->> sBatch - batch size of sequences
->> wBatch - batch size of words
->> isSorted - indicates whether the sequences are sorted by length
->> wCount - word count
->> devID - device id
->> mem - memory pool
->> isTraining - indicates whether we are training the model
-*/
-int T2TTrainer::LoadBatch(FILE * file, bool isLM, 
-                          XTensor * batchEnc, XTensor * paddingEnc, 
-                          XTensor * batchDec, XTensor * paddingDec,
-                          XTensor * gold, XTensor * label,
-                          int * seqs,
-                          int vsEnc, int vsDec, int sBatch, int wBatch, 
-                          bool isSorted, int &ws, int &wCount,
-                          int devID, XMem * mem, 
-						  bool isTraining)
-{
-    if(isLM){
-        return LoadBatchLM(file, batchEnc, paddingEnc, batchDec, paddingDec, gold, label,
-                           seqs, vsEnc, sBatch, wBatch, 
-                           isSorted, wCount, devID, mem, isTraining);
-    }
-    else{
-        return LoadBatchMT(file, batchEnc, paddingEnc, batchDec, paddingDec, gold, label,
-                           seqs, vsEnc, vsDec, sBatch, wBatch, 
-                           isSorted, ws, wCount, devID, mem, isTraining);
-    }
-}
-
-/* 
-load a batch of sequences (for LM)
->> file - the handle to the data file
->> isLM - indicates whether the data is used for training lms
->> batchEnc - the batch of the input sequences
->> paddingEnc - padding of the input sequences
->> batchDec - the batch of the output sequences
->> paddingDec - padding of the output sequences
->> gold - gold standard
->> seqs - keep the sequences in an array
->> vs - vocabulary size
->> sBatch - batch size of sequences
->> wBatch - batch size of words
->> isSorted - indicates whether the sequences are sorted by length
->> wCount - word count
->> devID - device id
->> mem - memory pool
->> isTraining - indicates whether we are training the model
-*/
-int T2TTrainer::LoadBatchLM(FILE * file, 
-                            XTensor * batchEnc, XTensor * paddingEnc,
-                            XTensor * batchDec, XTensor * paddingDec,
-                            XTensor * gold, XTensor * label,
-                            int * seqs,
-                            int vs, int sBatch, int wBatch, 
-                            bool isSorted, int &wCount,
-                            int devID, XMem * mem,
-							bool isTraining)
-{
-    if(nextSeq < 0 || nextSeq >= nseqBuf)
-        LoadBuf(file, isSorted, 1);
-
-    int seq = MAX(nextSeq, 0);
-    int wc = 0;
-    int wn = 0;
-    int sc = 0;
-    int max = 0;
-    while(seq + sc < nseqBuf){
-        int len = isDoubledEnd ? seqLen[seq + sc] : seqLen[seq + sc] - 1;
-        CheckNTErrors(len > 0, "Empty sequence!");
-        wn = len;
-        wc += wn;
-        sc += 1;
-
-        if(max < wn)
-            max = wn;
-
-        int tc = isBigBatch ? wc : max * sc;
-        if(sc >= sBatch && tc >= wBatch)
-            break;
-    }
-
-    wCount = 0;
-    nextSeq = seq + sc;
-
-    if(sc <= 0)
-        return 0;
-
-    int dims[MAX_TENSOR_DIM_NUM];
-    dims[0] = sc;
-    dims[1] = max;
-    dims[2] = vs;
-
-    InitTensor2D(batchEnc, sc, max, X_INT, devID, mem);
-    InitTensor2D(label, sc, max, X_INT, devID, mem);
-    InitTensor(gold, 3, dims, X_FLOAT, 1.0F, devID, mem);
-    InitTensor2D(paddingEnc, sc, max, X_FLOAT, devID, mem);
-    InitTensor2D(paddingDec, sc, max, X_FLOAT, devID, mem);
-
-    batchEnc->SetZeroAll();
-    label->SetZeroAll();
-    gold->SetZeroAll();
-    paddingEnc->SetZeroAll();
-    paddingDec->SetZeroAll();
-
-    int seqSize = 0;
-    
-    int * batchEncValues = new int[batchEnc->unitNum];
-    int * labelValues = new int[label->unitNum];
-    MTYPE * goldOffsets = new MTYPE[gold->unitNum];
-    MTYPE * paddingEncOffsets = new MTYPE[paddingEnc->unitNum];
-    MTYPE * paddingDecOffsets = new MTYPE[paddingDec->unitNum];
-
-    int wGold = 0;
-
-    memset(batchEncValues, 0, sizeof(int) * batchEnc->unitNum);
-    memset(labelValues, 0, sizeof(int) * label->unitNum);
-
-    for(int s = seq; s < seq + sc; s++){
-        int len = isDoubledEnd ? seqLen[s] : seqLen[s] - 1;
-        CheckNTErrors(len <= max, "Something is wrong!");
-        for(int w = 0; w < len; w++){
-            int num = buf[seqOffset[s] + w];
-            batchEncValues[(int)batchEnc->GetOffset2D(s - seq, w)] = num;
-            paddingEncOffsets[wCount] = paddingEnc->GetOffset2D(s - seq, w);
-            paddingDecOffsets[wCount] = paddingDec->GetOffset2D(s - seq, w);
-            if (w > 0) {
-                goldOffsets[wGold++] = gold->GetOffset3D(s - seq, w - 1, num);
-                labelValues[(int)label->GetOffset2D(s - seq, w - 1)] = buf[seqOffset[s] + w];
-            }
-            
-            if (w == len - 1) {
-                if (isDoubledEnd) {
-                    goldOffsets[wGold++] = gold->GetOffset3D(s - seq, w, num);
-                    labelValues[(int)label->GetOffset2D(s - seq, w)] = buf[seqOffset[s] + w];
-                }   
-                else {
-                    goldOffsets[wGold++] = gold->GetOffset3D(s - seq, w, buf[seqOffset[s] + w + 1]);
-                    labelValues[(int)label->GetOffset2D(s - seq, w)] = buf[seqOffset[s] + w + 1];
-                }
-                    
-            }
-
-            wCount++;
-
-            if(seqs != NULL)
-                seqs[seqSize++] = buf[seqOffset[s] + w];
-        }
-
-        if(seqs != NULL){
-            for(int w = len; w < max; w++)
-                seqs[seqSize++] = -1;
-        }
-    }
-
-    batchEnc->SetData(batchEncValues, batchEnc->unitNum);
-    label->SetData(labelValues, label->unitNum);
-    gold->SetDataBatched(goldOffsets, 1.0F, wGold);
-    paddingEnc->SetDataBatched(paddingEncOffsets, 1.0F, wCount);
-    paddingDec->SetDataBatched(paddingDecOffsets, 1.0F, wCount);
-
-    /*XTensor * tmp = NewTensorBuf(paddingEnc, devID, mem);
-    _ConvertDataType(batchEnc, tmp);
-    _NotEqual(tmp, paddingEnc, 0);
-    DelTensorBuf(tmp);
-        
-    XTensor * tmp2 = NewTensorBuf(paddingDec, devID, mem);
-    _ConvertDataType(batchEnc, tmp2);
-    _NotEqual(tmp2, paddingDec, 0);
-    DelTensorBuf(tmp2);*/
-
-    delete[] batchEncValues;
-    delete[] labelValues;
-    delete[] goldOffsets;
-    delete[] paddingEncOffsets;
-    delete[] paddingDecOffsets;
-
-    fflush(tf);
-
-    return sc;
-}
-
-int CompareBatchNode(const void * a, const void * b)
-{
-    return ((BatchNode*)b)->key - ((BatchNode*)a)->key;
-}
-
-
-/*
-load a batch of sequences (for MT)
->> file - the handle to the data file
->> batchEnc - the batch of the input sequences
->> paddingEnc - padding of the input sequences
->> batchDec - the batch of the output sequences
->> paddingDec - padding of the output sequences
->> gold - gold standard
->> seqs - keep the sequences in an array
->> vsEnc - size of the encoder vocabulary
->> vsDec - size of the decoder vocabulary
->> sBatch - batch size of sequences
->> wBatch - batch size of words
->> isSorted - indicates whether the sequences are sorted by length
->> wCount - word count
->> devID - device id
->> mem - memory pool
->> isTraining - indicates whether we are training the model
-*/
-int T2TTrainer::LoadBatchMT(FILE * file, 
-                            XTensor * batchEnc, XTensor * paddingEnc, 
-                            XTensor * batchDec, XTensor * paddingDec,
-                            XTensor * gold, XTensor * label,
-                            int * seqs,
-                            int vsEnc, int vsDec, int sBatch, int wBatch, 
-                            bool isSorted, int &ws, int &wCount,
-                            int devID, XMem * mem, 
-							bool isTraining)
-{
-    if (nextBatch < 0 || nextBatch >= bufBatchSize) {
-        LoadBuf(file, isSorted, 2);
-
-        int seq = 0;
-
-        bufBatchSize = 0;
-        nextBatch = 0;
-
-        /* we segment the buffer into batches */
-        while (seq < nseqBuf) {
-
-            int wcEnc = 0;
-            int wcDec = 0;
-            int wnEnc = 0;
-            int wnDec = 0;
-            int maxEnc = 0;
-            int maxDec = 0;
-            int sc = 0;
-
-            while (seq + sc < nseqBuf) {
-
-                /* source-side sequence */
-                wnEnc = seqLen[seq + sc];
-
-                /* target-side sequence */
-                wnDec = isDoubledEnd ? seqLen[seq + sc + 1] : seqLen[seq + sc + 1] - 1;
-
-                int tcEnc = isBigBatch ? (wcEnc + wnEnc) : MAX(maxEnc, wnEnc) * (sc + 2) / 2;
-                int tcDec = isBigBatch ? (wcDec + wnDec) : MAX(maxDec, wnDec) * (sc + 2) / 2;
-
-                if (sc != 0 && sc > sBatch * 2 && (tcEnc > wBatch || tcDec > wBatch))
-                    break;
-
-                wcEnc += wnEnc;
-                sc += 1;
-
-                if (maxEnc < wnEnc)
-                    maxEnc = wnEnc;
-
-                wcDec += wnDec;
-                sc += 1;
-
-                if (maxDec < wnDec)
-                    maxDec = wnDec;
-            }
-
-            BatchNode & batch = bufBatch[bufBatchSize];
-            batch.beg = seq;
-            batch.end = seq + sc;
-            batch.maxEnc = maxEnc;
-            batch.maxDec = maxDec;
-            batch.key = rand();
-
-            bufBatchSize++;
-            seq = seq + sc;
-        }
-
-        if(isRandomBatch)
-            qsort(bufBatch, bufBatchSize, sizeof(BatchNode), CompareBatchNode);
-    }
-
-    if(bufBatchSize <= 0)
-        return 0;
-
-    BatchNode & batch = bufBatch[nextBatch++];
-    int seq = batch.beg;
-    int sc = batch.end - batch.beg;
-    int maxEnc = batch.maxEnc;
-    int maxDec = batch.maxDec;
-
-    CheckNTErrors(sc % 2 == 0, "The input samples must be paired");
-
-    int sCount = sc/2;
-    int seqSize = 0;
-    int dimsDec[3] = {sCount, maxDec, vsDec};
-
-    InitTensor2D(batchEnc, sCount, maxEnc, X_INT, devID, mem);
-    InitTensor2D(paddingEnc, sCount, maxEnc, X_FLOAT, devID, mem);
-    InitTensor2D(batchDec, sCount, maxDec, X_INT, devID, mem);
-    InitTensor2D(paddingDec, sCount, maxDec, X_FLOAT, devID, mem);
-    InitTensor2D(label, sCount, maxDec, X_INT, devID, mem);
-    //InitTensor(gold, 3, dimsDec, X_FLOAT, 1.0F, devID, mem);
-
-    batchEnc->SetZeroAll();
-    paddingEnc->SetZeroAll();
-    batchDec->SetZeroAll();
-    paddingDec->SetZeroAll();
-    label->SetZeroAll();
-    //gold->SetZeroAll();
-
-    int wCountEnc = 0;
-    int wCountDec = 0;
-    int wCountPad = 0;
-    int wGold = 0;
-    wCount = 0;
-
-    int * batchEncValues = new int[batchEnc->unitNum];
-    int * batchDecValues = new int[batchDec->unitNum];
-    int * labelValues = new int[label->unitNum];
-    //MTYPE * paddingEncOffsets = new MTYPE[sc * maxEnc / 2];
-    MTYPE * paddingDecOffsets = new MTYPE[sc * maxDec / 2];
-    //MTYPE * goldOffsets = new MTYPE[sc * maxDec / 2];
-
-    memset(batchEncValues, 0, sizeof(int) * batchEnc->unitNum);
-    memset(batchDecValues, 0, sizeof(int) * batchDec->unitNum);
-    memset(labelValues, 0, sizeof(int) * batchDec->unitNum);
-
-    /* batch of the source-side sequences */
-    for(int s = seq; s < seq + sc; s += 2){
-        int len = seqLen[s];
-        int sent = (s - seq)/2;
-        for(int w = 0; w < len; w++){
-            int num = buf[seqOffset[s] + w];
-            batchEncValues[batchEnc->GetOffset2D(sent, w)] = num;
-            //paddingEncOffsets[wCountEnc] = paddingEnc->GetOffset2D(sent, w);
-            wCountEnc++;
-        }
-    }
-    ws = wCountEnc;
-    batchEnc->SetData(batchEncValues, batchEnc->unitNum);
-    //paddingEnc->SetDataBatched(paddingEncOffsets, 1.0F, wCountEnc);
-    XTensor * tmp = NewTensorBuf(paddingEnc, devID, mem);
-    _ConvertDataType(batchEnc, tmp);
-    _NotEqual(tmp, paddingEnc, 0);
-    DelTensorBuf(tmp);
-
-    /* batch of the target-side sequences */
-    for(int s = seq + 1; s < seq + sc; s += 2){
-        int len = isDoubledEnd ? seqLen[s] : seqLen[s] - 1;
-        CheckNTErrors(len <= maxDec, "Something is wrong!");
-        int sent = (s - seq - 1)/2;
-        for(int w = 0; w < len; w++){
-            int num = buf[seqOffset[s] + w];
-            batchDecValues[batchDec->GetOffset2D(sent, w)] = num;
-            //paddingDecOffsets[wCountDec] = paddingDec->GetOffset2D(sent, w);
-            if (w < len-1){
-                paddingDecOffsets[wCountPad++] = paddingDec->GetOffset2D(sent, w);
-                wCount++;
-            }
-            if (w > 0) {
-                //goldOffsets[wGold++] = gold->GetOffset3D(sent, w - 1, buf[seqOffset[s] + w]);
-                labelValues[label->GetOffset2D(sent, w - 1)] = buf[seqOffset[s] + w];
-            }
-            if (w == len - 1) {
-                if (isDoubledEnd) {
-                    //goldOffsets[wGold++] = gold->GetOffset3D(sent, w, buf[seqOffset[s] + w]);
-                    labelValues[label->GetOffset2D(sent, w)] = buf[seqOffset[s] + w];
-                }
-                else {
-                    //goldOffsets[wGold++] = gold->GetOffset3D(sent, w, buf[seqOffset[s] + w + 1]);
-                    labelValues[label->GetOffset2D(sent, w)] = buf[seqOffset[s] + w + 1];
-                }
-            }
-            //wCount++;
-            wCountDec++;
-            if(seqs != NULL)
-                seqs[seqSize++] = buf[seqOffset[s] + w];
-        }
-
-        if(seqs != NULL){
-            for(int w = len; w < maxDec; w++)
-                seqs[seqSize++] = -1;
-        }
-    }
-
-    batchDec->SetData(batchDecValues, batchDec->unitNum);
-    label->SetData(labelValues, label->unitNum);
-    paddingDec->SetDataBatched(paddingDecOffsets, 1.0F, wCountPad);
-
-    //XTensor * tmp2 = NewTensorBuf(paddingDec, devID, mem);
-    //_ConvertDataType(batchDec, tmp2);
-    //_NotEqual(tmp2, paddingDec, 0);
-    //DelTensorBuf(tmp2);
-
-    //gold->SetDataBatched(goldOffsets, 1.0F, wGold);
-
-    delete[] batchEncValues;
-    delete[] batchDecValues;
-    delete[] labelValues;
-    //delete[] paddingEncOffsets;
-    delete[] paddingDecOffsets;
-    //delete[] goldOffsets;
-
-    return sc;
-}
-
-/* 
-shuffle lines of the file 
->> srcFile - the source file to shuffle
->> tgtFile - the resulting file
-*/
-void T2TTrainer::Shuffle(const char * srcFile, const char * tgtFile)
-{
-    char * line = new char[MAX_LINE_LENGTH];
-#ifndef WIN32
-    sprintf(line, "shuf %s > %s", srcFile, tgtFile);
-    system(line);
-#else
-    ShowNTErrors("Cannot shuffle the file on WINDOWS systems!");
-#endif
-    delete[] line;
-}
-    
 /*
 get word probabilities for a batch of sequences
 >> output - word distribution for each position
@@ -1085,13 +452,13 @@ get word probabilities for a batch of sequences
 float T2TTrainer::GetProb(XTensor * output, XTensor * gold, XTensor * wordProbs)
 {
     XTensor probs;
-    InitTensor(&probs, output);
+    InitTensorV2(&probs, output);
     
     _Multiply(output, gold, &probs);
     
     /* probability of each word */
     XTensor wprobs;
-    InitTensor1D(&wprobs, output->unitNum/output->GetDim(-1), X_FLOAT, output->devID, output->mem);
+    InitTensor1D(&wprobs, output->unitNum/output->GetDim(-1), X_FLOAT, output->devID);
     
     int dims[2] = {output->unitNum/output->GetDim(-1), output->GetDim(-1)};
     probs.Reshape(2, dims);
@@ -1108,7 +475,7 @@ float T2TTrainer::GetProb(XTensor * output, XTensor * gold, XTensor * wordProbs)
     
     /* probability for the batch */
     XTensor result;
-    InitTensor1D(&result, 1, X_FLOAT, output->devID, output->mem);
+    InitTensor1D(&result, 1, X_FLOAT, output->devID);
     _ReduceSum(&probs, &result, 1);
     
     return result.Get1D(0);
@@ -1124,7 +491,7 @@ where
 */
 void T2TTrainer::Update(T2TModel * model, const float lr)
 {
-    XList ws(100);
+    TensorList ws(100);
 
     model->GetParams(ws);
 
@@ -1155,7 +522,7 @@ void T2TTrainer::Update(T2TModel * model, const float lr)
             _ScaleAndShiftMe(v, (1.0F - adamBeta2), 0);
 
             /* v2 = m / (sqrt(v) + delta) */
-            XTensor * v2 = NewTensorBuf(v, v->devID, v->mem);
+            XTensor * v2 = NewTensorBuf(v, v->devID);
             _Power(v, v2, 0.5F);
             _ScaleAndShiftMe(v2, 1.0F, d);
             _Div(m, v2, v2);
@@ -1185,7 +552,7 @@ void T2TTrainer::PrepareModel(T2TModel * model)
     moments.Clear();
     moments2nd.Clear();
 
-    XList ws(100);
+    TensorList ws(100);
 
     model->GetParams(ws);
 
@@ -1226,7 +593,7 @@ void T2TTrainer::PadOutput(XTensor * output, XTensor * gold, XTensor * padding)
 
     output->Reshape(output->unitNum/dimso[output->order - 1], dimso[output->order - 1]);
 
-    XTensor * padding2 = NewTensorBuf(1, &padding->unitNum, X_FLOAT, 1.0F, padding->devID, padding->mem);
+    XTensor * padding2 = NewTensorBuf(1, &padding->unitNum, X_FLOAT, padding->devID);
 
     _CopyValues(padding, padding2);
     _MultiplyDim(output, padding2, output, 0);

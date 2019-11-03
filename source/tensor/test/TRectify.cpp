@@ -19,6 +19,7 @@
 * $Created by: Lin Ye (email: linye2015@outlook.com) 2018-06-14
 */
 
+#include "../core/utilities/CheckData.h"
 #include "TRectify.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
@@ -48,8 +49,8 @@ bool TestRectify1()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * x = NewTensor(order, dimSize);
-    XTensor * y = NewTensor(order, dimSize);
+    XTensor * x = NewTensorV2(order, dimSize);
+    XTensor * y = NewTensorV2(order, dimSize);
     XTensor yUser;
 
     /* initialize variables */
@@ -61,43 +62,43 @@ bool TestRectify1()
     yUser = Rectify(*x);
 
     /* check results */
-	cpuTest = y->CheckData(answer, unitNum, 1e-4F) && yUser.CheckData(answer, unitNum, 1e-4F);
+    cpuTest = _CheckData(y, answer, unitNum, 1e-4F) && _CheckData(&yUser, answer, unitNum, 1e-4F);
 
 #ifdef USE_CUDA
-	/* GPU test */
-	bool gpuTest = true;
+    /* GPU test */
+    bool gpuTest = true;
 
-	/* create tensor */
-	XTensor * xGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-	XTensor * yGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
+    /* create tensor */
+    XTensor * xGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * yGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
     XTensor yUserGPU;
 
-	/* Initialize variables */
-	xGPU->SetData(xData, unitNum);
-	yGPU->SetZeroAll();
+    /* Initialize variables */
+    xGPU->SetData(xData, unitNum);
+    yGPU->SetZeroAll();
 
-	/* call Rectify function */
-	_Rectify(xGPU, yGPU);
+    /* call Rectify function */
+    _Rectify(xGPU, yGPU);
     yUserGPU = Rectify(*xGPU);
 
-	/* check results */
-	gpuTest = yGPU->CheckData(answer, unitNum, 1e-4F) && yUserGPU.CheckData(answer, unitNum, 1e-4F);
+    /* check results */
+    gpuTest = _CheckData(yGPU, answer, unitNum, 1e-4F) && _CheckData(&yUserGPU, answer, unitNum, 1e-4F);
 
-	/* destroy variables */
-	delete x;
+    /* destroy variables */
+    delete x;
     delete y;
     delete xGPU;
     delete yGPU;
-	delete[] dimSize;
+    delete[] dimSize;
 
-	return cpuTest && gpuTest;
+    return cpuTest && gpuTest;
 #else
-	/* destroy variables */
-	delete x;
+    /* destroy variables */
+    delete x;
     delete y;
-	delete[] dimSize;
+    delete[] dimSize;
 
-	return cpuTest;
+    return cpuTest;
 #endif // USE_CUDA
 }
 
@@ -109,108 +110,93 @@ In this case, lossName=CROSSENTROPY.
 */
 bool TestRectify2()
 {
-	/* a tensor of size (2, 3) */
-	int order = 2;
-	int * dimSize = new int[order];
-	dimSize[0] = 2;
-	dimSize[1] = 3;
+    /* a tensor of size (2, 3) */
+    int order = 2;
+    int * dimSize = new int[order];
+    dimSize[0] = 2;
+    dimSize[1] = 3;
 
-	int unitNum = 1;
-	for (int i = 0; i < order; i++)
-		unitNum *= dimSize[i];
+    int unitNum = 1;
+    for (int i = 0; i < order; i++)
+        unitNum *= dimSize[i];
 
-	DTYPE xData[2][3] = { {1.0F, 1.0F, 2.0F},
-	                      {2.0F, 4.0F, 5.0F} };
-	DTYPE goldData[2][3] = { {1.0F, 1.0F, 1.0F},
-	                         {1.0F, 1.0F, 1.0F} };
-    DTYPE yAnswer[2][3] = { {1.0F, 1.0F, 2.0F},
-	                        {2.0F, 4.0F, 5.0F} };
-	DTYPE dedyAnswer[2][3] = { {-1.0F, -1.0F, -0.5F},
-	                           {-0.5F, -0.25F, -0.2F} };
-	DTYPE dedxAnswer[2][3] = { {-1.0F, -1.0F, -0.5F},
-	                           {-0.5F, -0.25F, -0.2F} };
+	DTYPE xData[2][3] = { {-1.0F, 1.0F, 2.0F},
+	                      {-2.0F, 4.0F, 5.0F} };
+    DTYPE yData[2][3] = { {0.0F, 1.0F, 2.0F},
+	                      {0.0F, 4.0F, 5.0F} };
+	DTYPE dedyData[2][3] = { {-0.5F, -0.5F, -0.25F},
+	                         {-0.25F, -0.125F, -0.1F} };
+	DTYPE dedxAnswer[2][3] = { {0.0F, -0.5F, -0.25F},
+	                           {0.0F, -0.125F, -0.1F} };
 
-	/* CPU test */
-	bool cpuTest = true;
+    /* CPU test */
+    bool cpuTest = true;
 
-	/* create tensors */
-	XTensor * x = NewTensor(order, dimSize);
-	XTensor * y = NewTensor(order, dimSize);
-	XTensor * gold = NewTensor(order, dimSize);
-	XTensor * dedy = NewTensor(order, dimSize);
-	XTensor * dedx = NewTensor(order, dimSize);
+    /* create tensors */
+    XTensor * x = NewTensorV2(order, dimSize);
+    XTensor * y = NewTensorV2(order, dimSize);
+    XTensor * dedy = NewTensorV2(order, dimSize);
+    XTensor * dedx = NewTensorV2(order, dimSize);
 
-	/* initialize variables */
-	x->SetData(xData, unitNum);
-	gold->SetData(goldData, unitNum);
-	y->SetZeroAll();
-	dedy->SetZeroAll();
-	dedx->SetZeroAll();
+    /* initialize variables */
+    x->SetData(xData, unitNum);
+	y->SetData(yData, unitNum);
+	dedy->SetData(dedyData, unitNum);
+    dedx->SetZeroAll();
 
     /* call Rectify function */
-    _Rectify(x, y);
 
-	/* call RectifyBackward function */
-	_RectifyBackward(gold, y, x, dedy, dedx, CROSSENTROPY);
+    /* call RectifyBackward function */
+	_RectifyBackward(y, x, dedy, dedx);
 
-	/* check results */
-    cpuTest = y->CheckData(yAnswer, unitNum, 1e-4F)
-              && dedx->CheckData(dedxAnswer, unitNum, 1e-4F)
-              && dedy->CheckData(dedyAnswer, unitNum, 1e-4F);
+    /* check results */
+    cpuTest = _CheckData(dedx, dedxAnswer, unitNum, 1e-4F);
 
 #ifdef USE_CUDA
-	/* GPU test */
-	bool gpuTest = true;
+    /* GPU test */
+    bool gpuTest = true;
 
-	/* create tensors */
-	XTensor * xGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-	XTensor * yGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-	XTensor * goldGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-	XTensor * dedyGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-	XTensor * dedxGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
+    /* create tensors */
+    XTensor * xGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * yGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * dedyGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * dedxGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
 
-	/* initialize variables */
-	xGPU->SetData(xData, unitNum);
-	goldGPU->SetData(goldData, unitNum);
-	yGPU->SetZeroAll();
-	dedyGPU->SetZeroAll();
-	dedxGPU->SetZeroAll();
+    /* initialize variables */
+    xGPU->SetData(xData, unitNum);
+	yGPU->SetData(yData, unitNum);
+	dedyGPU->SetData(dedyData, unitNum);
+    dedxGPU->SetZeroAll();
     
     /* call Rectify function */
-    _Rectify(xGPU, yGPU);
 
-	/* call rectifybackward function */
-	_RectifyBackward(goldGPU, yGPU, xGPU, dedyGPU, dedxGPU, CROSSENTROPY);
+    /* call rectifybackward function */
+	_RectifyBackward(yGPU, xGPU, dedyGPU, dedxGPU);
     
-	/* check results */
-    gpuTest = yGPU->CheckData(yAnswer, unitNum, 1e-4F)
-              && dedxGPU->CheckData(dedxAnswer, unitNum, 1e-4F)
-              && dedyGPU->CheckData(dedyAnswer, unitNum, 1e-4F);
+    /* check results */
+    gpuTest = _CheckData(dedxGPU, dedxAnswer, unitNum, 1e-4F);
 
-	/* destroy variables */
+    /* destroy variables */
     delete x;
     delete y;
     delete dedy;
     delete dedx;
-    delete gold;
     delete xGPU;
     delete yGPU;
     delete dedyGPU;
     delete dedxGPU;
-    delete goldGPU;
-	delete[] dimSize;
+    delete[] dimSize;
 
-	return cpuTest && gpuTest;
+    return cpuTest && gpuTest;
 #else
-	/* destroy variables */
+    /* destroy variables */
     delete x;
     delete y;
     delete dedy;
     delete dedx;
-    delete gold;
 	delete[] dimSize;
 
-	return cpuTest;
+    return cpuTest;
 #endif // USE_CUDA
 }
 
@@ -238,12 +224,12 @@ bool TestRectify()
     /* case 2 test */
     caseFlag = TestRectify2();
 
-	if (!caseFlag) {
-		returnFlag = false;
-		XPRINT(0, stdout, ">> case 2 failed!\n");
-	}
-	else
-		XPRINT(0, stdout, ">> case 2 passed!\n");
+    if (!caseFlag) {
+        returnFlag = false;
+        XPRINT(0, stdout, ">> case 2 failed!\n");
+    }
+    else
+        XPRINT(0, stdout, ">> case 2 passed!\n");
 
     /* other cases test */
     /*

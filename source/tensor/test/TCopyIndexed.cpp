@@ -19,6 +19,7 @@
  * $Created by: Xu Chen (email: hello_master1954@163.com) 2018-06-27
  */
 
+#include "../core/utilities/CheckData.h"
 #include "TCopyIndexed.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
@@ -84,11 +85,11 @@ bool TestCopyIndexed1()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s = NewTensor(sOrder, sDimSize);
-    XTensor * t1 = NewTensor(tOrder, tDimSize);
-    XTensor * t2 = NewTensor(tOrder, tDimSize);
-    XTensor * sIndex = NewTensor(indexOrder, indexDimSize, X_INT);
-    XTensor * tIndex = NewTensor(indexOrder, indexDimSize, X_INT);
+    XTensor * s = NewTensorV2(sOrder, sDimSize);
+    XTensor * t1 = NewTensorV2(tOrder, tDimSize);
+    XTensor * t2 = NewTensorV2(tOrder, tDimSize);
+    XTensor * sIndex = NewTensorV2(indexOrder, indexDimSize, X_INT);
+    XTensor * tIndex = NewTensorV2(indexOrder, indexDimSize, X_INT);
     XTensor tUser;
 
     /* initialize variables */
@@ -104,20 +105,20 @@ bool TestCopyIndexed1()
     tUser = CopyIndexed(*s, dim, *sIndex, *tIndex, copyNum);
 
     /* check results */
-    cpuTest = t1->CheckData(answer, tUnitNum) && 
-              t2->CheckData(answer, tUnitNum) && 
-              tUser.CheckData(answer, tUnitNum);
+    cpuTest = _CheckData(t1, answer, tUnitNum) && 
+              _CheckData(t2, answer, tUnitNum) &&
+              _CheckData(&tUser, answer, tUnitNum);
     
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensors */
-    XTensor * sGPU = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * tGPU1 = NewTensor(sOrder, tDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * tGPU2 = NewTensor(sOrder, tDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * sIndexGPU = NewTensor(indexOrder, indexDimSize, X_INT, 1.0F, 0);
-    XTensor * tIndexGPU = NewTensor(indexOrder, indexDimSize, X_INT, 1.0F, 0);
+    XTensor * sGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU1 = NewTensorV2(sOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU2 = NewTensorV2(sOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sIndexGPU = NewTensorV2(indexOrder, indexDimSize, X_INT, 1.0F, 0);
+    XTensor * tIndexGPU = NewTensorV2(indexOrder, indexDimSize, X_INT, 1.0F, 0);
     XTensor tUserGPU;
 
     /* initialize variables */
@@ -133,9 +134,9 @@ bool TestCopyIndexed1()
     tUserGPU = CopyIndexed(*sGPU, dim, *sIndexGPU, *tIndexGPU, copyNum);
 
     /* check results */
-    gpuTest = tGPU1->CheckData(answer, tUnitNum) && 
-              tGPU2->CheckData(answer, tUnitNum) && 
-              tUserGPU.CheckData(answer, tUnitNum);
+    gpuTest = _CheckData(tGPU1, answer, tUnitNum) &&
+              _CheckData(tGPU2, answer, tUnitNum) &&
+              _CheckData(&tUserGPU, answer, tUnitNum);
 
     /* destroy variables */
     delete s;
@@ -229,11 +230,11 @@ bool TestCopyIndexed2()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s = NewTensor(sOrder, sDimSize);
-    XTensor * t1 = NewTensor(tOrder, tDimSize);
-    XTensor * t2 = NewTensor(tOrder, tDimSize);
-    XTensor * sIndex = NewTensor(indexOrder, indexDimSize, X_INT);
-    XTensor * tIndex = NewTensor(indexOrder, indexDimSize, X_INT);
+    XTensor * s = NewTensorV2(sOrder, sDimSize);
+    XTensor * t1 = NewTensorV2(tOrder, tDimSize);
+    XTensor * t2 = NewTensorV2(tOrder, tDimSize);
+    XTensor * sIndex = NewTensorV2(indexOrder, indexDimSize, X_INT);
+    XTensor * tIndex = NewTensorV2(indexOrder, indexDimSize, X_INT);
     XTensor tUser;
 
     /* initialize variables */
@@ -249,20 +250,20 @@ bool TestCopyIndexed2()
     tUser = CopyIndexed(*s, dim, *sIndex, *tIndex);
     
     /* check results */
-    cpuTest = t1->CheckData(answer, tUnitNum) && 
-              t2->CheckData(answer, tUnitNum) && 
-              tUser.CheckData(answer, tUnitNum);
+    cpuTest = _CheckData(t1, answer, tUnitNum) &&
+              _CheckData(t2, answer, tUnitNum) &&
+              _CheckData(&tUser, answer, tUnitNum);
     
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensors */
-    XTensor * sGPU = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * tGPU1 = NewTensor(sOrder, tDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * tGPU2 = NewTensor(sOrder, tDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * sIndexGPU = NewTensor(indexOrder, indexDimSize, X_INT, 1.0F, 0);
-    XTensor * tIndexGPU = NewTensor(indexOrder, indexDimSize, X_INT, 1.0F, 0);
+    XTensor * sGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU1 = NewTensorV2(sOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU2 = NewTensorV2(sOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sIndexGPU = NewTensorV2(indexOrder, indexDimSize, X_INT, 1.0F, 0);
+    XTensor * tIndexGPU = NewTensorV2(indexOrder, indexDimSize, X_INT, 1.0F, 0);
     XTensor tUserGPU;
 
     /* initialize variables */
@@ -278,9 +279,9 @@ bool TestCopyIndexed2()
     tUserGPU = CopyIndexed(*sGPU, dim, *sIndexGPU, *tIndexGPU, copyNum);
 
     /* check results */
-    gpuTest = tGPU1->CheckData(answer, tUnitNum) && 
-              tGPU2->CheckData(answer, tUnitNum) && 
-              tUserGPU.CheckData(answer, tUnitNum);
+    gpuTest = _CheckData(tGPU1, answer, tUnitNum) &&
+              _CheckData(tGPU2, answer, tUnitNum) &&
+              _CheckData(&tUserGPU, answer, tUnitNum);
 
     /* destroy variables */
     delete s;
@@ -374,11 +375,11 @@ bool TestCopyIndexed3()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s = NewTensor(sOrder, sDimSize);
-    XTensor * t1 = NewTensor(tOrder, tDimSize);
-    XTensor * t2 = NewTensor(tOrder, tDimSize);
-    XTensor * sIndex = NewTensor(indexOrder, indexDimSize, X_INT);
-    XTensor * tIndex = NewTensor(indexOrder, indexDimSize, X_INT);
+    XTensor * s = NewTensorV2(sOrder, sDimSize);
+    XTensor * t1 = NewTensorV2(tOrder, tDimSize);
+    XTensor * t2 = NewTensorV2(tOrder, tDimSize);
+    XTensor * sIndex = NewTensorV2(indexOrder, indexDimSize, X_INT);
+    XTensor * tIndex = NewTensorV2(indexOrder, indexDimSize, X_INT);
     XTensor tUser;
 
     /* initialize variables */
@@ -394,20 +395,20 @@ bool TestCopyIndexed3()
     tUser = CopyIndexed(*s, dim, *sIndex, *tIndex, copyNum);
     
     /* check results */
-    cpuTest = t1->CheckData(answer, tUnitNum) && 
-              t2->CheckData(answer, tUnitNum) && 
-              tUser.CheckData(answer, tUnitNum);
+    cpuTest = _CheckData(t1, answer, tUnitNum) &&
+              _CheckData(t2, answer, tUnitNum) &&
+              _CheckData(&tUser, answer, tUnitNum);
     
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensors */
-    XTensor * sGPU = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * tGPU1 = NewTensor(sOrder, tDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * tGPU2 = NewTensor(sOrder, tDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * sIndexGPU = NewTensor(indexOrder, indexDimSize, X_INT, 1.0F, 0);
-    XTensor * tIndexGPU = NewTensor(indexOrder, indexDimSize, X_INT, 1.0F, 0);
+    XTensor * sGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU1 = NewTensorV2(sOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU2 = NewTensorV2(sOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sIndexGPU = NewTensorV2(indexOrder, indexDimSize, X_INT, 1.0F, 0);
+    XTensor * tIndexGPU = NewTensorV2(indexOrder, indexDimSize, X_INT, 1.0F, 0);
     XTensor tUserGPU;
 
     /* initialize variables */
@@ -423,9 +424,9 @@ bool TestCopyIndexed3()
     tUserGPU = CopyIndexed(*sGPU, dim, *sIndexGPU, *tIndexGPU, copyNum);
 
     /* check results */
-    gpuTest = tGPU1->CheckData(answer, tUnitNum) && 
-              tGPU2->CheckData(answer, tUnitNum) && 
-              tUserGPU.CheckData(answer, tUnitNum);
+    gpuTest = _CheckData(tGPU1, answer, tUnitNum) &&
+              _CheckData(tGPU2, answer, tUnitNum) &&
+              _CheckData(&tUserGPU, answer, tUnitNum);
 
     /* destroy variables */
     delete s;
@@ -519,11 +520,11 @@ bool TestCopyIndexed4()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s = NewTensor(sOrder, sDimSize);
-    XTensor * t1 = NewTensor(tOrder, tDimSize);
-    XTensor * t2 = NewTensor(tOrder, tDimSize);
-    XTensor * sIndex = NewTensor(indexOrder, indexDimSize, X_INT);
-    XTensor * tIndex = NewTensor(indexOrder, indexDimSize, X_INT);
+    XTensor * s = NewTensorV2(sOrder, sDimSize);
+    XTensor * t1 = NewTensorV2(tOrder, tDimSize);
+    XTensor * t2 = NewTensorV2(tOrder, tDimSize);
+    XTensor * sIndex = NewTensorV2(indexOrder, indexDimSize, X_INT);
+    XTensor * tIndex = NewTensorV2(indexOrder, indexDimSize, X_INT);
     XTensor tUser;
 
     /* initialize variables */
@@ -539,20 +540,20 @@ bool TestCopyIndexed4()
     tUser = CopyIndexed(*s, dim, *sIndex, *tIndex, copyNum);
 
     /* check results */
-    cpuTest = t1->CheckData(answer, tUnitNum) && 
-              t2->CheckData(answer, tUnitNum) && 
-              tUser.CheckData(answer, tUnitNum);
+    cpuTest = _CheckData(t1, answer, tUnitNum) && 
+              _CheckData(t2, answer, tUnitNum) &&
+              _CheckData(&tUser, answer, tUnitNum);
     
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensors */
-    XTensor * sGPU = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * tGPU1 = NewTensor(sOrder, tDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * tGPU2 = NewTensor(sOrder, tDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * sIndexGPU = NewTensor(indexOrder, indexDimSize, X_INT, 1.0F, 0);
-    XTensor * tIndexGPU = NewTensor(indexOrder, indexDimSize, X_INT, 1.0F, 0);
+    XTensor * sGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU1 = NewTensorV2(sOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU2 = NewTensorV2(sOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sIndexGPU = NewTensorV2(indexOrder, indexDimSize, X_INT, 1.0F, 0);
+    XTensor * tIndexGPU = NewTensorV2(indexOrder, indexDimSize, X_INT, 1.0F, 0);
     XTensor tUserGPU;
 
     /* initialize variables */
@@ -568,9 +569,9 @@ bool TestCopyIndexed4()
     tUserGPU = CopyIndexed(*sGPU, dim, *sIndexGPU, *tIndexGPU, copyNum);
 
     /* check results */
-    gpuTest = tGPU1->CheckData(answer, tUnitNum) && 
-              tGPU2->CheckData(answer, tUnitNum) && 
-              tUserGPU.CheckData(answer, tUnitNum);
+    gpuTest = _CheckData(tGPU1, answer, tUnitNum) && 
+              _CheckData(tGPU2, answer, tUnitNum) &&
+              _CheckData(&tUserGPU, answer, tUnitNum);
 
     /* destroy variables */
     delete s;
@@ -664,11 +665,11 @@ bool TestCopyIndexed5()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s = NewTensor(sOrder, sDimSize);
-    XTensor * t1 = NewTensor(tOrder, tDimSize);
-    XTensor * t2 = NewTensor(tOrder, tDimSize);
-    XTensor * sIndex = NewTensor(indexOrder, indexDimSize, X_INT);
-    XTensor * tIndex = NewTensor(indexOrder, indexDimSize, X_INT);
+    XTensor * s = NewTensorV2(sOrder, sDimSize);
+    XTensor * t1 = NewTensorV2(tOrder, tDimSize);
+    XTensor * t2 = NewTensorV2(tOrder, tDimSize);
+    XTensor * sIndex = NewTensorV2(indexOrder, indexDimSize, X_INT);
+    XTensor * tIndex = NewTensorV2(indexOrder, indexDimSize, X_INT);
     XTensor tUser;
 
     /* initialize variables */
@@ -684,20 +685,20 @@ bool TestCopyIndexed5()
     tUser = CopyIndexed(*s, dim, *sIndex, *tIndex, copyNum);
 
     /* check results */
-    cpuTest = t1->CheckData(answer, tUnitNum) && 
-              t2->CheckData(answer, tUnitNum) && 
-              tUser.CheckData(answer, tUnitNum);
+    cpuTest = _CheckData(t1, answer, tUnitNum) &&
+              _CheckData(t2, answer, tUnitNum) &&
+              _CheckData(&tUser, answer, tUnitNum);
     
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensors */
-    XTensor * sGPU = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * tGPU1 = NewTensor(sOrder, tDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * tGPU2 = NewTensor(sOrder, tDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * sIndexGPU = NewTensor(indexOrder, indexDimSize, X_INT, 1.0F, 0);
-    XTensor * tIndexGPU = NewTensor(indexOrder, indexDimSize, X_INT, 1.0F, 0);
+    XTensor * sGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU1 = NewTensorV2(sOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU2 = NewTensorV2(sOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sIndexGPU = NewTensorV2(indexOrder, indexDimSize, X_INT, 1.0F, 0);
+    XTensor * tIndexGPU = NewTensorV2(indexOrder, indexDimSize, X_INT, 1.0F, 0);
     XTensor tUserGPU;
 
     /* initialize variables */
@@ -713,9 +714,9 @@ bool TestCopyIndexed5()
     tUserGPU = CopyIndexed(*sGPU, dim, *sIndexGPU, *tIndexGPU, copyNum);
 
     /* check results */
-    gpuTest = tGPU1->CheckData(answer, tUnitNum) && 
-              tGPU2->CheckData(answer, tUnitNum) && 
-              tUserGPU.CheckData(answer, tUnitNum);
+    gpuTest = _CheckData(tGPU1, answer, tUnitNum) &&
+              _CheckData(tGPU2, answer, tUnitNum) &&
+              _CheckData(&tUserGPU, answer, tUnitNum);
 
     /* destroy variables */
     delete s;

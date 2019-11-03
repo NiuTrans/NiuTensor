@@ -22,6 +22,7 @@
 #include "../../XTensor.h"
 #include "../../XUtility.h"
 #include "../../XName.h"
+#include "../shape/IsSameShaped.h"
 #include "Merge.h"
 #include "MakeMergeBlockIndex.h"
 #include "../movement/CopyBlocksOnSite.h"
@@ -45,10 +46,8 @@ void _Merge(const XTensor * s, XTensor * t, int whereToMerge, int leadingDim)
     if(leadingDim < 0)
         leadingDim = 0;
 
-    int whereToMergeRDI = s->order - whereToMerge - 1;
-    int leadingDimRDI = s->order - leadingDim - 1;
-    if (leadingDimRDI < 0)
-        leadingDimRDI = s->order - 1;
+    if (leadingDim >= s->order)
+        leadingDim = leadingDim - s->order;
 
     CheckNTErrors((s != NULL && t != NULL), "Invalid tensors!");
     CheckNTErrors((s->devID == t->devID || (s->devID < 0 && t->devID < 0)),
@@ -56,19 +55,20 @@ void _Merge(const XTensor * s, XTensor * t, int whereToMerge, int leadingDim)
 
     CheckNTErrors((s->unitNum == t->unitNum && s->unitSize == t->unitSize), "Unmatched tensors!");
     CheckNTErrors((s->order == t->order + 1), "Unmatched tensors!");
-    CheckNTErrors((leadingDimRDI > whereToMergeRDI), "Invalid leading dimension!");
+    CheckNTErrors((leadingDim < whereToMerge), "Invalid leading dimension!");
 
     for (int i = 0; i < s->order; i++) {
-        if (i == whereToMergeRDI) {
-            CheckNTErrors((t->dimSizeRDI[i] == s->dimSizeRDI[i] * s->dimSizeRDI[leadingDimRDI]),
+        if (i == whereToMerge) {
+            
+            CheckNTErrors((t->dimSize[i - 1] == s->dimSize[i] * s->dimSize[leadingDim]),
                           "Unmatched tensor sizes!");
         }
-        else if (i < leadingDimRDI){
-            CheckNTErrors((s->dimSizeRDI[i] == t->dimSizeRDI[i]),
+        else if (i < leadingDim){
+            CheckNTErrors((s->dimSize[i] == t->dimSize[i]),
                           "Unmatched tensor sizes!");
         }
-        else if (i > leadingDimRDI) {
-            CheckNTErrors((s->dimSizeRDI[i] == t->dimSizeRDI[i - 1]),
+        else if (i > leadingDim) {
+            CheckNTErrors((s->dimSize[i] == t->dimSize[i - 1]),
                           "Unmatched tensor sizes!");
         }
     }
@@ -77,14 +77,14 @@ void _Merge(const XTensor * s, XTensor * t, int whereToMerge, int leadingDim)
     int blockNum = 1;
     int gridSize = 1;
     int gridNum = 1;
-    int mergedNum = s->dimSizeRDI[leadingDimRDI];
+    int mergedNum = s->dimSize[leadingDim];
 
     for (int i = 0; i < s->order; i++) {
-        if (i <= leadingDimRDI) {
-            if (i <= whereToMergeRDI)
-                blockSize *= s->dimSizeRDI[i];
+        if (i >= leadingDim) {
+            if (i >= whereToMerge)
+                blockSize *= s->dimSize[i];
             else
-                blockNum *= s->dimSizeRDI[i];
+                blockNum *= s->dimSize[i];
         }
     }
 
@@ -121,7 +121,7 @@ void _Merge(const XTensor * s, XTensor * t, int whereToMerge, int leadingDim)
         if (!isOnSameDevice)
             dataTMP = mem != NULL ? mem->AllocBuf(mem->devID, size) : XMemAlloc(mem->devID, size);
 
-        int blockNumInMerge = s->dimSizeRDI[leadingDimRDI];
+        int blockNumInMerge = s->dimSize[leadingDim];
         int splitSizeInGrid = gridSize / blockNumInMerge;
         int realBlockSize = blockSize * t->unitSize;
 
@@ -147,6 +147,39 @@ void _Merge(const XTensor * s, XTensor * t, int whereToMerge, int leadingDim)
         }
     }
 }
+
+bool CheckMergeSize(const XTensor * s, const XTensor * t, int whereToMerge, int leadingDim)
+{
+    if (!(s && t))
+        return false;
+
+    if (!(s->dataType == t->dataType))
+        return false;
+
+    if (leadingDim < 0)
+        leadingDim = 0;
+    int order = s->order - 1;
+    int * dimSize = new int[order];
+
+    for (int i = 0; i < s->order; i++) {
+        if (i < leadingDim)
+            dimSize[i] = s->dimSize[i];
+        else if (i > leadingDim) {
+            if (i != whereToMerge)
+                dimSize[i - 1] = s->dimSize[i];
+            else
+                dimSize[i - 1] = s->dimSize[i] * s->dimSize[leadingDim];
+        }
+    }
+
+    for (int i = 0; i < order; i++) {
+        if (dimSize[i] != t->dimSize[i])
+            return false;
+    }
+
+    return true;
+}
+
 
 /*
 transform a tensor by merging it along with a dimension (return an XTensor structure)
@@ -189,9 +222,11 @@ XTensor Merge(const XTensor &s, int whereToMerge, int leadingDim)
     _Merge(&s, &t, whereToMerge, leadingDim);
 
     /* tensor connections */
-    XLink::MakeLink(&s, NULL, &t, SHAPE_MERGE);
-    XLink::AddParamToHeadInt(&t, whereToMerge);
-    XLink::AddParamToHeadInt(&t, leadingDim);
+    if (s.enableGrad) {
+        XLink::MakeLink(&s, NULL, &t, SHAPE_MERGE);
+        XLink::AddParamToHeadInt(&t, whereToMerge);
+        XLink::AddParamToHeadInt(&t, leadingDim);
+    }
 
     /* destroy variables */
     delete[] dimSize;
@@ -199,33 +234,70 @@ XTensor Merge(const XTensor &s, int whereToMerge, int leadingDim)
     return t;
 }
 
+void Merge(const XTensor &s, XTensor &t, int whereToMerge, int leadingDim)
+{
+    if (!t.isInit || !CheckMergeSize(&s, &t, whereToMerge, leadingDim)) {
+        if (leadingDim < 0)
+            leadingDim = 0;
+        int order = s.order - 1;
+        int * dimSize = new int[order];
+
+        for (int i = 0; i < s.order; i++) {
+            if (i < leadingDim)
+                dimSize[i] = s.dimSize[i];
+            else if (i > leadingDim) {
+                if (i != whereToMerge)
+                    dimSize[i - 1] = s.dimSize[i];
+                else
+                    dimSize[i - 1] = s.dimSize[i] * s.dimSize[leadingDim];
+            }
+        }
+
+        float dr = (!s.isSparse) ? 1.0F : s.denseRatio;
+        InitTensorV2(&t, order, dimSize, s.dataType, dr, s.devID, s.mem);
+
+        /* destroy variables */
+        delete[] dimSize;
+    }
+
+    /* call _Merge function */
+    _Merge(&s, &t, whereToMerge, leadingDim);
+
+    if (s.enableGrad) {
+        /* tensor connections */
+        XLink::MakeLink(&s, NULL, &t, SHAPE_MERGE);
+        XLink::AddParamToHeadInt(&t, whereToMerge);
+        XLink::AddParamToHeadInt(&t, leadingDim);
+    }
+}
+
 /*
 merge small tensors into a big tensor
 
 >> smalls - the list of the small tensors
->> big - the merged tensor (for return)
+>> t - the merged tensor (for return)
 >> whereToMerge - the merging operation is along with which dimension
 */
-void _Merge(const XList * smalls, XTensor * big, int whereToMerge)
+void _Merge(const TensorList * smalls, XTensor * t, int whereToMerge)
 {
-    whereToMerge = (whereToMerge < 0 ? big->order - 1 : whereToMerge);
+    whereToMerge = (whereToMerge < 0 ? t->order - 1 : whereToMerge);
 
     CheckNTErrors((smalls != NULL), "Invalid list!");
     CheckNTErrors((smalls->count > 0), "Empty list!");
-    CheckNTErrors((whereToMerge >= 0 && whereToMerge < big->order), "Wrong range of  whereToMerge");
+    CheckNTErrors((whereToMerge >= 0 && whereToMerge < t->order), "Wrong range of  whereToMerge");
 
     bool uniform = true;
 
     int mergeNum = smalls->count;
-    XTensor* smallsItem0 = (XTensor*)(smalls->GetItem(0));
+    XTensor* smallsItem0 = smalls->GetItem(0);
     int itemSize = smallsItem0->unitNum * smallsItem0->unitSize;
 
     for (int i = 0; i < smalls->count; i++) {
-        XTensor* smallsItem = (XTensor*)smalls->GetItem(i);
-        CheckNTErrors((big->unitNum == smallsItem->unitNum * mergeNum), "Unmatched tensors!");
+        XTensor* smallsItem = smalls->GetItem(i);
+        CheckNTErrors((t->unitNum == smallsItem->unitNum * mergeNum), "Unmatched tensors!");
 
         if (i > 0) {
-            XTensor * preItem = (XTensor*)smalls->GetItem(i - 1);
+            XTensor * preItem = smalls->GetItem(i - 1);
             if (smallsItem->unitNum * smallsItem->unitSize != (char*)smallsItem->data - (char*)preItem->data)
                 uniform = false;
         }
@@ -237,13 +309,12 @@ void _Merge(const XList * smalls, XTensor * big, int whereToMerge)
     int gridNum = 1;
     int mergedNum = smalls->count;
 
-    XTensor * s0 = (XTensor*)smalls->GetItem(0);
-    int whereToMergeRDI = s0->order - whereToMerge - 1;
+    XTensor * s0 = smalls->GetItem(0);
     for (int i = 0; i < s0->order; i++) {
-        if (i <= whereToMergeRDI)
-            blockSize *= s0->dimSizeRDI[i];
+        if (i >= whereToMerge)
+            blockSize *= s0->dimSize[i];
         else
-            blockNum *= s0->dimSizeRDI[i];
+            blockNum *= s0->dimSize[i];
     }
 
     CheckNTErrors((s0->unitNum % (blockSize * blockNum) == 0), "Incorrect size!");
@@ -255,17 +326,17 @@ void _Merge(const XList * smalls, XTensor * big, int whereToMerge)
     /* merging with fewer data copy operations */
     if (mergedNum * gridNum <= MIN_TENSOR_MERGE_LIST_NUM) {
         int sPitch = blockSize * s0->unitSize;
-        int tPtich = blockSize * mergedNum * big->unitSize;
-        int mSize = blockSize * big->unitSize;
+        int tPtich = blockSize * mergedNum * t->unitSize;
+        int mSize = blockSize * t->unitSize;
         int n = blockNum;
         int sStep = 0;
-        int tStep = blockSize * big->unitSize;
+        int tStep = blockSize * t->unitSize;
         for (int g = 0; g < gridNum; g++) {
-            char * tData = (char*)big->data + g * blockSize * blockNum * big->unitSize;
+            char * tData = (char*)t->data + g * blockSize * blockNum * t->unitSize;
             for (int k = 0; k < mergedNum; k++) {
-                XTensor * s = (XTensor*)smalls->GetItem(k);
+                XTensor * s = smalls->GetItem(k);
                 char * sData = (char*)s->data + g * blockSize * blockNum * s->unitSize;
-                XMemCopy2D(tData + k * tStep, tPtich, big->devID,
+                XMemCopy2D(tData + k * tStep, tPtich, t->devID,
                     sData + k * sStep, sPitch, s->devID,
                     mSize, n);
             }
@@ -288,19 +359,19 @@ void _Merge(const XList * smalls, XTensor * big, int whereToMerge)
         if (uniform)
             dataTMP = smallsItem0->data;
         else
-            dataTMP = mem != NULL ? mem->AllocBuf(mem->devID, size) : XMemAlloc(big->devID, size);
+            dataTMP = mem != NULL ? mem->AllocBuf(mem->devID, size) : XMemAlloc(t->devID, size);
 
         tensorTMP->data = dataTMP;
 
         /* copy from source to tmp */
         if (!uniform) {
             for (int i = 0; i < mergeNum; i++) {
-                XTensor* smallsItem = (XTensor*)smalls->GetItem(i);
+                XTensor* smallsItem = smalls->GetItem(i);
                 XMemCopy((char*)(tensorTMP->data) + (itemSize * i), tensorTMP->devID, smallsItem->data, smallsItem->devID, itemSize);
             }
         }
 
-        _Merge(tensorTMP, big, whereToMerge + 1);
+        _Merge(tensorTMP, t, whereToMerge + 1);
 
         delete[] dimSizeTMP;
 
@@ -310,7 +381,7 @@ void _Merge(const XList * smalls, XTensor * big, int whereToMerge)
         if ((!uniform) && (mem != NULL))
             mem->ReleaseBuf(mem->devID, size);
         else
-            XMemFree(big->devID, dataTMP);
+            XMemFree(t->devID, dataTMP);
     }
 }
 
@@ -322,9 +393,9 @@ make a new tensor to keep the result and return it
 >> whereToMerge - the merging operation is along with which dimension
 << return - the big tensor merged by small tensors
 */
-XTensor Merge(const XList &smalls, int whereToMerge)
+XTensor Merge(const TensorList &smalls, int whereToMerge)
 {
-    XTensor * tensor = (XTensor*)smalls.GetItem(0);
+    XTensor * tensor = smalls.GetItem(0);
     int order = tensor->order;
     int * dimSize = new int[order];
     for (int i = 0; i < tensor->order; i++) {
@@ -342,8 +413,10 @@ XTensor Merge(const XList &smalls, int whereToMerge)
     _Merge(&smalls, &big, whereToMerge);
     
     /* tensor connections */
-    XLink::MakeLink(&smalls, &big, SHAPE_MERGE_LIST);
-    XLink::AddParamToHeadInt(&big, whereToMerge);
+    if (tensor->enableGrad) {
+        XLink::MakeLink(&smalls, &big, SHAPE_MERGE_LIST);
+        XLink::AddParamToHeadInt(&big, whereToMerge);
+    }
 
     /* destroy variables */
     delete[] dimSize;
@@ -359,7 +432,7 @@ merge two tensors into a big tensor (return an XTensor structure)
 */
 XTensor Merge(const XTensor &smallA, const XTensor &smallB, int whereToMerge)
 {
-    CheckNTErrors(XTensor::IsSameShaped(&smallA, &smallB), 
+    CheckNTErrors(IsSameShaped(smallA, smallB), 
                  "The two tensors must be of the same size!");
 
     int order = smallA.order;
@@ -375,16 +448,18 @@ XTensor Merge(const XTensor &smallA, const XTensor &smallB, int whereToMerge)
     XTensor big(order, dimSize, smallA.dataType, dr, smallA.devID, smallA.mem);
     big.SetTMPFlag();
 
-    XList smalls(2);
-    smalls.Add(&smallA);
-    smalls.Add(&smallB);
+    TensorList smalls(2);
+    smalls.Add((XTensor*)&smallA);
+    smalls.Add((XTensor*)&smallB);
 
     /* call _Merge function */
     _Merge(&smalls, &big, whereToMerge);
 
     /* tensor connections */
-    XLink::MakeLink(&smalls, &big, SHAPE_MERGE_LIST);
-    XLink::AddParamToHeadInt(&big, whereToMerge);
+    if (smallA.enableGrad) {
+        XLink::MakeLink(&smalls, &big, SHAPE_MERGE_LIST);
+        XLink::AddParamToHeadInt(&big, whereToMerge);
+    }
 
     /* destroy variables */
     delete[] dimSize;

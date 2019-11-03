@@ -34,6 +34,11 @@ namespace nts{
 int testxmemid = 0;
 void * recordp = NULL;
 
+/*
+for managing the memories
+*/
+XMemManager GMems;
+
 XMem * GMem;
 
 /* constructor */
@@ -48,6 +53,7 @@ XMem::XMem()
     strcpy(name, "xmem");
     signature = 0;
     mergeFreeOTF = true;
+    isInitialized = false;
 }
 
 /* 
@@ -58,7 +64,7 @@ constructor
 >> myMode - mode of running the memory pool
             UNI_FREE: free all the space at the end of using the memory pool
             FREE_ON_THE_FLY: normal "malloc" and "free" mode
->> myBlockSize - size of memory block
+>> myBlockSize - size of a memory block
 >> myBlockNum  - number of memory blocks
 >> myBufSize - size of buffer
 */
@@ -103,7 +109,7 @@ initialize it
 >> myMode - mode of running the memory pool
             UNI_FREE: free all the space at the end of using the memory pool
             FREE_ON_THE_FLY: normal "malloc" and "free" mode
->> myBlockSize - size of memory block
+>> myBlockSize - size of a memory block
 >> myBlockNum  - number of memory blocks
 >> myBufSize - size of buffer
 */
@@ -164,6 +170,7 @@ void XMem::Initialize(int myDevID, MEMPOOL_MODE myMode, MTYPE myBlockSize, int m
 #endif
 
     signature++;
+    isInitialized = true;
 }
 
 /* free memory */
@@ -216,9 +223,9 @@ void XMem::Free(int myDevID, void * mem)
     }
 }
 
-/* 
-get signature 
-<< return - return the signature
+/*
+get the signature
+<< return - the signature
 */
 MTYPE XMem::GetSignature()
 {
@@ -226,7 +233,7 @@ MTYPE XMem::GetSignature()
 }
 
 /* 
-use string as the name of the memory pool 
+set the name of the memory pool 
 >> myName - name of the memory pool
 */
 void XMem::SetName(const char * myName)
@@ -259,7 +266,7 @@ void XMem::SetDevice(int myDevID)
 }
 
 /* 
-switch to the device (with fast cuda execution mode) we want to work 
+switch to the device (with fast cuda execution mode) we intend to work on
 >> myDevID - device id(-1: CPU memory, >=0: GPU device ID)
 */
 void XMem::SetDeviceFast(int myDevID)
@@ -275,7 +282,7 @@ void XMem::SetDeviceFast(int myDevID)
 }
 
 /* 
-run in static mode 
+run in the static mode
 >> myIsStatic - specify if the memory allocation is static
 */
 void XMem::SetStaticMode(bool myIsStatic)
@@ -300,7 +307,7 @@ void XMem::SetComputationMode(bool myIsForComputation)
         cublasDestroy(cublasHandle);
     if(myIsForComputation)
         CheckNTErrors((enum curandStatus)cublasCreate(&cublasHandle) == CURAND_STATUS_SUCCESS, 
-				      "Cannot create the cublas handle.");
+                      "Cannot create the cublas handle.");
 
     SetDevice(devIDBackup);
 #endif
@@ -316,11 +323,11 @@ void XMem::SetIndex(INT_64 indexSize, MTYPE minSizeFirst, int minSizeNum)
 {
     delete[] memIndex;
     delete[] memIndex2;
-	delete[] minSizeIndex;
+    delete[] minSizeIndex;
 
-	nodeNum = indexSize;
-	nodeNumUsed = minSizeNum * 2;
-	indexEntryNum = minSizeNum;
+    nodeNum = indexSize;
+    nodeNumUsed = minSizeNum * 2;
+    indexEntryNum = minSizeNum;
     
     memIndex = new MPieceNode[nodeNum];
     memset(memIndex, 0, sizeof(MPieceNode) * nodeNum);
@@ -328,12 +335,12 @@ void XMem::SetIndex(INT_64 indexSize, MTYPE minSizeFirst, int minSizeNum)
     memIndex2 = new MPieceNode[nodeNum];
     memset(memIndex2, 0, sizeof(MPieceNode) * nodeNum);
 
-	minSizeIndex = new MTYPE[indexEntryNum];
-	memset(minSizeIndex, 0, sizeof(MTYPE) * indexEntryNum);
+    minSizeIndex = new MTYPE[indexEntryNum];
+    memset(minSizeIndex, 0, sizeof(MTYPE) * indexEntryNum);
 
-	minSizeIndex[0] = minSizeFirst;
-	for(int i = 1; i < indexEntryNum; i++)
-		minSizeIndex[i] = minSizeIndex[i - 1] * 2;
+    minSizeIndex[0] = minSizeFirst;
+    for(int i = 1; i < indexEntryNum; i++)
+        minSizeIndex[i] = minSizeIndex[i - 1] * 2;
 
     indexOffset = GetMSB(minSizeFirst);
 }
@@ -752,8 +759,8 @@ void * XMem::AllocStandard(int myDevID, MTYPE mySize, bool myIsRebuiltIndex)
 
     /* if all index nodes are used, we rebuild the index to release the nodes that are free */
     if(nodeNumUsed == nodeNum){
-    	RebuildIndex();
-    	CheckNTErrors(nodeNumUsed < nodeNum, "No enough index nodes for the memory pool!");
+        RebuildIndex();
+        CheckNTErrors(nodeNumUsed < nodeNum, "No enough index nodes for the memory pool!");
     }
 
     /*if(testxmemid == 30){
@@ -956,8 +963,8 @@ release a piece of memory as "free"
 */
 void XMem::ReleaseStandard(int myDevID, void * p, MTYPE size)
 {
-	if(p == NULL)
-		return;
+    if(p == NULL)
+        return;
     
     if(size <= minSizeIndex[0])
         size = minSizeIndex[0];
@@ -1087,7 +1094,7 @@ void XMem::RebuildIndex()
             block->mem = NULL;
         }
         else{
-        	/* if the block is in use, we build the index */
+            /* if the block is in use, we build the index */
             int pieceCount = 0;
             MTYPE size = 0;
             MHeader * newLast = NULL;
@@ -1487,5 +1494,180 @@ cublasHandle_t * XMem::GetCublasHandle()
 }
 
 #endif
+
+/* constructor */
+XMemManager::XMemManager()
+{
+    Initialize();
+}
+
+/* de-constructor */
+XMemManager::~XMemManager()
+{
+}
+
+/* get memory size */
+MTYPE XMemManager::GetAvailableMemory()
+{
+    unsigned long freeMem = 0;
+#if __APPLE__
+    int mib[2] = {CTL_HW, HW_MEMSIZE};
+    unsigned int namelen = sizeof(mib) / sizeof(mib[0]);
+    unsigned long long size;
+    size_t len = sizeof(size);
+    if (sysctl(mib, namelen, &size, &len, NULL, 0) < 0){
+        ShowNTErrors("Cannot get memory size on Mac!");
+    }
+    else{
+        return size;
+    }
+#elif _WIN32
+    MEMORYSTATUSEX memoryStatus;
+    memoryStatus.dwLength = sizeof(memoryStatus);
+    if (GlobalMemoryStatusEx(&memoryStatus)){
+        freeMem = memoryStatus.ullAvailPhys;
+    }
+#else
+    long pages = sysconf(_SC_AVPHYS_PAGES);
+    long page_size = sysconf(_SC_PAGE_SIZE);
+    freeMem = pages * page_size;
+#endif
+    return (MTYPE)freeMem;
+}
+
+/* get GPU memory size */
+MTYPE XMemManager::GetAvailableGPUMemory(int devID)
+{
+    size_t freeMem = 0;
+    
+#ifdef USE_CUDA
+    size_t totalMem = 0;
+    cudaSetDevice(devID);
+    if (cudaMemGetInfo(&freeMem, &totalMem) != cudaSuccess){
+        XPRINT(0, stderr, "cannot get GPU memory information.");
+        exit(1);
+    }
+#endif
+    return (MTYPE)freeMem;
+}
+
+/* get buffer size */
+void XMemManager::GetBufferSize(MTYPE freeMem, MTYPE * myBufSize)
+{
+    *myBufSize = 0;
+    if (freeMem >= MILLION * 128){
+        *myBufSize = MILLION * 32;
+        if (freeMem >= MILLION * 256){
+            *myBufSize = MILLION * 64;
+            if (freeMem >= MILLION * 512){
+                *myBufSize = MILLION * 128;
+                if (freeMem >= MILLION * 1024) {
+                    *myBufSize = MILLION * 128;
+                    if (freeMem >= MILLION * 2048)
+                        *myBufSize = MILLION * 128;
+                }
+            }
+        }
+    }
+} 
+
+/* initialize it and set the global memory information */
+void XMemManager::Initialize()
+{
+    srand((unsigned int)time(NULL));
+
+    Free();
+    
+    /* CPUs (we actually do not care about how many CPUs are using) */
+    nCPUMem = 1;
+
+    /* GPUs */
+    nGPUMem = 0;
+
+#ifdef USE_CUDA
+    if (cudaGetDeviceCount(&nGPUMem) != cudaSuccess) {
+        XPRINT(0, stderr, "cannot get GPU information.");
+        exit(1);
+    }
+#endif
+
+}
+
+/* free it */
+void XMemManager::Free()
+{
+    for (int i = 0; i < MAX_CPU_MEM_NUM; i++)
+        CPUMems[i].Free();
+    for (int i = 0; i < MAX_GPU_MEM_NUM; i++)
+        GPUMems[i].Free();
+}
+
+/* get global memory pool */
+XMem * XMemManager::GetMem(const int devID)
+{
+    XMem * mem = NULL;
+    if (devID < 0){
+        if(!CPUMems[0].isInitialized){
+            MTYPE freeMem = GetAvailableMemory();
+            MTYPE myBufSize = 0;
+            GetBufferSize(freeMem, &myBufSize);
+            CPUMems[0].Initialize(-1, FREE_ON_THE_FLY, 
+                                  MIN_BLOCK_SIZE_FOR_MEMPOOL, 
+                                  MIN_BLOCK_NUM_FOR_MEMPOOL, 
+                                  myBufSize);
+        }
+        mem = CPUMems;
+    }
+    else{
+        if (devID < nGPUMem){
+            if(!GPUMems[devID].isInitialized){
+                MTYPE freeMem = GetAvailableGPUMemory(devID);
+                MTYPE myBufSize = 0;
+                GetBufferSize(freeMem, &myBufSize);
+                GPUMems[devID].Initialize(devID, FREE_ON_THE_FLY, 
+                                          MIN_BLOCK_SIZE_FOR_MEMPOOL, 
+                                          MIN_BLOCK_NUM_FOR_MEMPOOL, 
+                                          myBufSize);
+            }
+            mem = GPUMems + devID;
+        }
+        else{
+            XPRINT1(0, stderr, "Cannot get the memory (%d). Please check your device id!", devID);
+        }
+    }
+    
+    return mem;
+}
+
+/* get global memory size */
+int XMemManager::GetMemSize(const int devID, MTYPE * myBlockSize, int * myBlockNum, MTYPE * myBufSize)
+{
+    XMem * mem = GetMem(devID);
+    int result = 0;
+    if (mem != NULL){
+        *myBlockSize = mem->maxBlockSize;
+        *myBlockNum = mem->blockNum;
+        *myBufSize = mem->bufSize;
+        result = 1;
+    }
+    return result;
+}
+
+/* show memory information */
+void XMemManager::ShowMemInfo()
+{
+    XPRINT(1, stderr, "Memory Information:\n");
+    MTYPE myBlockSize, myBufSize;
+    int myBlockNum;
+    for(int i = 0; i < nCPUMem; i++){
+        GetMemSize(-1, &myBlockSize, &myBlockNum, &myBufSize);
+        XPRINT3(1, stderr, " - id:-1 CPU, blockSize:%lld, blockNum:%d, bufSize:%lld\n", myBlockSize, myBlockNum, myBufSize);
+    }
+
+    for(int i = 0; i < nGPUMem; i++){
+        GetMemSize(i, &myBlockSize, &myBlockNum, &myBufSize);
+        XPRINT4(1, stderr, " - id:%2d GPU, blockSize:%lld, blockNum:%d, bufSize:%lld\n", i, myBlockSize, myBlockNum, myBufSize);
+    }
+}
 
 } /* end of the nts (NiuTrans.Tensor) namespace */

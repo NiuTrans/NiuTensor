@@ -33,11 +33,15 @@ void _Merge(const XTensor * s, XTensor * t, int whereToMerge, int leadingDim = -
    e.g., (M, N/3, 3) -> (M, N) */
 XTensor Merge(const XTensor &s, int whereToMerge, int leadingDim = -1);
 
+void Merge(const XTensor &s, XTensor &t, int whereToMerge, int leadingDim = -1);
+
 /* merge small tensors into a big tensor */
-void _Merge(const XList * smalls, XTensor * big, int whereToMerge);
+void _Merge(const TensorList * smalls, XTensor * t, int whereToMerge);
 
 /* merge small tensors into a big tensor (return an XTensor structure) */
-XTensor Merge(const XList &smalls, int whereToMerge);
+XTensor Merge(const TensorList &smalls, int whereToMerge);
+
+void Merge(const TensorList &smalls, XTensor &t, int whereToMerge);
 
 /* merge two tensors into a big tensor (return an XTensor structure) */
 XTensor Merge(const XTensor &smallA, const XTensor &smallB, int whereToMerge);

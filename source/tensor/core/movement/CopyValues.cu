@@ -37,10 +37,11 @@ copy a range of elements from a source vector to a target vector
 */
 void _CudaCopyValues(const XTensor * s, XTensor * t, XStream * stream)
 {
-    CheckNTErrors((s != NULL && t != NULL), "The input tensor and output tensor must be nonempty!");
+    CheckNTErrors(s != NULL && t != NULL, "The input tensor and output tensor must be nonempty!");
     CheckNTErrors(s->dataType == t->dataType, "Unmatched data type!");
-    CheckNTErrors((s->unitSize == t->unitSize), "Incompatible vectors in value copy.");
-    CheckNTErrors((s->denseRatio <= s->denseRatio), "Incompatible vectors in value copy.");
+    CheckNTErrors(s->unitSize == t->unitSize, "Incompatible data types in value copy.");
+    CheckNTErrors(s->unitNum == t->unitNum, "The data items are be the same.");
+    CheckNTErrors(s->denseRatio <= t->denseRatio, "Incompatible vectors in value copy.");
 
     /* dense -> dense */
     if (!s->isSparse && !t->isSparse) {
@@ -51,15 +52,15 @@ void _CudaCopyValues(const XTensor * s, XTensor * t, XStream * stream)
     }
     /* dense -> sparse */
     else if (!s->isSparse && t->isSparse &&
-        s->dataType == DEFAULT_DTYPE &&
-        t->dataType == DEFAULT_DTYPE)
+              s->dataType == DEFAULT_DTYPE &&
+              t->dataType == DEFAULT_DTYPE)
     {
         ShowNTErrors("TODO!");
     }
     /* sparse -> dense */
     else if (s->isSparse && !t->isSparse &&
-        s->dataType == DEFAULT_DTYPE &&
-        t->dataType == DEFAULT_DTYPE)
+             s->dataType == DEFAULT_DTYPE &&
+             t->dataType == DEFAULT_DTYPE)
     {
         ShowNTErrors("TODO!");
     }

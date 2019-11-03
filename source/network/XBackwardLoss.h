@@ -23,6 +23,7 @@
 
 #include "../tensor/XTensor.h"
 #include "../tensor/function/FHeader.h"
+#include "../tensor/loss/LHeader.h"
 
 #ifndef __XBACKWARDLOSS_H__
 #define __XBACKWARDLOSS_H__
@@ -34,11 +35,19 @@ namespace nts{
 class XLossGrad
 {
 public:
-    /* compute dE/dx for a given function y = f(x) */
-    void Compute(XTensor * gold, XTensor * y, XTensor * x, 
-                 XTensor * dedy, XTensor * dedx, XTensor * padding,
-                 int funcID, void * params,
-                 LOSS_FUNCTION_NAME lossName);
+    /* compute dE/dx of a node */
+    static
+    void MakeGrad(XTensor * node, bool isEfficient);
+
+    /* indicates whether the node is for a Loss computation */
+    static
+    bool IsLossOP(XTensor * node);
+
+    ///* compute dE/dx for a given function y = f(x) */
+    //void Compute(XTensor * gold, XTensor * y, XTensor * x, 
+    //             XTensor * dedy, XTensor * dedx, XTensor * padding,
+    //             int funcID, void * params,
+    //             LOSS_FUNCTION_NAME lossName);
 
     /* compute dE/dy for variable y and error(loss) function E */
     void Compute(XTensor * gold, XTensor * y, 

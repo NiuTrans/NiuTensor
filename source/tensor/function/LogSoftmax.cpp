@@ -27,6 +27,7 @@
 #include "../core/reduce/ReduceSum.h"
 #include "../core/reduce/ReduceMax.h"
 #include "../core/movement/CopyValues.h"
+#include "../core/shape/IsSameShaped.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
@@ -49,7 +50,6 @@ void _LogSoftmax(const XTensor * x, XTensor * y, int leadDim)
         return;
     }
 
-    int leadDimRDI = x->order - leadDim - 1;
     if (!x->isSparse && !y->isSparse &&
         x->dataType == DEFAULT_DTYPE && y->dataType == DEFAULT_DTYPE)
     {
@@ -69,36 +69,36 @@ void _LogSoftmax(const XTensor * x, XTensor * y, int leadDim)
         XTensor * blockMax = NULL;
         XTensor * blockSum = NULL;
 
-        int dimensionSize = y->dimSizeRDI[leadDimRDI];
+        int dimensionSize = y->dimSize[leadDim];
         int stride = 1;
         int blockSize = 1;
         int blockNum = 1;
 
-        for (int i = 0; i < leadDimRDI; i++)
-            stride *= y->dimSizeRDI[i];
+        for (int i = leadDim + 1; i < x->order; i++)
+            stride *= y->dimSize[i];
         blockSize = stride * dimensionSize;
         blockNum = y->unitNum / blockSize;
 
-        max = NewTensorBuf(x->order - 1, dimSize, x->dataType, x->denseRatio, x->devID, mem);
-        sum = NewTensorBuf(x->order - 1, dimSize, x->dataType, x->denseRatio, x->devID, mem);
+        max = NewTensorBufV2(x->order - 1, dimSize, x->dataType, x->denseRatio, x->devID, mem);
+        sum = NewTensorBufV2(x->order - 1, dimSize, x->dataType, x->denseRatio, x->devID, mem);
 
         _ReduceMax(x, max, leadDim);
         _ReduceSum(x, sum, leadDim, max, 1.0F, true);
 
         if (x->devID >= 0) {
-            if(leadDimRDI == 0){
+            if(leadDim == x->order - 1){
                 blockSize = y->unitNum;
                 blockNum  = 1;
-                blockx = NewTensor2D(blockSize/dimensionSize, -dimensionSize, x->dataType, x->devID, mem);
-                blocky = NewTensor2D(blockSize/dimensionSize, -dimensionSize, x->dataType, x->devID, mem);
-                blockMax = NewTensor2D(blockSize/dimensionSize, -1, x->dataType, x->devID, mem);
-                blockSum = NewTensor2D(blockSize/dimensionSize, -1, x->dataType, x->devID, mem);
+                blockx = NewTensor2DV2(blockSize/dimensionSize, -dimensionSize, x->dataType, x->devID, mem);
+                blocky = NewTensor2DV2(blockSize/dimensionSize, -dimensionSize, x->dataType, x->devID, mem);
+                blockMax = NewTensor2DV2(blockSize/dimensionSize, -1, x->dataType, x->devID, mem);
+                blockSum = NewTensor2DV2(blockSize/dimensionSize, -1, x->dataType, x->devID, mem);
             }
             else{
-                blockx = NewTensor2D(-stride, dimensionSize, x->dataType, x->devID, mem);
-                blocky = NewTensor2D(-stride, dimensionSize, x->dataType, x->devID, mem);
-                blockMax = NewTensor2D(-stride, 1, x->dataType, x->devID, mem);
-                blockSum = NewTensor2D(-stride, 1, x->dataType, x->devID, mem);
+                blockx = NewTensor2DV2(-stride, dimensionSize, x->dataType, x->devID, mem);
+                blocky = NewTensor2DV2(-stride, dimensionSize, x->dataType, x->devID, mem);
+                blockMax = NewTensor2DV2(-stride, 1, x->dataType, x->devID, mem);
+                blockSum = NewTensor2DV2(-stride, 1, x->dataType, x->devID, mem);
             }
         }
 
@@ -137,7 +137,7 @@ void _LogSoftmax(const XTensor * x, XTensor * y, int leadDim)
                 blockMax->data = mp;
                 blockSum->data = sp;
 #ifdef USE_CUDA
-                if(leadDimRDI == 0)
+                if(leadDim == x->order - 1)
                     _CudaLogSoftmaxSumMax(blockx, blocky, 1, blockSum, blockMax);
                 else
                     _CudaLogSoftmaxSumMax(blockx, blocky, leadDim, blockSum, blockMax);
@@ -188,13 +188,15 @@ XTensor LogSoftmax(const XTensor &x, int leadDim)
     _LogSoftmax(&x, &y, ld);
 
     /* tensor connection */
-    XLink::MakeLink(&x, NULL, &y, FUNC_LOGSOFTMAX);
-    XLink::AddParamToHeadInt(&y, ld);
+    if (x.enableGrad) {
+        XLink::MakeLink(&x, NULL, &y, FUNC_LOGSOFTMAX);
+        XLink::AddParamToHeadInt(&y, ld);
+    }
 
     return y;
 }
 
-/* 
+/*
 log scale softmax y = log(e^x / \sum_{i} e^{x_i})
 make a new tensor to keep the result and return it
 
@@ -204,15 +206,22 @@ make a new tensor to keep the result and return it
 */
 void LogSoftmax(const XTensor &x, XTensor &y, int leadDim)
 {
-    if(!XTensor::IsSameShaped(&x, &y))
-        InitTensor(&y, &x);
+    int ld = leadDim;
+    if (ld < 0)
+        ld = x.order - 1;
+
+    if (!y.isInit || !IsSameShaped(y, x)) {
+        InitTensorV2(&y, &x);
+    }
 
     /* call _LogSoftmax function */
-    _LogSoftmax(&x, &y, leadDim);
+    _LogSoftmax(&x, &y, ld);
 
-    /* tensor connection */
-    XLink::MakeLink(&x, NULL, &y, FUNC_LOGSOFTMAX);
-    XLink::AddParamToHeadInt(&y, leadDim);
+    if (x.enableGrad) {
+        /* tensor connection */
+        XLink::MakeLink(&x, NULL, &y, FUNC_LOGSOFTMAX);
+        XLink::AddParamToHeadInt(&y, ld);
+    }
 }
 
 /*
@@ -289,7 +298,6 @@ void _LogSoftmaxBackward(XTensor * gold, XTensor * y, XTensor * x,
     if(leadDim < 0)
         leadDim = y->order - 1;
 
-    int leadDimRDI = y->order - leadDim - 1;
 #ifdef USE_CUDA
     if (gold->devID >= 0) {
         _CudaLogSoftmaxBackward(gold, y, x, dedy, dedx, padding, leadDim, lossName);
@@ -297,12 +305,12 @@ void _LogSoftmaxBackward(XTensor * gold, XTensor * y, XTensor * x,
     }
 #endif
 
-    int dimensionSize = y->dimSizeRDI[leadDimRDI];
+    int dimensionSize = y->dimSize[leadDim];
     int stride = 1;
     int blockSize = 1;
     int blockNum = 1;
-    for (int i = 0; i < leadDimRDI; i++)
-        stride *= y->dimSizeRDI[i];
+    for (int i = leadDim + 1; i < y->order; i++)
+        stride *= y->dimSize[i];
     blockSize = stride * dimensionSize;
     blockNum = y->unitNum / blockSize;
 
@@ -329,10 +337,10 @@ void _LogSoftmaxBackward(XTensor * gold, XTensor * y, XTensor * x,
                     int key = gold->GetKeyInSparse(i);
                     DTYPE value = gold->GetInSparse(i);
                     int offset = key;
-                    if (dedx->dimSizeRDI[0] != gm) {
+                    if (dedx->dimSize[dedx->order - 1] != gm) {
                         int mi = key % gm;
                         int ni = key / gm;
-                        int key2 = ni * dedx->dimSizeRDI[0] + mi;
+                        int key2 = ni * dedx->dimSize[dedx->order - 1] + mi;
                         offset = key2;
                     }
                     if (key >= 0 && key < size)
@@ -343,7 +351,7 @@ void _LogSoftmaxBackward(XTensor * gold, XTensor * y, XTensor * x,
                 }
             }
             else {
-                CheckNTErrors((XTensor::IsSameShaped(gold, y)), "The tensors must be of the same size!");
+                CheckNTErrors((_IsSameShaped(gold, y)), "The tensors must be of the same size!");
                 for (int k = 0; k < blockNum; k++) {
                     gp = (DTYPE*)gold->data + k * blockSize;
                     op = (DTYPE*)y->data + k * blockSize;
@@ -386,10 +394,10 @@ void _LogSoftmaxBackward(XTensor * gold, XTensor * y, XTensor * x,
                     int key = gold->GetKeyInSparse(i);
                     DTYPE value = gold->GetInSparse(i);
                     int offset = key;
-                    if (dedx->dimSizeRDI[0] != gm) {
+                    if (dedx->dimSize[dedx->order - 1] != gm) {
                         int mi = key % gm;
                         int ni = key / gm;
-                        int key2 = ni * dedx->dimSizeRDI[0] + mi;
+                        int key2 = ni * dedx->dimSize[dedx->order - 1] + mi;
                         offset = key2;
                     }
                     if (key >= 0 && key < size)
@@ -397,7 +405,7 @@ void _LogSoftmaxBackward(XTensor * gold, XTensor * y, XTensor * x,
                 }
             }
             else {
-                CheckNTErrors((XTensor::IsSameShaped(gold, y)), "The tensors must be of the same size!");
+                CheckNTErrors((_IsSameShaped(gold, y)), "The tensors must be of the same size!");
                 for (int k = 0; k < blockNum; k++) {
                     gp = (DTYPE*)gold->data + k * blockSize;
                     op = (DTYPE*)y->data + k * blockSize;
@@ -421,11 +429,11 @@ void _LogSoftmaxBackward(XTensor * gold, XTensor * y, XTensor * x,
         /* for columns with no xs we set dE/ds = 0 */
         if (gold != NULL && gold->isSparse) {
             CheckNTErrors((gold->order == 2), "The gold standard tensor must be of order 2!");
-            if ((gold->dimSize[1] > 1 && !gold->isAllValued[0]) || gold->dimSize[1] != dedx->dimSizeRDI[0]) {
+            if ((gold->dimSize[1] > 1 && !gold->isAllValued[0]) || gold->dimSize[1] != dedx->dimSize[dedx->order - 1]) {
                 int gn = gold->dimSize[0];
                 int gm = gold->dimSize[1];
-                int sm = dedx->dimSizeRDI[0];
-                int sn = dedx->dimSizeRDI[1];
+                int sm = dedx->dimSize[dedx->order - 1];
+                int sn = dedx->dimSize[dedx->order - 2];
 
                 int * flags = new int[sm];
                 memset(flags, 0, sizeof(int)*sm);

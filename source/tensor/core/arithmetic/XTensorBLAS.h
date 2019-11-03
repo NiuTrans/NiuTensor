@@ -56,8 +56,8 @@ void _CudaBLASMatrixMULBatchedStrided(cublasHandle_t * handle,
                                       DTYPE alpha = (DTYPE)1.0, DTYPE beta = 1.0);
 
 /* matrix multiplication in batch mode via cuda version BLAS */
-void _CudaBLASMatrixMULList(cublasHandle_t * handle, const XList * a, MATRIX_TRANS_TYPE transposedA, 
-                            const XList * b, MATRIX_TRANS_TYPE transposedB, XList * c,
+void _CudaBLASMatrixMULList(cublasHandle_t * handle, const TensorList * a, MATRIX_TRANS_TYPE transposedA, 
+                            const TensorList * b, MATRIX_TRANS_TYPE transposedB, TensorList * c,
                             int count, DTYPE alpha = (DTYPE)1.0, DTYPE beta = 1.0);
 
 #endif

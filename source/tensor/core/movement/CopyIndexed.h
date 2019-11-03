@@ -31,16 +31,15 @@ void _CopyIndexed(const XTensor * s, XTensor * t, int dim,
                   int * srcIndex, int indexSize, int * tgtIndex,
                   int copyNum = 1);
 
-/* copy selected sub-tensors where indeces are kept in tensors */
+/* copy selected sub-tensors */
 void _CopyIndexed(const XTensor * s, XTensor * t, int dim, 
                   const XTensor * srcIndex, const XTensor * tgtIndex, 
                   int copyNum = 1);
 
-/* 
-copy selected sub-tensors (return a XTensor structure)
-make a new tensor to keep the result and return it (remove this???)
-*/
-XTensor CopyIndexed(const XTensor &s, int dim, int * srcIndex, int indexSize, int * tgtIndex, int copyNum);
+/* copy selected sub-tensors */
+void _CopyIndexed(const XTensor * s, XTensor * t, int dim,                   
+                  const XTensor * srcIndex, int copyNum = 1);
+
 /*
 copy selected sub-tensors where indeces are kept in tensors (return an XTensor structure)
 make a new tensor to keep the result and return it

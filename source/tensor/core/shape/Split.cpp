@@ -46,23 +46,22 @@ void _Split(const XTensor * s, XTensor * t, int whereToSplit, int splitNum)
 
     CheckNTErrors((s->unitNum == t->unitNum && s->unitSize == t->unitSize), "Unmatched tensors!");
     CheckNTErrors((s->order == t->order - 1), "Unmatched tensors!");
-    CheckNTErrors((t->dimSizeRDI[t->order - 1] == splitNum), "Incorrect tensor sizes!");
+    CheckNTErrors((t->dimSize[0] == splitNum), "Incorrect tensor sizes!");
 
-    int whereToSplitRDI = s->order - whereToSplit - 1;
     for (int i = 0; i < s->order; i++) {
-        if (i == whereToSplitRDI) {
-            CheckNTErrors((s->dimSizeRDI[i] == t->dimSizeRDI[i] * splitNum),
+        if (i == whereToSplit) {
+            CheckNTErrors((s->dimSize[i] == t->dimSize[i + 1] * splitNum),
                           "Unmatched tensor sizes!");
         }
         else {
-            CheckNTErrors((s->dimSizeRDI[i] == t->dimSizeRDI[i]),
+            CheckNTErrors((s->dimSize[i] == t->dimSize[i + 1]),
                           "Unmatched tensor sizes!");
         }
     }
 
     /* for the case that we split the last dimension. Actually
     (N, M) and (N, M/3, 3) have the same memory layout */
-    if (s->order - 1 == whereToSplitRDI) {
+    if (0 == whereToSplit) {
         XMemCopy(t->data, t->devID, s->data, s->devID, s->unitNum * s->unitSize);
         return;
     }
@@ -70,14 +69,14 @@ void _Split(const XTensor * s, XTensor * t, int whereToSplit, int splitNum)
     int blockSize = 1;
     int blockNum = 1;
     for (int i = 0; i < s->order; i++) {
-        if (i == whereToSplitRDI) {
-            blockSize *= s->dimSizeRDI[i] / splitNum;
+        if (i == whereToSplit) {
+            blockSize *= s->dimSize[i] / splitNum;
             blockNum *= splitNum;
         }
-        else if (i < whereToSplitRDI)
-            blockSize *= s->dimSizeRDI[i];
+        else if (i > whereToSplit)
+            blockSize *= s->dimSize[i];
         else
-            blockNum *= s->dimSizeRDI[i];
+            blockNum *= s->dimSize[i];
     }
 
     CheckNTErrors((blockNum % splitNum == 0), "Incorrect split number!");
@@ -156,6 +155,33 @@ void _Split(const XTensor * s, XTensor * t, int whereToSplit, int splitNum)
     }
 }
 
+bool CheckSplitSize(const XTensor * s, const XTensor * t, int whereToSplit, int splitNum)
+{
+    if (!(s && t))
+        return false;
+
+    if (!(s->dataType == t->dataType))
+        return false;
+
+    int order = s->order + 1;
+    int * dimSize = new int[order];
+
+    dimSize[0] = splitNum;
+    for (int i = 0; i < s->order; i++) {
+        if (i == whereToSplit)
+            dimSize[i + 1] = s->dimSize[i] / splitNum;
+        else
+            dimSize[i + 1] = s->dimSize[i];
+    }
+
+    for (int i = 0; i < order; i++) {
+        if (dimSize[i] != t->dimSize[i])
+            return false;
+    }
+
+    return true;
+}
+
 /*
 transform a tensor by splitting it, e.g., (N, M) -> (N/3, M, 3) (return an XTensor structure)
 make a new tensor to keep the result and return it
@@ -190,14 +216,48 @@ XTensor Split(const XTensor &s, int whereToSplit, int splitNum)
     _Split(&s, &t, whereToSplit, splitNum);
         
     /* tensor connections */
-    XLink::MakeLink(&s, NULL, &t, SHAPE_SPLIT);
-    XLink::AddParamToHeadInt(&t, whereToSplit);
-    XLink::AddParamToHeadInt(&t, splitNum);
+    if (s.enableGrad) {
+        XLink::MakeLink(&s, NULL, &t, SHAPE_SPLIT);
+        XLink::AddParamToHeadInt(&t, whereToSplit);
+        XLink::AddParamToHeadInt(&t, splitNum);
+    }
 
     /* destroy variables */
     delete[] dimSize;
 
     return t;
+}
+
+void Split(const XTensor &s, XTensor &t, int whereToSplit, int splitNum)
+{
+    if (!t.isInit || !CheckSplitSize(&s, &t, whereToSplit, splitNum)) {
+        int order = s.order + 1;
+        int * dimSize = new int[order];
+
+        dimSize[0] = splitNum;
+        for (int i = 0; i < s.order; i++) {
+            if (i == whereToSplit)
+                dimSize[i + 1] = s.dimSize[i] / splitNum;
+            else
+                dimSize[i + 1] = s.dimSize[i];
+        }
+
+        float dr = (!s.isSparse) ? 1.0F : s.denseRatio;
+        InitTensorV2(&t, order, dimSize, s.dataType, dr, s.devID, s.mem);
+
+        /* destroy variables */
+        delete[] dimSize;
+    }
+
+    /* call _Split function */
+    _Split(&s, &t, whereToSplit, splitNum);
+
+    if (s.enableGrad) {
+        /* tensor connections */
+        XLink::MakeLink(&s, NULL, &t, SHAPE_SPLIT);
+        XLink::AddParamToHeadInt(&t, whereToSplit);
+        XLink::AddParamToHeadInt(&t, splitNum);
+    }
 }
 
 /*
@@ -209,13 +269,12 @@ split a big tensor into small tensors
 >> whereToSplit - which dimension of the tensor is to split
 >> splitNum - how many splits
 */
-void _Split(const XTensor * big, XList * smalls, int whereToSplit, int splitNum)
+void _Split(const XTensor * big, TensorList * smalls, int whereToSplit, int splitNum)
 {
     CheckNTErrors((smalls != NULL), "Invalid list!");
     CheckNTErrors((smalls->count == splitNum), "Unmatched tensors!");
     CheckNTErrors((smalls->count > 0), "Wrong input!");
 
-    int whereToSplitRDI = big->order - whereToSplit - 1;
     bool uniform = true;
 
     for (int i = 0; i < smalls->count; i++) {
@@ -231,14 +290,14 @@ void _Split(const XTensor * big, XList * smalls, int whereToSplit, int splitNum)
     int blockSize = 1;
     int blockNum = 1;
     for (int i = 0; i < big->order; i++) {
-        if (i == whereToSplitRDI) {
-            blockSize *= big->dimSizeRDI[i] / splitNum;
+        if (i == whereToSplit) {
+            blockSize *= big->dimSize[i] / splitNum;
             blockNum *= splitNum;
         }
-        else if (i < whereToSplitRDI)
-            blockSize *= big->dimSizeRDI[i];
+        else if (i > whereToSplit)
+            blockSize *= big->dimSize[i];
         else
-            blockNum *= big->dimSizeRDI[i];
+            blockNum *= big->dimSize[i];
     }
 
     CheckNTErrors((blockNum % splitNum == 0), "Incorrect split number!");
@@ -340,7 +399,7 @@ split a big tensor into small tensors
 >> whereToSplit - which dimension of the tensor is to split
 >> splitNum - how many splits
 */
-void Split(const XTensor &big, XList &smalls, int whereToSplit, int splitNum)
+void Split(const XTensor &big, TensorList &smalls, int whereToSplit, int splitNum)
 {
     CheckNTErrors(big.GetDim(whereToSplit) % splitNum == 0, "Wrong splitNum!");
 
@@ -350,12 +409,15 @@ void Split(const XTensor &big, XList &smalls, int whereToSplit, int splitNum)
     /* tensor connections */
     for(int i = 0; i < smalls.count; i++){
         XTensor * s = (XTensor*)smalls.Get(i);
-        XLink::MakeLink(&big, NULL, s, SHAPE_SPLIT_LIST);
-        XLink::AddParamToHeadInt(s, whereToSplit);
 
-        /* it is tricky here that we keep the id of each 
-           block, rather than the total number of the splits */
-        XLink::AddParamToHeadInt(s, i);
+        if (s->enableGrad) {
+            XLink::MakeLink(&big, NULL, s, SHAPE_SPLIT_LIST);
+            XLink::AddParamToHeadInt(s, whereToSplit);
+
+            /* it is tricky here that we keep the id of each
+               block, rather than the total number of the splits */
+            XLink::AddParamToHeadInt(s, i);
+        }
     }
 }
 

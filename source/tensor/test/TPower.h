@@ -22,8 +22,6 @@
 #ifndef __TEST_POWER_H__
 #define __TEST_POWER_H__
 
-#include "../core/math/Power.h"
-
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
 /* test for Power Function */

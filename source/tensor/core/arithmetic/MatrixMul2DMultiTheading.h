@@ -30,7 +30,7 @@ namespace nts { // namespace nts(NiuTrans.Tensor)
 matrix multiplication for a block (x1,y1) - (x2,y2)
 where (x1,y1) is the upper-left corner and (x2,y2) is the bottom-right corner
 */
-void _MatrixMul2DMultiTheading(XList * args);
+void _MatrixMul2DMultiTheading(TensorList * args);
 
 } // namespace nts(NiuTrans.Tensor)
 

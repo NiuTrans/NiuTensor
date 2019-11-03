@@ -19,21 +19,23 @@
 * $Created by: XIAO Tong (email: xiaotong@mail.neu.edu.cn) 2018-04-27
 */
 
-#include "../XName.h"
 #include "Identity.h"
-#include "CrossEntropy.h"
+#include "../XName.h"
 #include "../XUtility.h"
 #include "../core/movement/CopyValues.h"
+#include "../core/shape/IsSameShaped.h"
 
 namespace nts{ // namespace nts(NiuTrans.Tensor)
 
 /* 
 identity function y = x 
 >> x - input tensor
->> y - result
+>> y - output tensor
 */
 void _Identity(const XTensor * x, XTensor * y)
 {
+    CheckNTErrors(_IsSameShaped(x, y), 
+                 "The input tensor and output tensor must have the same shape!")
     _CopyValues(x, y);
 }
 
@@ -42,7 +44,7 @@ identity function y = x (return an XTensor structure)
 make a new tensor to keep the result and return it
 
 >> x - input tensor
-<< return - y
+<< return - output tensor
 */
 XTensor Identity(const XTensor &x)
 {
@@ -53,42 +55,43 @@ XTensor Identity(const XTensor &x)
     _Identity(&x, &y);
 
     /* tensor connection */
-    XLink::MakeLink(&x, NULL, &y, FUNC_IDENTITY);
+    if (x.enableGrad) {
+        XLink::MakeLink(&x, NULL, &y, FUNC_IDENTITY);
+    }
 
     return y;
 }
+
+void Identity(const XTensor &x, XTensor &y)
+{
+    if (!y.isInit || !IsSameShaped(y, x)) {
+        InitTensorV2(&y, &x);
+    }
+
+    /* call _Identity function */
+    _Identity(&x, &y);
+
+    if (x.enableGrad) {
+        /* tensor connection */
+        XLink::MakeLink(&x, NULL, &y, FUNC_IDENTITY);
+    }
+}
+
 /* 
 backward computation for identity function y = x 
 
 dE/dx = dE/dy * dy/dx = dE/dy
 
->> gold - gold standard to measure error (or loss)
->> y - output of the function
->> x - input of the function
+>> y - output of the identity function
+>> x - input of the identity function
 >> dedy - dE/dy
 >> dedx - dE/dx
->> lossName - type of loss function, e.g., cross entropy
 */
-void _IdentityBackward(XTensor * gold, XTensor * y, XTensor * x, 
-                       XTensor * dedy, XTensor * dedx,
-                       LOSS_FUNCTION_NAME lossName)
+void _IdentityBackward(const XTensor * y, const XTensor * x,
+                       const XTensor * dedy, XTensor * dedx)
 {
-    CheckNTErrors((gold == NULL || XTensor::IsSameShaped(gold, y)), 
-                  "The tensors must be of the same size!");
-
-    if(x->dataType == DEFAULT_DTYPE && y->dataType == DEFAULT_DTYPE)
-    {
-        /* calculate dE/dy */
-        if(lossName == CROSSENTROPY)
-            _CrossEntropyBackward(dedy, y, gold);
-        else if(lossName != NOLOSS)
-            _LossBackward(dedy, gold, y, lossName);
-
-        if(dedy->data != dedx->data)
-            _CopyValues(dedy, dedx);
-    }
-    else
-        ShowNTErrors("TODO!");
+    if(dedy->data != dedx->data)
+        _CopyValues(dedy, dedx);
 }
 
 } // namespace nts(NiuTrans.Tensor)

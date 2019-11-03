@@ -61,7 +61,7 @@ convert onehot tensor to index tensor (cuda version)
 >> index - index tensor, which value is an integer num
 >> size - the last dimension size of the onehot tensor
 */
-void _CudaOnehotToIndex(XTensor * onehot, XTensor * index, int size)
+void _CudaOnehotToIndex(const XTensor * onehot, XTensor * index, int size)
 {
     int devID = onehot->devID;
 
@@ -111,13 +111,10 @@ void KernelIndexToOnehot(DTYPE * onehotData, int * indexData, int blockNum, int 
 
     int id = indexData[i];
 
-    //od[id] = 2.0;
-    //onehotData[i * stride + id] = 0.1;
     if (offset == id)
         od[offset] = confidence;
-    else{
-        od[offset] = lowconfidence;
-    }
+    //else
+    //    od[offset] = lowconfidence;
 }
 
 /* 
@@ -127,7 +124,8 @@ convert index tensor to onehot tensor (cuda version)
 >> onehot - onehot tensor, which value is 0 or 1
 >> size - the last dimension size of the onehot tensor
 */
-void _CudaIndexToOnehot(XTensor * index, XTensor * onehot, int size, float confidence, float lowconfidence)
+void _CudaIndexToOnehot(const XTensor * index, XTensor * onehot, 
+                        int size, float confidence, float lowconfidence)
 {
     int devID = onehot->devID;
 

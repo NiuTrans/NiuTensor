@@ -38,8 +38,7 @@ For a 1-dimensional data array a, variance = 1/n * \sum_i (a_i - mean)^2
 */
 void _ReduceVariance(const XTensor * input, XTensor * output, int dim, const XTensor * mean)
 {
-	int dimRDI = input->order - dim - 1;
-    int num = input->dimSizeRDI[dimRDI];
+    int num = input->dimSize[dim];
     _ReduceSum(input, output, dim, mean, 2.0F);
     _ScaleAndShiftMe(output, (DTYPE)1 / num, 0);
 }
@@ -58,7 +57,7 @@ For a 1-dimensional data array a, variance = 1/n * \sum_i (a_i - mean)^2
 XTensor ReduceVariance(const XTensor &input, int dim, const XTensor &mean)
 {
     CheckNTErrors(dim >= 0 && dim < input.order, "Illegal dimension to reduce!");
-	
+    
     int order = input.order - 1;
     int * dimSize = new int[order];
     for(int i = 0; i < order; i++){
@@ -76,12 +75,56 @@ XTensor ReduceVariance(const XTensor &input, int dim, const XTensor &mean)
     _ReduceVariance(&input, &output, dim, &mean);
                 
     /* tensor connection */
-    XLink::MakeLink(&input, &mean, &output, REDUCE_REDUCEVARIANCE);
-    XLink::AddParamToHeadInt(&output, dim);
+    if (input.enableGrad) {
+        XLink::MakeLink(&input, &mean, &output, REDUCE_REDUCEVARIANCE);
+        XLink::AddParamToHeadInt(&output, dim);
+    }
 
     /* destroy variables */
     delete[] dimSize;
 
     return output;
 }
+
+/* 
+variance of the items along a dimension of the tensor
+
+For a 1-dimensional data array a, variance = 1/n * \sum_i (a_i - mean)^2
+
+>> input - the input tensor
+>> output - the output tensor
+>> dim - the dimension where the reduction is performed on
+>> mean - the mean value
+*/
+void ReduceVariance(const XTensor &input, XTensor &output, int dim, const XTensor &mean)
+{
+    CheckNTErrors(dim >= 0 && dim < input.order, "Illegal dimension to reduce!");
+
+    if (!output.isInit || !XTensor::IsReduceShaped(&input, &output, dim)) {
+        int order = input.order - 1;
+        int * dimSize = new int[order];
+        for (int i = 0; i < order; i++) {
+            if (i < dim)
+                dimSize[i] = input.dimSize[i];
+            else if (i >= dim)
+                dimSize[i] = input.dimSize[i + 1];
+        }
+
+        float dr = (!input.isSparse) ? 1.0F : input.denseRatio;
+        InitTensorV2(&output, order, dimSize, input.dataType, dr, input.devID, input.mem);
+
+        /* destroy variables */
+        delete[] dimSize;
+    }
+
+    /* call _ReduceVariance function */
+    _ReduceVariance(&input, &output, dim, &mean);
+
+    if (input.enableGrad) {
+        /* tensor connection */
+        XLink::MakeLink(&input, &mean, &output, REDUCE_REDUCEVARIANCE);
+        XLink::AddParamToHeadInt(&output, dim);
+    }
+}
+
 } // namespace nts(NiuTrans.Tensor)

@@ -19,6 +19,7 @@
 * $Created by: Xu Chen (email: hello_master1954@163.com) 2018-06-27
 */
 
+#include "../core/utilities/CheckData.h"
 #include "TReduceSumSquared.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
@@ -67,9 +68,9 @@ bool TestReduceSumSquared1()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s = NewTensor(sOrder, sDimSize);
-    XTensor * t = NewTensor(tOrder, tDimSize);
-    XTensor * shift = NewTensor(shiftOrder, shiftDimSize);
+    XTensor * s = NewTensorV2(sOrder, sDimSize);
+    XTensor * t = NewTensorV2(tOrder, tDimSize);
+    XTensor * shift = NewTensorV2(shiftOrder, shiftDimSize);
     XTensor tUser;
 
     /* initialize variables */
@@ -82,16 +83,16 @@ bool TestReduceSumSquared1()
     tUser = ReduceSumSquared(*s, 0, *shift);
 
     /* check results */
-    cpuTest = t->CheckData(answer, tUnitNum) && tUser.CheckData(answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensors */
-    XTensor * sGPU = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * tGPU = NewTensor(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * shiftGPU = NewTensor(shiftOrder, shiftDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * shiftGPU = NewTensorV2(shiftOrder, shiftDimSize, X_FLOAT, 1.0F, 0);
     XTensor tUserGPU;
 
     /* initialize variables */
@@ -104,7 +105,7 @@ bool TestReduceSumSquared1()
     tUserGPU = ReduceSumSquared(*sGPU, 0, *shiftGPU);
 
     /* check results */
-    gpuTest = tGPU->CheckData(answer, tUnitNum) && tUserGPU.CheckData(answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
 
     /* destroy variables */
     delete s;
@@ -175,9 +176,9 @@ bool TestReduceSumSquared2()
     bool cpuTest = true;
 
     /* create tensors */
-    XTensor * s = NewTensor(sOrder, sDimSize);
-    XTensor * t = NewTensor(tOrder, tDimSize);
-    XTensor * shift = NewTensor(shiftOrder, shiftDimSize);
+    XTensor * s = NewTensorV2(sOrder, sDimSize);
+    XTensor * t = NewTensorV2(tOrder, tDimSize);
+    XTensor * shift = NewTensorV2(shiftOrder, shiftDimSize);
     XTensor tUser;
 
     /* initialize variables */
@@ -190,16 +191,16 @@ bool TestReduceSumSquared2()
     tUser = ReduceSumSquared(*s, 1, *shift);
 
     /* check results */
-    cpuTest = t->CheckData(answer, tUnitNum) && tUser.CheckData(answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
 
 #ifdef USE_CUDA
     /* GPU test */
     bool gpuTest = true;
 
     /* create tensors */
-    XTensor * sGPU = NewTensor(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * tGPU = NewTensor(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
-    XTensor * shiftGPU = NewTensor(shiftOrder, shiftDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * shiftGPU = NewTensorV2(shiftOrder, shiftDimSize, X_FLOAT, 1.0F, 0);
     XTensor tUserGPU;
 
     /* initialize variables */
@@ -212,7 +213,7 @@ bool TestReduceSumSquared2()
     tUserGPU = ReduceSumSquared(*sGPU, 1, *shiftGPU);
 
     /* check results */
-    gpuTest = tGPU->CheckData(answer, tUnitNum) && tUserGPU.CheckData(answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
 
     /* destroy variables */
     delete s;

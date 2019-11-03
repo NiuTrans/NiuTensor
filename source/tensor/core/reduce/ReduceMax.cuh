@@ -31,6 +31,9 @@ namespace nts{ // namespace nts(NiuTrans.Tensor)
 /* get the max-valued items along a dimension of the tensor (cuda version) */
 void _CudaReduceMax(const XTensor * input, XTensor * output, int dim);
 
+/* get the min-valued items along a dimension of the tensor (cuda version) */
+void _CudaReduceMin(const XTensor * input, XTensor * output, int dim);
+
 #endif // USE_CUDA
 
 } // namespace nts(NiuTrans.Tensor)

@@ -23,7 +23,6 @@
 #define __RECTIFY_H__
 
 #include "../XTensor.h"
-#include "Loss.h"
 
 namespace nts{ // namespace nts(NiuTrans.Tensor)
 
@@ -33,10 +32,11 @@ void _Rectify(const XTensor * x, XTensor * y);
 /* rectify function y = max(0, x) (return an XTensor structure) */
 XTensor Rectify(const XTensor &x);
 
+void Rectify(const XTensor &x, XTensor &y);
+
 /* de/dx */
-void _RectifyBackward(XTensor * gold, XTensor * y, XTensor * x, 
-                      XTensor * dedy, XTensor * dedx,
-                      LOSS_FUNCTION_NAME lossName);
+void _RectifyBackward(XTensor * y, XTensor * x, 
+                      XTensor * dedy, XTensor * dedx);
 
 } // namespace nts(NiuTrans.Tensor)
 

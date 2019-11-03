@@ -20,6 +20,7 @@
 */
 
 #include "../XTensor.h"
+#include "../core/utilities/CheckData.h"
 #include "THardTanH.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
@@ -32,75 +33,75 @@ y =  1    if x > 1
 */
 bool TestHardTanH1()
 {
-	/* a tensor of size (2, 3) */
-	int order = 2;
-	int * dimSize = new int[order];
-	dimSize[0] = 2;
-	dimSize[1] = 3;
+    /* a tensor of size (2, 3) */
+    int order = 2;
+    int * dimSize = new int[order];
+    dimSize[0] = 2;
+    dimSize[1] = 3;
 
-	int unitNum = 1;
-	for (int i = 0; i < order; i++)
-		unitNum *= dimSize[i];
+    int unitNum = 1;
+    for (int i = 0; i < order; i++)
+        unitNum *= dimSize[i];
 
-	DTYPE xData[2][3] = { {0.5F, -1.0F, 2.0F},
-	                      {3.5F, -4.5F, 1.0F} };
-	DTYPE answer[2][3] = { {0.5F, -1.0F, 1.0F},
-	                       {1.0F, -1.0F, 1.0F} };
+    DTYPE xData[2][3] = { {0.5F, -1.0F, 2.0F},
+                          {3.5F, -4.5F, 1.0F} };
+    DTYPE answer[2][3] = { {0.5F, -1.0F, 1.0F},
+                           {1.0F, -1.0F, 1.0F} };
 
-	/* CPU test */
-	bool cpuTest = true;
+    /* CPU test */
+    bool cpuTest = true;
 
-	/* create tensors */
-	XTensor * x = NewTensor(order, dimSize);
-	XTensor * y = NewTensor(order, dimSize);
+    /* create tensors */
+    XTensor * x = NewTensorV2(order, dimSize);
+    XTensor * y = NewTensorV2(order, dimSize);
     XTensor yUser;
 
-	/* initialize variables */
-	x->SetData(xData, unitNum);
-	y->SetZeroAll();
+    /* initialize variables */
+    x->SetData(xData, unitNum);
+    y->SetZeroAll();
 
-	/* call hardtanh function */
-	_HardTanH(x, y);
+    /* call hardtanh function */
+    _HardTanH(x, y);
     yUser = HardTanH(*x);
 
-	/* check results */
-	cpuTest = y->CheckData(answer, unitNum, 1e-4F) && yUser.CheckData(answer, unitNum, 1e-4F);
+    /* check results */
+    cpuTest = _CheckData(y, answer, unitNum, 1e-4F) && _CheckData(&yUser, answer, unitNum, 1e-4F);
 
 #ifdef USE_CUDA
-	/* GPU test */
-	bool gpuTest = true;
+    /* GPU test */
+    bool gpuTest = true;
 
-	/* create tensor */
-	XTensor * xGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-	XTensor * yGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
+    /* create tensor */
+    XTensor * xGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * yGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
     XTensor yUserGPU;
 
-	/* Initialize variables */
-	xGPU->SetData(xData, unitNum);
-	yGPU->SetZeroAll();
+    /* Initialize variables */
+    xGPU->SetData(xData, unitNum);
+    yGPU->SetZeroAll();
 
-	/* call hardtanh function */
-	_HardTanH(xGPU, yGPU);
+    /* call hardtanh function */
+    _HardTanH(xGPU, yGPU);
     yUserGPU = HardTanH(*xGPU);
 
-	/* check results */
-	gpuTest = yGPU->CheckData(answer, unitNum, 1e-4F) && yUserGPU.CheckData(answer, unitNum, 1e-4F);
+    /* check results */
+    gpuTest = _CheckData(yGPU, answer, unitNum, 1e-4F) && _CheckData(&yUserGPU, answer, unitNum, 1e-4F);
 
-	/* destroy variables */
-	delete x;
+    /* destroy variables */
+    delete x;
     delete y;
     delete xGPU;
     delete yGPU;
-	delete[] dimSize;
+    delete[] dimSize;
 
-	return cpuTest && gpuTest;
+    return cpuTest && gpuTest;
 #else
-	/* destroy variables */
-	delete x;
+    /* destroy variables */
+    delete x;
     delete y;
-	delete[] dimSize;
+    delete[] dimSize;
 
-	return cpuTest;
+    return cpuTest;
 #endif // USE_CUDA
 }
 
@@ -117,93 +118,83 @@ In this case, lossName=SQUAREDERROR.
 */
 bool TestHardTanH2()
 {
-	/* a tensor of size (2, 3) */
-	int order = 2;
-	int * dimSize = new int[order];
-	dimSize[0] = 2;
-	dimSize[1] = 3;
+    /* a tensor of size (2, 3) */
+    int order = 2;
+    int * dimSize = new int[order];
+    dimSize[0] = 2;
+    dimSize[1] = 3;
 
-	int unitNum = 1;
-	for (int i = 0; i < order; i++)
-		unitNum *= dimSize[i];
+    int unitNum = 1;
+    for (int i = 0; i < order; i++)
+        unitNum *= dimSize[i];
 
-	DTYPE xData[2][3] = { {0.5F, -1.0F, 2.0F},
-	                      {3.5F, -4.5F, 1.0F} };
-	DTYPE goldData[2][3] = { {1.0F, 1.0F, 1.0F},
-	                         {1.0F, 1.0F, 1.0F} };
-	DTYPE yAnswer[2][3] = { {0.5F, -1.0F, 1.0F},
-	                        {1.0F, -1.0F, 1.0F} };
-    DTYPE dedyAnswer[2][3] = { {-0.5F, -2.0F, 0.0F},
-	                           {0.0F, -2.0F, 0.0F} };
-	DTYPE dedxAnswer[2][3] = { {-0.5F, -2.0F, 0.0F},
-	                           {0.0F, 0.0F, -0.0F} };
+    DTYPE xData[2][3] = { {0.5F, -1.0F, 2.0F},
+                          {3.5F, -4.5F, 1.0F} };
+    DTYPE yAnswer[2][3] = { {0.5F, -1.0F, 1.0F},
+                            {1.0F, -1.0F, 1.0F} };
+    DTYPE dedxAnswer[2][3] = { {-0.5F, -2.0F, 0.0F},
+                               {0.0F, 0.0F, -0.0F} };
+    DTYPE dedyData[2][3] = { {-0.5F, -2.0F, 0.0F},
+	                         {0.0F, -2.0F, 0.0F} };
 
-	/* CPU test */
-	bool cpuTest = true;
+    /* CPU test */
+    bool cpuTest = true;
 
-	/* create tensors */
-	XTensor * x = NewTensor(order, dimSize);
-	XTensor * y = NewTensor(order, dimSize);
-	XTensor * gold = NewTensor(order, dimSize);
-	XTensor * dedy = NewTensor(order, dimSize);
-	XTensor * dedx = NewTensor(order, dimSize);
+    /* create tensors */
+    XTensor * x = NewTensorV2(order, dimSize);
+    XTensor * y = NewTensorV2(order, dimSize);
+    XTensor * dedy = NewTensorV2(order, dimSize);
+    XTensor * dedx = NewTensorV2(order, dimSize);
 
-	/* initialize variables */
-	x->SetData(xData, unitNum);
-	gold->SetData(goldData, unitNum);
+    /* initialize variables */
+    x->SetData(xData, unitNum);
     y->SetZeroAll();
-    dedy->SetZeroAll();
-	dedx->SetZeroAll();
+    dedx->SetZeroAll();
+    dedy->SetData(dedyData, unitNum);
 
     /* call HardTanH function */
     _HardTanH(x, y);
 
-	/* call HardTanHBackward function */
-	_HardTanHBackward(gold, y, x, dedy, dedx, SQUAREDERROR);
+    /* call HardTanHBackward function */
+	_HardTanHBackward(y, x, dedy, dedx);
 
-	/* check results */
-	cpuTest = y->CheckData(yAnswer, unitNum, 1e-4F) 
-              && dedx->CheckData(dedxAnswer, unitNum, 1e-4F)
-              && dedy->CheckData(dedyAnswer, unitNum, 1e-4F);
+    /* check results */
+	cpuTest = _CheckData(y, yAnswer, unitNum, 1e-4F) &&
+              _CheckData(dedx, dedxAnswer, unitNum, 1e-4F);
 
 #ifdef USE_CUDA
-	/* GPU test */
-	bool gpuTest = true;
+    /* GPU test */
+    bool gpuTest = true;
 
-	/* create tensors */
-	XTensor * xGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-	XTensor * yGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-	XTensor * goldGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-	XTensor * dedyGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
-	XTensor * dedxGPU = NewTensor(order, dimSize, X_FLOAT, 1.0F, 0);
+    /* create tensors */
+    XTensor * xGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * yGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * dedyGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
+    XTensor * dedxGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
 
-	/* initialize variables */
-	xGPU->SetData(xData, unitNum);
-	goldGPU->SetData(goldData, unitNum);
+    /* initialize variables */
+    xGPU->SetData(xData, unitNum);
     yGPU->SetZeroAll();
-    dedyGPU->SetZeroAll();
 	dedxGPU->SetZeroAll();
+	dedyGPU->SetData(dedyData, unitNum);
 
     /* call HardTanH function */
     _HardTanH(xGPU, yGPU);
 
-	/* call hardtanhbackward function */
-	_HardTanHBackward(goldGPU, yGPU, xGPU, dedyGPU, dedxGPU, SQUAREDERROR);
+    /* call hardtanhbackward function */
+	_HardTanHBackward(yGPU, xGPU, dedyGPU, dedxGPU);
 
-	/* check results */
-	gpuTest = y->CheckData(yAnswer, unitNum, 1e-4F) 
-              && dedxGPU->CheckData(dedxAnswer, unitNum, 1e-4F)
-              && dedyGPU->CheckData(dedyAnswer, unitNum, 1e-4F);
+    /* check results */
+	gpuTest = _CheckData(yGPU, yAnswer, unitNum, 1e-4F) &&
+              _CheckData(dedxGPU, dedxAnswer, unitNum, 1e-4F);
 
-	/* destroy variables */
+    /* destroy variables */
     delete x;
     delete y;
-    delete gold;
     delete dedx;
     delete dedy;
     delete xGPU;
     delete yGPU;
-    delete goldGPU;
     delete dedxGPU;
     delete dedyGPU;
     delete[] dimSize;
@@ -213,12 +204,11 @@ bool TestHardTanH2()
     /* destroy variables */
     delete x;
     delete y;
-    delete gold;
     delete dedx;
     delete dedy;
     delete[] dimSize;
 
-	return cpuTest;
+    return cpuTest;
 #endif // USE_CUDA
 }
 
@@ -230,43 +220,43 @@ TODO!!
 /* test for HardTanH Function */
 bool TestHardTanH()
 {
-	XPRINT(0, stdout, "[TEST HARDTANH] test hardtanh and its backward computation \n");
-	bool returnFlag = true, caseFlag = true;
+    XPRINT(0, stdout, "[TEST HARDTANH] test hardtanh and its backward computation \n");
+    bool returnFlag = true, caseFlag = true;
 
-	/* case 1 test */
-	caseFlag = TestHardTanH1();
+    /* case 1 test */
+    caseFlag = TestHardTanH1();
 
-	if (!caseFlag) {
-		returnFlag = false;
-		XPRINT(0, stdout, ">> case 1 failed!\n");
-	}
-	else
-		XPRINT(0, stdout, ">> case 1 passed!\n");
+    if (!caseFlag) {
+        returnFlag = false;
+        XPRINT(0, stdout, ">> case 1 failed!\n");
+    }
+    else
+        XPRINT(0, stdout, ">> case 1 passed!\n");
 
-	/* case 2 test */
-	caseFlag = TestHardTanH2();
+    /* case 2 test */
+    caseFlag = TestHardTanH2();
 
-	if (!caseFlag) {
-		returnFlag = false;
-		XPRINT(0, stdout, ">> case 2 failed!\n");
-	}
-	else
-		XPRINT(0, stdout, ">> case 2 passed!\n");
+    if (!caseFlag) {
+        returnFlag = false;
+        XPRINT(0, stdout, ">> case 2 failed!\n");
+    }
+    else
+        XPRINT(0, stdout, ">> case 2 passed!\n");
 
-	/* other cases test */
-	/*
-	TODO!!
-	*/
+    /* other cases test */
+    /*
+    TODO!!
+    */
 
-	if (returnFlag) {
-		XPRINT(0, stdout, ">> All Passed!\n");
-	}
-	else
-		XPRINT(0, stdout, ">> Failed!\n");
+    if (returnFlag) {
+        XPRINT(0, stdout, ">> All Passed!\n");
+    }
+    else
+        XPRINT(0, stdout, ">> Failed!\n");
 
-	XPRINT(0, stdout, "\n");
+    XPRINT(0, stdout, "\n");
 
-	return returnFlag;
+    return returnFlag;
 }
 
 } // namespace nts(NiuTrans.Tensor)

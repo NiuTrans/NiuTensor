@@ -235,9 +235,8 @@ void _CudaUnsqueeze(const XTensor * a, XTensor * b, int dim, int dSize)
     int blockSize = 1;
     int blockNumA = 1;
     int blockNumB = 1;
-    int dimRDI = b->order - dim - 1;
-    for (int i = 0; i < dimRDI; i++)
-        blockSize *= a->dimSizeRDI[i];
+    for (int i = dim; i < a->order; i++)
+        blockSize *= a->dimSize[i];
 
     blockNumA = a->unitNum / blockSize;
     blockNumB = b->unitNum / blockSize;
@@ -250,7 +249,7 @@ void _CudaUnsqueeze(const XTensor * a, XTensor * b, int dim, int dSize)
     int devIDBackup = 0;
     ProtectCudaDev(a->devID, devIDBackup);
 
-    if (dimRDI == 0) {
+    if (dim == b->order - 1) {
         GDevs.GetCudaThread2D(a->devID, dSize, blockNumA, MAX_INT, cudaGrids, cudaBlocks);
 
         if (a->dataType == X_FLOAT && b->dataType == X_FLOAT) {

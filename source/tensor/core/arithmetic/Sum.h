@@ -34,12 +34,16 @@ tensor summation a = a + b * \beta
 keep the result in the input tensor a and return nothing
 */
 void _SumMe(XTensor * a, const XTensor * b, DTYPE beta = (DTYPE)1.0);
+void SumMe(XTensor & a, const XTensor & b, DTYPE beta = (DTYPE)1.0);
     
 /*
 tensor summation c = a + b * \beta
 make a new tensor c to keep the result and return it
 */
 XTensor Sum(const XTensor &a, const XTensor &b, DTYPE beta = (DTYPE)1.0);
+
+/* tensor summation c = a + b * \beta */
+void Sum(const XTensor &a, const XTensor &b, XTensor &c, DTYPE beta = (DTYPE)1.0);
 
 } // namespace nts(NiuTrans.Tensor)
 

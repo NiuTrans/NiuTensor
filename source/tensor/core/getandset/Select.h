@@ -27,13 +27,16 @@
 namespace nts{ // namespace nts(NiuTrans.Tensor)
 
 /* generate a tensor with selected data c = select(a) */
-void _Select(const XTensor * a, XTensor * c, XTensor * indexCPU);
+void _Select(const XTensor * a, XTensor * c, int* index, int dim);
+
+/* generate a tensor with selected data c = select(a) */
+void _Select(const XTensor * a, XTensor * c, XTensor* index, int dim);
 
 /* 
 generate a tensor with selected data c = select(a) (returna a XTensor structure)
 make a new tensor to keep the result and return it
 */
-XTensor Select(const XTensor &a, XTensor &indexCPU);
+XTensor Select(const XTensor &a, XTensor &index, int dim);
 
 /* 
 generate a tensor with selected data in range[low,high] along the given dimension 

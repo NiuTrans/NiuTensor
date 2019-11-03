@@ -29,7 +29,7 @@ namespace nts { // namespace nts(NiuTrans.Tensor)
 #ifdef USE_CUDA
 
 /* flush a list of XTensor to GPU memory */
-void CudaCPUToGPUFlush(XList * mList, int devID, XMem * GPUMem);
+void CudaCPUToGPUFlush(TensorList * mList, int devID, XMem * GPUMem);
 
 /* copy the data from GPU memory to CPU memory */
 void CudaGPUToCPUFlush(XTensor * tensor);
