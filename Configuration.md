@@ -1,4 +1,4 @@
-# NiuTrans.Tensor
+# NiuTensor
 
 # Windows下配置Visual Studio环境
 
