@@ -1482,7 +1482,7 @@ void XMem::ShowMemUsage(FILE * file)
     }
 
     fprintf(file, "mem:%.1fMB used:%.1fMB usage:%.3f\n", 
-           (DTYPE)used/MILLION, (DTYPE)total/MILLION, (DTYPE)used/total);
+           (DTYPE)total/MILLION, (DTYPE)used/MILLION, (DTYPE)used/total);
 }
 
 #ifdef USE_CUDA
