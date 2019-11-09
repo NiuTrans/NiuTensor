@@ -154,8 +154,8 @@ void _funcName(const XTensor * a, const XTensor * b, XTensor *c)                
     CheckNTErrors((_IsSameShaped(a, b, c)),                                          \
                   "Input and output tensors should have the same type!");            \
     CheckNTErrors((a->dataType == DEFAULT_DTYPE), "TODO!");                          \
-    CheckDev(a, b);                                                                  \
-    CheckDev(a, c);                                                                  \
+    CheckDev(a->devID, b->devID);                                                    \
+    CheckDev(a->devID, c->devID);                                                    \
     /* run it on GPUs */                                                             \
     if (a->devID >= 0) {                                                             \
         ShowNTErrors("No GPU devices support!")                                      \
