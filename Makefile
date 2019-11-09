@@ -10,9 +10,13 @@ EXE_DIR = $(ROOT)/bin
 # whether to generate dll
 dll = 0
 
+# 0 - on Windows or Linux platform
+# 1 - on Macintosh platform
+OnMac = 0
+
 # 0 - use CPU 
 # 1 - use GPU
-USE_CUDA = 1
+USE_CUDA = 0
 # modify this path if neccessary
 CUDA_ROOT = /usr/local/cuda-9.0
 CUDA_LIB_DIR = $(CUDA_ROOT)/lib64
@@ -86,7 +90,12 @@ ifeq ($(USE_CUDA), 1)
 					 /lib64/libdl.so.2
     DYNAMIC_DEPLIB += -lcudart -lnvidia-ml
 endif 
-DEPLIBS = -Wl,--start-group $(STATIC_DEPLIB) -Wl,--end-group -lm -ldl $(DYNAMIC_DEPLIB)
+
+ifeq ($(OnMac), 1)
+    DEPLIBS = $(STATIC_DEPLIB) -lm -ldl $(DYNAMIC_DEPLIB)
+else
+    DEPLIBS = -Wl,--start-group $(STATIC_DEPLIB) -Wl,--end-group -lm -ldl $(DYNAMIC_DEPLIB)
+endif
 
 # specify the compilers here
 CC = gcc
