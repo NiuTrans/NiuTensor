@@ -20,13 +20,13 @@
  */
 
 #include <stdio.h>
-#include "XNet.h"
-#include "../tensor/XUtility.h"
-#include "../tensor/function/FHeader.h"
-#include "../tensor/core/CHeader.h"
-#include "../tensor/test/Test.h"
-#include "../sample/fnnlm/FNNLM.h"
-#include "../sample/transformer/Transformer.h"
+#include "./network/XNet.h"
+#include "./tensor/XUtility.h"
+#include "./tensor/function/FHeader.h"
+#include "./tensor/core/CHeader.h"
+#include "./tensor/test/Test.h"
+#include "./sample/fnnlm/FNNLM.h"
+#include "./sample/transformer/Transformer.h"
 
 //#define CRTDBG_MAP_ALLOC
 //#include <stdlib.h>

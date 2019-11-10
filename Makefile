@@ -107,9 +107,7 @@ ifeq ($(USE_INTEL_COMPILER), 1)
 endif
 
 # main file
-MAIN_FILE = $(SRC)/network/Main.cpp
-Tensor_Main := $(SRC)/tensor/Main.cpp
-Network_Main := $(SRC)/network/Main.cpp
+MAIN_FILE = $(SRC)/Main.cpp
 
 ifeq ($(USE_CUDA), 1)
 	NIUTRANS_EXE := $(NIUTRANS_EXE).GPU
@@ -155,8 +153,7 @@ else
 	SOURCES := $(foreach dir,$(SRC_DIR),$(wildcard $(dir)/*.c) $(wildcard $(dir)/*.cpp) $(wildcard $(dir)/*.cc) )
 endif
 
-SOURCES := $(subst $(Tensor_Main), ,$(SOURCES))
-SOURCES := $(subst $(Network_Main), ,$(SOURCES))
+SOURCES := $(subst $(MAIN_FILE), ,$(SOURCES))
 
 # object file
 OBJS := $(patsubst %.c,%.o,$(SOURCES))
