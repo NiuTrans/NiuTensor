@@ -36,7 +36,7 @@ NiuTensor是小牛开源项目所开发的一个轻量级工具包，提供了�
     * 通过function里的FHeader.h可以调用一些激活函数
 * 在所创建项目中使用命名空间nts
 
-此外，一些必须的环境配置方法请参考 [NiuTensor环境配置](https://github.com/NiuTrans/NiuTensor/blob/master/Configuration.md)。
+此外，一些必须的环境配置方法请参考 [NiuTensor环境配置](https://github.com/NiuTrans/NiuTensor/blob/master/doc/Configuration.md)。
 
 ### Linux
 
