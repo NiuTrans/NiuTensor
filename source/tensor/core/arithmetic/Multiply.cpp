@@ -23,6 +23,8 @@
 #include "../../XName.h"
 #include "../../XUtility.h"
 #include "../shape/IsSameShaped.h"
+#include "Sum.h"
+#include "../math/ScaleAndShift.h"
 #include "Multiply.h"
 #include "Multiply.cuh"
 #include "MultiplyDim.h"
@@ -158,35 +160,6 @@ void MultiplyMe(XTensor& a, const XTensor& b, DTYPE alpha, int leadingDim)
     _Multiply(&a, &b, &a, alpha, leadingDim);
 }
 
-/* 
-return a dimension if the multiplication is performed as MultiplyDim (in more details in MultiplyDim.h)
->> a - a tensor
->> b - another tensor for multiplication
-*/
-int GetMultiplyDimIndex(const XTensor &a, const XTensor &b)
-{
-    if(a.order < b.order)
-        return -1;
-    if(IsSameShaped(a, b))
-        return -1;
-
-    int hitCount = 0;
-    int hitDim = -1;
-    for(int i = 0; i < b.order; i++){
-        if(b.dimSize[b.order - 1 - i] == 1)
-            continue;
-        else if(b.dimSize[b.order - 1 - i] == a.dimSize[a.order - 1 - i]){
-            hitCount++;
-            hitDim = a.order - b.order + i;
-        }
-    }
-
-    if(hitCount == 1)
-        return hitDim;
-    else
-        return -1;
-}
-
 /*
 element-wise product of two tensors (return an XTensor structure)
 make a new tensor c to keep the result and return it
@@ -199,40 +172,43 @@ where i is the index of the item
 >> leadingDim - the dimension along which we perform broadcasting
 << return - the product of the tensors
 */
-XTensor Multiply(const XTensor &a, const XTensor &b, DTYPE alpha, int leadingDim)
+XTensor Multiply(const XTensor &a, const XTensor &b, int leadingDim)
 {
-
     XTensor c(&a);
     c.SetTMPFlag();
-    
-    int n = GetMultiplyDimIndex(a, b);
 
-    if(n == -1){
-        CheckNTErrors(a.dimSize[leadingDim] == b.dimSize[leadingDim], "TODO!");
-    
-        /* call _Multiply function */
-        _Multiply(&a, &b, &c, 0, leadingDim);
-    
-        /* tensor connections */
-        if (a.enableGrad && b.enableGrad) {
-            XLink::MakeLink(&a, &b, &c, MATH_MULTIPLY);
-            XLink::AddParamToHead(&c, alpha);
-            XLink::AddParamToHeadInt(&c, leadingDim);
-        }
+    if (b.order == 0){
+        DTYPE scale = b.Get0D();
+        ScaleAndShift(a, c, scale, 0.0F);
     }
-    else if(n >= 0 && n < a.order){
-        /* call _MultiplyDim function */
-        _MultiplyDim(&a, &b, &c, n, alpha);
+    else {
+        DTYPE alpha = 0.0F;
+        int n = GetBroadcastDimIndex(a, b);
 
-        /* tensor connections */
-        if (a.enableGrad && b.enableGrad) {
-            XLink::MakeLink(&a, &b, &c, MATH_MULTIPLYDIM);
-            XLink::AddParamToHeadInt(&c, n);
-            XLink::AddParamToHead(&c, alpha);
+        if(n == -1){
+            CheckNTErrors(a.dimSize[leadingDim] == b.dimSize[leadingDim], "TODO!");
+
+            /* call _Multiply function */
+            _Multiply(&a, &b, &c, alpha, leadingDim);
+
+            /* tensor connections */
+            if (a.enableGrad && b.enableGrad) {
+                XLink::MakeLink(&a, &b, &c, MATH_MULTIPLY);
+            }
         }
-    }
-    else{
-        ShowNTErrors("Something is wrong!");
+        else if(n >= 0 && n < a.order){
+            /* call _MultiplyDim function */
+            _MultiplyDim(&a, &b, &c, n, alpha);
+
+            /* tensor connections */
+            if (a.enableGrad && b.enableGrad) {
+                XLink::MakeLink(&a, &b, &c, MATH_MULTIPLYDIM);
+                XLink::AddParamToHeadInt(&c, n);
+            }
+        }
+        else{
+            ShowNTErrors("Something is wrong!");
+        }
     }
 
     return c;
@@ -256,36 +232,46 @@ void Multiply(const XTensor &a, const XTensor &b, XTensor &c, DTYPE alpha, int l
         InitTensorV2(&c, &a);
     }
 
-    int n = GetMultiplyDimIndex(a, b);
+    if (b.order == 0){
+        DTYPE scale = b.Get0D();
+        XTensor * tmp1 = NewTensorBufV2(&a, a.devID, a.mem);
+        XTensor * tmp2 = NewTensorBufV2(&c, c.devID, c.mem);
 
-    if (n == -1) {
-        CheckNTErrors(a.dimSize[leadingDim] == b.dimSize[leadingDim], "TODO!");
+        ScaleAndShift(a, *tmp1, scale, 0.0F);
+        ScaleAndShift(c, *tmp2, alpha, 0.0F);
+        Sum(*tmp2, *tmp1, c);
 
-        /* call _Multiply function */
-        _Multiply(&a, &b, &c, 0, leadingDim);
-
-        if (a.enableGrad && b.enableGrad) {
-            /* tensor connections */
-            XLink::MakeLink(&a, &b, &c, MATH_MULTIPLY);
-            XLink::AddParamToHead(&c, alpha);
-            XLink::AddParamToHeadInt(&c, leadingDim);
-        }
-    }
-    else if (n >= 0 && n < a.order) {
-        /* call _MultiplyDim function */
-        _MultiplyDim(&a, &b, &c, n, alpha);
-
-        if (a.enableGrad && b.enableGrad) {
-            /* tensor connections */
-            XLink::MakeLink(&a, &b, &c, MATH_MULTIPLYDIM);
-            XLink::AddParamToHeadInt(&c, n);
-            XLink::AddParamToHead(&c, alpha);
-        }
+        DelTensorBuf(tmp1);
+        DelTensorBuf(tmp2);
     }
     else {
-        ShowNTErrors("Something is wrong!");
-    }
+        int n = GetBroadcastDimIndex(a, b);
 
+        if (n == -1) {
+            CheckNTErrors(a.dimSize[leadingDim] == b.dimSize[leadingDim], "TODO!");
+
+            /* call _Multiply function */
+            _Multiply(&a, &b, &c, alpha, leadingDim);
+
+            if (a.enableGrad && b.enableGrad) {
+                /* tensor connections */
+                XLink::MakeLink(&a, &b, &c, MATH_MULTIPLY);
+            }
+        }
+        else if (n >= 0 && n < a.order) {
+            /* call _MultiplyDim function */
+            _MultiplyDim(&a, &b, &c, n, alpha);
+
+            if (a.enableGrad && b.enableGrad) {
+                /* tensor connections */
+                XLink::MakeLink(&a, &b, &c, MATH_MULTIPLYDIM);
+                XLink::AddParamToHeadInt(&c, n);
+            }
+        }
+        else {
+            ShowNTErrors("Something is wrong!");
+        }
+    }
 }
 
 } // namespace nts(NiuTrans.Tensor)

@@ -119,7 +119,7 @@ bool TestSetData2()
     XTensor * modify = NewTensorV2(dataOrder, dataDimSize);
 
     /* Initialize variables */
-    _SetDataFixedFloat(s, 1.0F);
+    s->SetDataFixed(1);
     modify->SetData(data, dataUnitNum);
 
     /* call SetDataIndexed function */
@@ -137,7 +137,7 @@ bool TestSetData2()
     XTensor * modifyGPU = NewTensorV2(dataOrder, dataDimSize, X_FLOAT, 1.0F, 0);
 
     /* Initialize variables */
-    _SetDataFixedFloat(sGPU, 1.0F);
+    sGPU->SetDataFixed(1);
     modifyGPU->SetData(data, dataUnitNum);
 
     /* call SetDataIndexed function */
@@ -212,11 +212,11 @@ bool TestSetData3()
     XTensor * modify = NewTensorV2(dataOrder, dataDimSize);
 
     /* Initialize variables */
-    _SetDataFixedFloat(s, 1.0F);
+    s->SetDataFixed(1);
     modify->SetData(data, dataUnitNum);
 
     /* call SetDataIndexed function */
-    _SetDataFixedFloat(s, 1.0F);
+    s->SetDataFixed(1);
     _SetDataIndexed(s, modify, 1, 1);
     
     /* check results */
@@ -231,7 +231,7 @@ bool TestSetData3()
     XTensor * modifyGPU = NewTensorV2(dataOrder, dataDimSize, X_FLOAT, 1.0F, 0);
 
     /* Initialize variables */
-    _SetDataFixedFloat(sGPU, 1.0F);
+    sGPU->SetDataFixed(1);
     modifyGPU->SetData(data, dataUnitNum);
     
     /* call SetDataIndexed function */

@@ -94,7 +94,7 @@ int TransformerMain(int argc, const char ** argv)
         else{
             T2TTrainer tester;
             tester.Init(argc, args);
-            tester.Test(testFN, outputFN, &model);
+            tester.Validate(testFN, outputFN, &model);
         }
     }
 

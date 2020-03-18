@@ -78,7 +78,7 @@ namespace nts {
     if(!(x)) \
     { \
         fprintf(stderr, "[ERROR] calling '%s' (%s line %d): %s\n", #x, __FILENAME__, __LINE__, msg); \
-        exit(1); \
+        throw; \
     } \
 } \
 
@@ -87,7 +87,7 @@ namespace nts {
     if(!(x)) \
     { \
         fprintf(stderr, "[ERROR] calling '%s' (%s line %d): %s\n", #x, __FILENAME__, __LINE__); \
-        exit(1); \
+        throw; \
     } \
 } \
 
@@ -95,7 +95,7 @@ namespace nts {
 { \
     { \
         fprintf(stderr, "[ERROR] (%s line %d): %s\n", __FILENAME__, __LINE__, msg); \
-        exit(1); \
+        throw; \
     } \
 } \
 

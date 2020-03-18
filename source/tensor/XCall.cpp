@@ -129,6 +129,39 @@ void InitTensor(XTensor * tensor,
     tensor->enableGrad = isEnableGrad;
 }
 
+/*
+initialize a scalar V2
+>> tensor - the tensor we intend to initialize
+>> myDataType - unit size (e.g., int, float, and double)
+>> myDevID - when myMem is NULL, myDevID specifies the device
+             on which we allocate the data on site
+>> myMem - memory pool used to allocating the data array
+           myMem = NULL means that the tensor is allocated on
+           the device dynamically, rather than on the memory pool
+*/
+
+void InitTensor0DV2(XTensor * tensor, const TENSOR_DATA_TYPE myDataType, const int myDevID, XMem * myMem)
+{
+    int dims[MAX_TENSOR_DIM_NUM];
+
+    InitTensorV2(tensor, 0, dims, myDataType, 1.0F, myDevID, myMem);
+}
+
+/*
+initialize a scalar
+>> tensor - the tensor we intend to initialize
+>> myDataType - unit size (e.g., int, float, and double)
+>> myDevID - when myMem is NULL, myDevID specifies the device
+             on which we allocate the data on site
+*/
+
+void InitTensor0D(XTensor * tensor, const TENSOR_DATA_TYPE myDataType, const int myDevID, const bool isEnableGrad)
+{
+    int dims[MAX_TENSOR_DIM_NUM];
+
+    InitTensor(tensor, 0, dims, myDataType, myDevID, isEnableGrad);
+}
+
 /* 
 initialize a dense tensor V2 
 >> tensor - the tensor we intend to initialize
@@ -550,6 +583,37 @@ XTensor * NewTensorBuf(const XTensor * reference, int devID, const bool isEnable
                         reference->dataType, devID, isEnableGrad);
 }
 
+/*
+generate a scalar V2
+>> myDataType - unit size (e.g., int, float, and double)
+>> myDevID - when myMem is NULL, myDevID specifies the device
+             on which we allocate the data on site
+>> myMem - memory pool used to allocating the data array
+           myMem = NULL means that the tensor is allocated on
+           the device dynamically, rather than on the memory pool.
+*/
+
+XTensor * NewTensor0DV2(const TENSOR_DATA_TYPE myDataType, const int myDevID, XMem * myMem)
+{
+    int dims[MAX_TENSOR_DIM_NUM];
+
+    return NewTensorV2(0, dims, myDataType, 1.0F, myDevID, myMem);
+}
+
+/*
+generate a scalar
+>> myDataType - unit size (e.g., int, float, and double)
+>> myDevID - when myMem is NULL, myDevID specifies the device
+             on which we allocate the data on site.
+*/
+
+XTensor * NewTensor0D(const TENSOR_DATA_TYPE myDataType, const int myDevID, const bool isEnableGrad)
+{
+    int dims[MAX_TENSOR_DIM_NUM];
+
+    return NewTensor(0, dims, myDataType, myDevID, isEnableGrad);
+}
+
 /* 
 generate a dense vector V2 
 >> num - number of entries
@@ -778,7 +842,7 @@ XTensor * NewTensor5D(const int d0, const int d1, const int d2, const int d3, co
 XTensor * NewTensorRange(int lower, int upper, int step, const TENSOR_DATA_TYPE myDataType, const int myDevID, const bool isEnableGrad)
 {
     int size = abs(upper - lower);
-    int unitNum = ceil(1.0 * size / abs(step));
+    int unitNum = (int)ceil(1.0 * size / abs(step));
 
     XTensor * tensor = NewTensor1D(unitNum, myDataType, myDevID, isEnableGrad);
     tensor->Range(lower, upper, step);
@@ -799,7 +863,7 @@ XTensor * NewTensor(const XTensor * a, bool isFilledData)
     
     memset(dims, 0, sizeof(int) * MAX_TENSOR_DIM_NUM);
 
-    if(a->order > 0)
+    if(a->order >= 0)
         memcpy(dims, a->dimSize, sizeof(int) * a->order);
 
     if(!isFilledData)
@@ -810,7 +874,6 @@ XTensor * NewTensor(const XTensor * a, bool isFilledData)
                                       a->devID, a->mem);
 
     return newTensor;
-
 }
 
 /* 

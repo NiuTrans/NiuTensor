@@ -125,28 +125,16 @@ public:
     void Train(const char * fn, const char * validFN, const char * modelFN, T2TModel * model);
 
     /* test the model */
-    void Test(const char * fn, const char * ofn, T2TModel * model);
+    void Validate(const char * fn, const char * ofn, T2TModel * model);
 
     /* make a checkpoint */
     void MakeCheckpoint(T2TModel * model, const char * validFN, const char * modelFN, const char * label, int id);
-    
-    /* get word probabilities for a batch of sequences */
-    float GetProb(XTensor * output, XTensor * gold, XTensor * wordProbs);
 
     /* update the model by delta rule */
     void Update(T2TModel * model, const float lr);
 
     /* prepare model for training */
     void PrepareModel(T2TModel * model);
-
-    /* do padding on the output */
-    void PadOutput(XTensor * output, XTensor * gold, XTensor * padding);
-    
-    /* recale the output and gold tensors for normalized loss */
-    void RescaleOutput(XTensor * output, XTensor * gold, XTensor * padding);
-    
-    /* perform label smoothing */
-    void LabelSmooth(XTensor * gold, XTensor * smoothed, DTYPE p);
 };
 
 

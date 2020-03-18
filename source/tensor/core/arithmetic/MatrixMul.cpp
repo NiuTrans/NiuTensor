@@ -62,7 +62,7 @@ void _MatrixMul(const XTensor * a, MATRIX_TRANS_TYPE transposedA,
     
     /* we transform a higher order tensor to a matrix to kill the number
        of calls of matrix multiplication */
-    if(transposedA == X_NOTRANS && a->order > 2 && b->order == 2){
+    if (transposedA == X_NOTRANS && a->order > 2 && b->order == 2) {
         int ncolA = a->dimSize[a->order - 1];
         int ncolC = c->dimSize[c->order - 1];
         XTensor * a2 = NewTensor2DV2(a->unitNum/ncolA, -ncolA, a->dataType, a->devID, a->mem);
@@ -159,6 +159,10 @@ void _MatrixMul(const XTensor * a, MATRIX_TRANS_TYPE transposedA,
                       "The code must be run on the same GPU!");
         
         int devIDBackup;
+
+        if (beta == 0)
+            c->SetZeroAll();
+
         ProtectCudaDev(a->devID, devIDBackup);
 
         cublasHandle_t * handle = a->mem != NULL ? a->mem->GetCublasHandle() : GDevs.GetCudaHandle(a->devID);
@@ -341,7 +345,6 @@ void MatrixMul(const XTensor &a, MATRIX_TRANS_TYPE transposedA,
 
         /* destroy variables */
         delete[] dimSize;
-
     }
 
     /* call _MatrixMul function */

@@ -87,11 +87,10 @@ public:
                     XTensor &maskEnc, XTensor &maskDec, XTensor &maskEncDec);
     
     /* make the mask of the encoder */
-    void MakeMTMaskEnc(XTensor &inputEnc, XTensor &paddingEnc, XTensor &maskEnc);
+    void MakeMTMaskEnc(XTensor &paddingEnc, XTensor &maskEnc);
     
     /* make the mask of the decoder */
-    void MakeMTMaskDec(XTensor &inputEnc, XTensor &inputDec,
-                       XTensor &paddingEnc, XTensor &paddingDec,
+    void MakeMTMaskDec(XTensor &paddingEnc, XTensor &paddingDec,
                        XTensor &maskDec, XTensor &maskEncDec);
 
     /* get parameter matrics */

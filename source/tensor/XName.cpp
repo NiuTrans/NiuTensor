@@ -105,6 +105,8 @@ const char * GetOPName(int type)
             return "R_REDUCEMEAN";
         else if (type == REDUCE_REDUCESUM)
             return "R_REDUCESUM";
+        else if (type == REDUCE_REDUCESUMALL)
+            return "R_REDUCESUMALL";
         else if (type == REDUCE_REDUCESUMSQUARED)
             return "R_REDUCESUMSQUARED";
         else if (type == REDUCE_REDUCEVARIANCE)

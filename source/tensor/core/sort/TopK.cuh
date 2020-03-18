@@ -29,7 +29,7 @@ namespace nts { // namespace nts(NiuTrans.Tensor)
 #ifdef USE_CUDA
 
 /* get the top-k items along a given dimension */
-void _CudaTopK(const XTensor * a, XTensor * b, XTensor * index, int dim, int k);
+void _CudaTopK(const XTensor * a, XTensor * b, XTensor * index, int dim, int k, bool isSorted);
 
 #endif // USE_CUDA
 

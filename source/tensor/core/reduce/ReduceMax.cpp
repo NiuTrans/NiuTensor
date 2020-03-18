@@ -86,7 +86,7 @@ void _funcCPUName(const XTensor * input, XTensor * output, int dim)             
                     vecBuf[j] = VectorBuffer::loadu((DTYPE*)(ip)+j * vecBufLength);                                 \
                 }                                                                                                   \
                 for (int j = 1; j < strideNum / 32; j++) {                                                          \
-                    const DTYPE* ptr = (DTYPE*)(ip + j * vecBufLength);                                             \
+                    const DTYPE* ptr = (DTYPE*)(ip + j * 4 * vecBufLength);                                         \
                     vecBuf[0] = vecBuf[0]._vectorOp(VectorBuffer::loadu(ptr + 0 * vecBufLength));                   \
                     vecBuf[1] = vecBuf[1]._vectorOp(VectorBuffer::loadu(ptr + 1 * vecBufLength));                   \
                     vecBuf[2] = vecBuf[2]._vectorOp(VectorBuffer::loadu(ptr + 2 * vecBufLength));                   \
@@ -106,7 +106,7 @@ void _funcCPUName(const XTensor * input, XTensor * output, int dim)             
         else {                                                                                                      \
             /* data is separated */                                                                                 \
             for(int i = 0; i < blockNum; i++){                                                                      \
-                for(int j = 0; j < input->dimSize[input->order - 1] / 32; j++){                                     \
+                for(int j = 0; j < stride / 32; j++){                                                               \
                     DTYPE * ip = (DTYPE*)input->data + blockSize * i;                                               \
                     DTYPE * op = (DTYPE*)output->data + stride * i;                                                 \
                     VectorBuffer vecBuf[4];                                                                         \

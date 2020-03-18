@@ -76,278 +76,191 @@ void _SetDataFanInOut(XTensor * tensor, DTYPE gain)
     //_SetDataRand(tensor, -finfout, finfout);
 }
 
-/* 
-generate data items with a fixed value p 
->> tensor - the tensor whose data array would be initialized
->> p - pointer to the number for initializing the tensor
-*/
-void _SetDataFixed(XTensor * tensor, void * valuePointer)
-{
-    int num = tensor->unitNum;
-
-    if(tensor->dataType == X_INT){
-        int p = *(int*)valuePointer;
-        if(tensor->devID < 0){
-            int * d = (int*)tensor->data;
-            if(num % 4 == 0){
-                for(int i = 0; i < num; i += 4){
-                    d[i] = p;
-                    d[i + 1] = p;
-                    d[i + 2] = p;
-                    d[i + 3] = p;
-                }
-            }
-            else{
-                for(int i = 0; i < num; i++)
-                    d[i] = p;
-            }
-        }
-        else{
-#ifdef USE_CUDA
-            _CudaSetDataFixedInt(tensor, p);
-#endif
-        }
-    }
-    else if(tensor->dataType == X_FLOAT){
-        float p = *(float*)valuePointer;
-        if(tensor->devID < 0){
-            float * d = (float*)tensor->data;
-            if(num % 4 == 0){
-                for(int i = 0; i < num; i += 4){
-                    d[i] = p;
-                    d[i + 1] = p;
-                    d[i + 2] = p;
-                    d[i + 3] = p;
-                }
-            }
-            else{
-                for(int i = 0; i < num; i++)
-                    d[i] = p;
-            }
-        }
-        else{
-#ifdef USE_CUDA
-            _CudaSetDataFixedFloat(tensor, p);
-#endif
-        }
-    }
-    else if(tensor->dataType == X_DOUBLE){
-        double p = *(double*)valuePointer;
-        if(tensor->devID < 0){
-            double * d = (double*)tensor->data;
-            if(num % 4 == 0){
-                for(int i = 0; i < num; i += 4){
-                    d[i] = p;
-                    d[i + 1] = p;
-                    d[i + 2] = p;
-                    d[i + 3] = p;
-                }
-            }
-            else{
-                for(int i = 0; i < num; i++)
-                    d[i] = p;
-            }
-        }
-        else{
-#ifdef USE_CUDA
-            _CudaSetDataFixedDouble(tensor, p);
-#endif
-        }
-    }
-    else{
-        ShowNTErrors("TODO");
-    }
-}
-
-/* 
-generate data items with a fixed value p (in default type) 
->> tensor - the tensor whose data array would be initialized
->> p - number in default type
-*/
-void SetDataFixed(XTensor &tensor, DTYPE p)
-{
-    _SetDataFixed(&tensor, &p);
-}
-    
 /*
-generate data items with a fixed value p (in integer)
->> tensor - the tensor whose data array would be initialized
->> p - an integer
-*/
-void SetDataFixedInt(XTensor &tensor, int p)
-{
-    CheckNTErrors(tensor.dataType == X_INT, "An integer tensor is required!");
-    _SetDataFixed(&tensor, &p);
-}
+set a data array with a fixed value
 
-/* 
-generate data items with a fixed value p (in integer) 
->> tensor - the tensor whose data array would be initialized
->> p - an int-valued number
+>> d - pointer to the data array
+>> v - the initial value
+>> size - size of the array
 */
-void _SetDataFixedInt(XTensor * tensor, int p)
+template<class T>
+void ArraySetDataFixed(T * d, T v, int size)
 {
-    CheckNTErrors(tensor->dataType == X_INT, "the tensor must be in X_INT!");
-
-    if(p == 0)
-        tensor->SetZeroAll();
-    else
-        _SetDataFixed(tensor, &p);
+    if (size % 4 == 0) {
+        for (int i = 0; i < size; i += 4) {
+            d[i] = v;
+            d[i + 1] = v;
+            d[i + 2] = v;
+            d[i + 3] = v;
+        }
+    }
+    else {
+        for (int i = 0; i < size; i++)
+            d[i] = v;
+    }
 }
 
 /*
-generate data items with a fixed value p (in float) 
->> tensor - the tensor whose data array would be initialized
->> p - a float-valued number
-*/
-void _SetDataFixedFloat(XTensor * tensor, float p)
-{
-    CheckNTErrors(tensor->dataType == X_FLOAT, "the tensor must be in X_FLOAT!");
+generate data items with a fixed value
 
-    if(p == 0)
-        tensor->SetZeroAll();
+>> tensor - the tensor for initialization
+>> value - the initial value
+*/
+template<class T>
+void _SetDataFixed(XTensor * tensor, T value)
+{
+    if (tensor->devID >= 0) {
+#ifdef USE_CUDA
+        _CudaSetDataFixed(tensor, value);
+        return;
+#else
+        ShowNTErrors("Please specify USE_CUDA and recompile the code!");
+#endif
+    }
+
+    int num = tensor->unitNum;
+
+    if (tensor->dataType == X_INT)
+        ArraySetDataFixed((int*)tensor->data, (int)value, num);
+    else if (tensor->dataType == X_FLOAT)
+        ArraySetDataFixed((float*)tensor->data, (float)value, num);
+    else if (tensor->dataType == X_DOUBLE)
+        ArraySetDataFixed((double*)tensor->data, (double)value, num);
     else
-        _SetDataFixed(tensor, &p);
+        ShowNTErrors("TODO! Unsupported datatype!")
+}
+template void _SetDataFixed<int>(XTensor*, int);
+template void _SetDataFixed<float>(XTensor*, float);
+template void _SetDataFixed<double>(XTensor*, double);
+
+/*
+generate data items with a fixed value p only if the condition entry is non-zero
+
+>> d - pointer to the data array
+>> c - pointer to the condition array
+>> v - the initial value
+>> size - size of the array
+*/
+template<class T>
+void ArraySetDataFixedCond(T* d, T* c, T v, int size)
+{
+    for (int i = 0; i < size; i++) {
+        if (c[i] != 0)
+            d[i] = v;
+    }
 }
 
 /* 
-generate data items with a fixed value p (in double) 
->> tensor - the tensor whose data array would be initialized
->> p - a double-valued number
-*/
-void _SetDataFixedDouble(XTensor * tensor, double p)
-{
-    CheckNTErrors(tensor->dataType == X_DOUBLE, "the tensor must be in X_DOUBLE!");
+generate data items with a fixed value p only if the condition entry is non-zero 
 
-    if(p == 0)
-        tensor->SetZeroAll();
-    else
-        _SetDataFixed(tensor, &p);
-}
-
-/* 
-generate data items with a fixed value p only if 
-the condition entry is non-zero 
 >> tensor - the tensor whose data array would be initialized
 >> condition - the condition tensor whose entries would be checked
                for set the corresponding entries in "tensor"
->> p - a given value
+>> value - a given value
 */
-void _SetDataFixedCond(XTensor * tensor, XTensor * condition, DTYPE p)
+template<class T>
+void _SetDataFixedCond(XTensor * tensor, XTensor * condition, T value)
 {
+    CheckDev(tensor->devID, condition->devID);
+    CheckDataType(tensor->dataType, condition->dataType);
+
+    if (tensor->devID >= 0) {
+#ifdef USE_CUDA
+        _CudaSetDataFixedCond(tensor, condition, value);
+        return;
+#else
+        ShowNTErrors("Please specify USE_CUDA and recompile the code!");
+#endif
+    }
+
     int num = tensor->unitNum;
 
-    CheckNTErrors(num == condition->unitNum, "Wrong size of the condition tensor!");
-    CheckNTErrors(condition->unitSize == sizeof(float), "TODO!");
-
-    if(tensor->dataType == DEFAULT_DTYPE){
-        if(tensor->devID < 0){
-            DTYPE * data = (DTYPE*)tensor->data;
-            DTYPE * cond = (DTYPE*)condition->data;
-            for(int i = 0; i < num; i++){
-                if(cond[i] != 0)
-                    data[i] = p;
-            }
-        }
-        else{
-#ifdef USE_CUDA
-            _CudaSetDataFixedCondFloat(tensor, condition, p);
-#else
-            ShowNTErrors("Please specify USE_CUDA and recompile the code");
-#endif
-        }
-    }
-    else{
-        ShowNTErrors("the tensor should be in integer typed!");
-    }
+    if (tensor->dataType == X_INT)
+        ArraySetDataFixedCond((int*)tensor->data, (int*)condition->data, (int)value, num);
+    else if (tensor->dataType == X_FLOAT)
+        ArraySetDataFixedCond((float*)tensor->data, (float*)condition->data, (float)value, num);
+    else if (tensor->dataType == X_DOUBLE)
+        ArraySetDataFixedCond((double*)tensor->data, (double*)condition->data, (double)value, num);
+    else
+        ShowNTErrors("TODO! Unsupported datatype!")
 }
-
-/* 
-generate data items with a fixed value p only if 
-the condition entry is non-zero 
->> tensor - the tensor whose data array would be initialized
->> condition - the condition tensor whose entries would be checked
-               for set the corresponding entries in "tensor"
->> p - a given value
-*/
-void _SetDataFixedCondInt(XTensor * tensor, XTensor * condition, int p)
-{
-    int num = tensor->unitNum;
-
-    CheckNTErrors(num == condition->unitNum, "Wrong size of the condition tensor!");
-    CheckNTErrors(condition->unitSize == sizeof(float), "TODO!");
-
-    if(tensor->dataType == DEFAULT_DTYPE){
-        if(tensor->devID < 0){
-            int * data = (int*)tensor->data;
-            int * cond = (int*)condition->data;
-            for(int i = 0; i < num; i++){
-                if(cond[i] != 0)
-                    data[i] = p;
-            }
-        }
-        else{
-#ifdef USE_CUDA
-            _CudaSetDataFixedCondInt(tensor, condition, p);
-#else
-            ShowNTErrors("Please specify USE_CUDA and recompile the code");
-#endif
-        }
-    }
-    else{
-        ShowNTErrors("TODO!");
-    }
-}
+template void _SetDataFixedCond<int>(XTensor*, XTensor*, int);
+template void _SetDataFixedCond<float>(XTensor*, XTensor*, float);
+template void _SetDataFixedCond<double>(XTensor*, XTensor*, double);
 
 /* 
 set data items along with a given dimension (and keep the remaining items unchanged) 
->> tensor - the tensor whose data array would be initialized
+
+>> tensor - the tensor for initialization
 >> beg - the beginning position
 >> len - length along with the given dimension
 >> dim - the dimension along which we set the data
-e.g., given a 3 * 3 tensor 
-      1 2 3
-      4 5 6
-      7 8 9
-      when beg = 1, len = 1, dim = 0 and p = 0, we have
-      1 2 3
-      0 0 0
-      7 8 9
-      i.e., we set all entries of row 1 to 0
+   e.g., given a 3 * 3 tensor 
+         1 2 3
+         4 5 6
+         7 8 9
+         when beg = 1, len = 1, dim = 0 and value = 0, we have
+         1 2 3
+         0 0 0
+         7 8 9
+         i.e., we set all entries of row 1 to 0
+>> value - the given value
 */
-void _SetDataDim(XTensor * tensor, int beg, int len, int dim, DTYPE p)
+template<class T>
+void _SetDataDim(XTensor * tensor, int beg, int len, int dim, T value)
 {
-    int n = tensor->order;
+    int order = tensor->order;
+    int size = tensor->GetDim(dim);
+    if (dim < 0)
+        dim = order + dim; 
 
-    CheckNTErrors(tensor->dataType == DEFAULT_DTYPE, "TODO!");
-    CheckNTErrors(dim < n && dim >= 0, "Illegal dimension!");
-    CheckNTErrors(beg >= 0 && beg < tensor->GetDim(dim), "Illegal beginning position!");
-    CheckNTErrors(beg + len >= 0 && beg + len < tensor->GetDim(dim), "Illegal length!");
-    
-    if(tensor->devID < 0){
-        int stride = 1;
-        int blockSize = 1;
-        int blockNum  = 1;
-        for(int i = n - 1; i > dim; i--){
-            stride *= tensor->GetDim(i);
-        }
-        blockSize = stride * tensor->GetDim(dim);
-        blockNum = tensor->unitNum / blockSize;
+    CheckNTErrors(dim < order && dim >= 0, "Illegal dimension!");
+    CheckNTErrors(beg >= 0 && beg < size, "Illegal beginning position!");
+    CheckNTErrors(len >= 0 && beg + len <= size, "Illegal length!");
 
-        int l = len * stride;
-
-        for(int i = 0; i < blockNum; i++){
-            DTYPE * d = (DTYPE*)tensor->data + blockSize * i + beg * stride;    
-            for(int j = 0; j < l; j++)
-                d[j] = p;
-        }
-    }
-    else{
+    if (tensor->devID >= 0) {
 #ifdef USE_CUDA
-        _CudaSetDataDim(tensor, beg, len, dim, p);
+        _CudaSetDataDim(tensor, beg, len, dim, (DTYPE)value);
+        return;
+#else
+        ShowNTErrors("Please specify USE_CUDA and recompile the code!");
 #endif
     }
+
+    int stride = 1;
+    int blockSize = 1;
+    int blockNum  = 1;
+
+    for (int i = order - 1; i > dim; i--)
+        stride *= tensor->GetDim(i);
+    blockSize = stride * size;
+    blockNum = tensor->unitNum / blockSize;
+
+    int initNum = len * stride;
+
+    for(int i = 0; i < blockNum; i++) {
+        if (tensor->dataType == X_INT) {
+            int* d = (int*)tensor->data + blockSize * i + beg * stride;
+            for (int j = 0; j < initNum; j++)
+                d[j] = (int)value;
+        }
+        else if (tensor->dataType == X_FLOAT) {
+            float* d = (float*)tensor->data + blockSize * i + beg * stride;
+            for (int j = 0; j < initNum; j++)
+                d[j] = (float)value;
+        }
+        else if (tensor->dataType == X_DOUBLE) {
+            double* d = (double*)tensor->data + blockSize * i + beg * stride;
+            for (int j = 0; j < initNum; j++)
+                d[j] = (double)value;
+        }
+        else
+            ShowNTErrors("TODO! Unsupported datatype!")
+    }
 }
+template void _SetDataDim<int>(XTensor*, int, int, int, int);
+template void _SetDataDim<float>(XTensor*, int, int, int, float);
+template void _SetDataDim<double>(XTensor*, int, int, int, double);
 
 /* 
 modify data items along with a given index and dimension (and keep the remaining items unchanged) 
@@ -355,114 +268,139 @@ modify data items along with a given index and dimension (and keep the remaining
 >> modify - the tensor whose data array would be used to modify the source tensor
 >> dim - the dimension along which we modify the tensor
 >> index - index of the given dimension
-e.g., given a source tensor (3, 3)
-      1 2 3
-      4 5 6
-      7 8 9
-      given a modified tensor (3)
-      1 2 3
-      when dim = 0, index = 1, we have
-      1 2 3
-      1 2 3
-      7 8 9
-      i.e., we set entries of row 1 to {1, 2, 3}
+   e.g., given a source tensor (3, 3)
+         1 2 3
+         4 5 6
+         7 8 9
+         given a modified tensor (3)
+         1 2 3
+         when dim = 0, index = 1, we have
+         1 2 3
+         1 2 3
+         7 8 9
+         i.e., we set entries of row 1 to {1, 2, 3}
 */
-void _SetDataIndexed(XTensor * source, XTensor * modify, int dim, int index)
+void _SetDataIndexed(XTensor * tensor, XTensor * modify, int dim, int index)
 {
-    int order = source->order;
-    int size = source->GetDim(dim);
+    int order = tensor->order;
+    int size = tensor->GetDim(dim);
+    if (dim < 0)
+        dim = order + dim;
 
-    CheckNTErrors(source->dataType == DEFAULT_DTYPE, "TODO!");
+    CheckDev(tensor->devID, modify->devID);
     CheckNTErrors(dim >= 0 && dim < order, "Illegal dimension!");
     CheckNTErrors(index >= 0 && index < size, "Illegal index!");
     
-    for(int i = 0; i < order - 1; i++){
-        if(i < dim){
-            CheckNTErrors(modify->GetDim(i) == source->GetDim(i), "Illegal dimension!");
+    for(int i = 0; i < order - 1; i++) {
+        if(i < dim) {
+            CheckNTErrors(modify->GetDim(i) == tensor->GetDim(i), "Illegal dimension!");
         }
-        else if(i >= dim){
-            CheckNTErrors(modify->GetDim(i) == source->GetDim(i+1), "Illegal dimension!");
+        else if(i >= dim) {
+            CheckNTErrors(modify->GetDim(i) == tensor->GetDim(i+1), "Illegal dimension!");
         }
     }
 
-    if(source->devID < 0 && modify->devID < 0){
+    if (tensor->devID >= 0) {
+#ifdef USE_CUDA
+        _CudaSetDataIndexed(tensor, modify, dim, index);
+        return;
+#else
+        ShowNTErrors("Please specify USE_CUDA and recompile the code!");
+#endif
+    }
+
+    if(tensor->devID < 0) {
         int stride = 1;
         int blockSize = 1;
         int blockNum  = 1;
 
-        for(int i = order - 1; i > dim; i--){
-            stride *= source->GetDim(i);
+        for (int i = order - 1; i > dim; i--) {
+            stride *= tensor->GetDim(i);
         }
 
-        blockSize = stride * source->GetDim(dim);
-        blockNum = source->unitNum / blockSize;
+        blockSize = stride * tensor->GetDim(dim);
+        blockNum = tensor->unitNum / blockSize;
 
-        for(int i = 0; i < blockNum; i++){
-            DTYPE * d = (DTYPE*)source->data + blockSize * i + index * stride;
+        for (int i = 0; i < blockNum; i++) {
+            DTYPE * d = (DTYPE*)tensor->data + blockSize * i + index * stride;
             DTYPE * p = (DTYPE*)modify->data + stride * i;
             for(int j = 0; j < stride; j++)
                 d[j] = p[j];
         }
     }
-    else if(source->devID >= 0 && modify->devID >= 0) {
-#ifdef USE_CUDA
-        _CudaSetDataIndexed(source, modify, dim, index);
-#else
-        ShowNTErrors("Please specify USE_CUDA and recompile the code!");
-#endif
-    }
-    else{
-        ShowNTErrors("TODO!");
-    }
 }
 
 /* 
 generate data as lower triangular matrics for last two dimensions 
+
 >> tensor - the tensor whose data to be set
->> p - the value for each entry of the lower triangular matrics
+>> value - the value for each entry of the lower triangular matrics
 >> shift - the offset from diagonal
-e.g., for a 3 * 3 tensor, 
-      when p = 1 ans shift = 0, we have
-      1 0 0
-      1 1 0
-      1 1 1
-      when p = 2 and shift = -1, we have
-      0 0 0
-      2 0 0
-      2 2 0
+
+   e.g., for a 3 * 3 tensor, 
+         when value = 1 ans shift = 0, we have
+         1 0 0
+         1 1 0
+         1 1 1
+         when value = 2 and shift = -1, we have
+         0 0 0
+         2 0 0
+         2 2 0
 */
-void _SetDataLowTri(XTensor * tensor, DTYPE p, int shift)
+void _SetDataLowTri(XTensor * tensor, DTYPE value, int shift)
 {
     int n = tensor->order;
 
-    CheckNTErrors(tensor->dataType == DEFAULT_DTYPE, "TODO!");
     CheckNTErrors(n >= 2, "The tensor must have a order no less than 2!");
     CheckNTErrors(tensor->GetDim(n - 1) == tensor->GetDim(n - 2), 
                  "The last two dimensions must be of the same size!");
 
-    if(tensor->devID < 0){
-        int l = tensor->GetDim(-1);
-        int blockNum = 1;
-        int blockSize = l * l;
-        for(int i = 0; i < n - 2; i++)
-            blockNum *= tensor->GetDim(i);
-
-        for(int i = 0; i < blockNum; i++){
-            DTYPE * d = (DTYPE*)tensor->data + i * blockSize;
-            for(int row = 0; row < l; row++){
-                for(int col = 0; col <= row + shift; col++){
-                    d[row * l + col] = p;
-                }
-                for(int col = MAX(0, row + shift + 1); col < l; col++){
-                    d[row * l + col] = 0;
-                }
-            }
-        }
-    }
-    else{
+    tensor->SetZeroAll();
+    if (tensor->devID >= 0) {
 #ifdef USE_CUDA
-        _CudaSetDataLowTri(tensor, p, shift);
+        _CudaSetDataLowTri(tensor, value, shift);
+        return;
+#else
+        ShowNTErrors("Please specify USE_CUDA and recompile the code!");
 #endif
+    }
+
+    int size = tensor->GetDim(-1);
+    int blockSize = size * size;
+    int blockNum = tensor->unitNum / blockSize;
+
+    for (int i = 0; i < blockNum; i++) {
+        for (int row = 0; row < size; row++) {
+            if (tensor->dataType == X_INT) {
+                int * d = (int*)tensor->data + i * blockSize;
+                for (int col = 0; col <= row + shift; col++) {
+                    d[row * size + col] = (int)value;
+                }
+                /*for (int col = MAX(0, row + shift + 1); col < size; col++) {
+                    d[row * size + col] = 0;
+                }*/
+            }
+            else if (tensor->dataType == X_FLOAT) {
+                float * d = (float*)tensor->data + i * blockSize;
+                for (int col = 0; col <= row + shift; col++) {
+                    d[row * size + col] = (float)value;
+                }
+                /*for (int col = MAX(0, row + shift + 1); col < size; col++) {
+                    d[row * size + col] = 0;
+                }*/
+            }
+            else if (tensor->dataType == X_DOUBLE) {
+                double * d = (double*)tensor->data + i * blockSize;
+                for (int col = 0; col <= row + shift; col++) {
+                    d[row * size + col] = (double)value;
+                }
+                /*for (int col = MAX(0, row + shift + 1); col < size; col++) {
+                    d[row * size + col] = 0;
+                }*/
+            }
+            else 
+                ShowNTErrors("TODO! Unsupported datatype!")
+        }
     }
 }
 
@@ -484,7 +422,7 @@ generate data items with a uniform distribution in [lower, upper]
 */
 void _SetDataRand(XTensor * tensor, DTYPE lower, DTYPE upper)
 {
-    CheckNTErrors(upper > lower, "the high value must be greater than low value!");
+    CheckNTErrors(upper >= lower, "the high value must be greater than low value!");
 
     if(tensor == NULL)
         return;
@@ -506,27 +444,50 @@ void _SetDataRand(XTensor * tensor, DTYPE lower, DTYPE upper)
             }
         }
         else{
-            ShowNTErrors("TODO");
+            ShowNTErrors("TODO! Unsupported datatype!")
         }
     }
-    /* 
-    GPU code
-    The trick here is that initialize the data on a temperary tensor on CPU.
-    The CPU data is then copied to GPU.
-    TODO: generate data points on GPUs straightforwardly.
-    */
     else{
 #ifdef USE_CUDA
-        _CudaSetDataRand(tensor, lower, upper);
+        /*
+        GPU code
+        The trick here is that initialize the data on a temperary tensor on CPU.
+        The CPU data is then copied to GPU.
+        TODO: generate data points on GPUs straightforwardly.
+        */
+        //_CudaSetDataRand(tensor, lower, upper);
+        int num = tensor->unitNum;
+        DTYPE variance = upper - lower;
+
+        void * d = NULL;
+        if (tensor->dataType == X_FLOAT) {
+            d = new float[num];
+            for (int i = 0; i < num; i++) 
+                *((float*)d + i) = lower + variance * (float)rand() / RAND_MAX;
+        }
+        else if (tensor->dataType == X_DOUBLE) {
+            d = new double[num];
+            for (int i = 0; i < num; i++) 
+                *((double*)d + i) = (double)lower + variance * rand() / RAND_MAX;
+        }
+        else {
+            ShowNTErrors("Data type must be X_FLOAT or X_Double!");
+        }
+
+        tensor->SetData(d, num);
+
+        if (tensor->dataType == X_FLOAT) {
+            delete[](float*)d;
+        }
+        else {
+            delete[](double*)d;
+        }
 #endif
-        //XTensor * t2 = NewTensorV2(tensor->order, tensor->dimSize, tensor->dataType, tensor->denseRatio, -1);
-        //_SetDataRand(t2, low, high);
-        //_CopyValues(t2, tensor);
-        //delete t2;
     }
 }
 
 /* generate data items with a range by start, end and the step
+
 >> tensor - the tensor whose data array would be initialized
 >> start - the begin of the array
 >> end - the end of the array (not included self)
@@ -537,7 +498,7 @@ void _SetDataRange(XTensor * tensor, DTYPE lower, DTYPE upper, DTYPE step)
     CheckNTErrors((tensor->order == 1), "Tensor must be 1 dimension!");
 
     /* compute the true length according to the (start, end, step) */
-    DTYPE size = fabs(upper - lower);
+    DTYPE size = (DTYPE)fabs(upper - lower);
     int num = ceil(size / fabs(step));
     CheckNTErrors((tensor->unitNum == num), "Unit number of the tensor is not matched.");
 
@@ -554,7 +515,7 @@ void _SetDataRange(XTensor * tensor, DTYPE lower, DTYPE upper, DTYPE step)
             *((float*)data + i) = lower + i * step;
     }
     else {
-        ShowNTErrors("TODO!");
+        ShowNTErrors("TODO! Unsupported datatype!")
     }
 
     /* set the data from the array */
@@ -564,8 +525,10 @@ void _SetDataRange(XTensor * tensor, DTYPE lower, DTYPE upper, DTYPE step)
 }
 
 /* 
-generate data items with a uniform distribution in [lower, upper] and set
-the item to a pre-defined value if the item >= p, set the item to 0 otherwise
+generate data items with a uniform distribution in [lower, upper] and 
+set the item to a pre-defined value if the item >= p, 
+set the item to 0 otherwise
+
 >> tensor - the tensor whose data array would be initialized
 >> lower - lower value of the range
 >> upper - upper value of the range
@@ -595,9 +558,31 @@ void _SetDataRandP(XTensor * tensor, DTYPE lower, DTYPE upper, DTYPE p, DTYPE va
 #endif // USE_CUDA
     }
 }
-    
+
+/* a gauss distribution (Box-Muller method) */
+double GaussRand(DTYPE mean, DTYPE standardDeviation)
+{
+    static double u, v;
+    static int phase = 0;
+    double z;
+    double pi = 3.141592654;
+
+    if (phase == 0) {
+        u = (rand() + 1.0) / (RAND_MAX + 1.0);
+        v = (rand() + 1.0) / (RAND_MAX + 1.0);
+        z = sqrt(-2.0 * log(u)) * sin(2.0 * pi * v);
+    }
+    else {
+        z = sqrt(-2.0 * log(u)) * cos(2.0 * pi * v);
+    }
+
+    phase = 1 - phase;
+    return mean + (z * standardDeviation);
+}
+
 /*
 generate data items with a normal distribution with specified mean and standard deviation 
+
 >> tensor - the tensor that keeps the data
 >> mean - mean or expectation of the distribution
 >> standardDeviation - standard deviation of the distribution
@@ -605,7 +590,31 @@ generate data items with a normal distribution with specified mean and standard 
 void _SetDataRandN(XTensor * tensor, DTYPE mean, DTYPE standardDeviation)
 {
     // TODO: rewrite it and add cuda code!!!!!!!
-    tensor->SetDataRandn(mean, standardDeviation);
+    int num = tensor->unitNum;
+
+    void * d = NULL;
+    if (tensor->dataType == X_FLOAT) {
+        d = new float[num];
+        for (int i = 0; i < num; i++)
+            *((float*)d + i) = (float)GaussRand(mean, standardDeviation);
+    }
+    else if (tensor->dataType == X_DOUBLE) {
+        d = new double[num];
+        for (int i = 0; i < num; i++)
+            *((double*)d + i) = GaussRand(mean, standardDeviation);
+    }
+    else {
+        ShowNTErrors("TODO! Unsupported datatype!")
+    }
+
+    tensor->SetData(d, num);
+
+    if (tensor->dataType == X_FLOAT) {
+        delete[](float*)d;
+    }
+    else {
+        delete[](double*)d;
+    }
 }
 
 /* 

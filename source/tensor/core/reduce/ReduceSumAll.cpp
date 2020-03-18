@@ -16,11 +16,12 @@
  */
 
 /*
- * $Created by: Xu Chen (email: hello_master1954@163.com) 2018-09-27
+ * $Created by: LI Yinqqiao (email: li.yin.qiao.2012@hotmail.com) 2020-01-09
  */
 
 #include "ReduceSumAll.h"
 #include "ReduceSum.h"
+#include "../../XName.h"
 #include "../movement/CopyValues.h"
 
 namespace nts{ // namespace nts(NiuTrans.Tensor)
@@ -42,55 +43,70 @@ int * getDimSize(const XTensor * tensor, int n)
 /*
 sum all the items of the tensor (It should be optimized!)
 >> source - the inpute tensor
+<< target - the total summation
+*/
+void _ReduceSumAll(const XTensor * source, XTensor * target)
+{
+    CheckNTErrors((source->devID == target->devID || (source->devID < 0 && target->devID < 0)),
+                  "This code must be run on the same device!");
+    CheckNTErrors((source && target), "Empty input or output tensors!");
+    CheckNTErrors((target->order == 0), "Incorrect target tensor sizes!");
+    CheckNTErrors((target->unitNum == 1), "Illegal dimension to reduce!");
+    CheckNTErrors((source->dataType == target->dataType), "Unmatched data types!");
+
+    int dims[1] = {source->unitNum};
+
+    XTensor * all = NewTensorBufV2(1, dims, source->dataType, source->denseRatio, source->devID, source->mem);
+
+    _CopyValues(source, all);
+    _ReduceSum(all, target, 0);
+
+    DelTensorBuf(all);
+}
+
+/*
+sum all the items of the tensor (It should be optimized!)
+>> source - the inpute tensor
+<< value - the total summation
+*/
+void _ReduceSumAll(const XTensor * source, DTYPE * value)
+{
+    int * dimSize = new int[MAX_TENSOR_DIM_NUM];
+    float dr = (!source->isSparse) ? 1.0F : source->denseRatio;
+    XTensor * target = NewTensorBufV2(0, dimSize, source->dataType, source->denseRatio, source->devID, source->mem);
+    target->SetTMPFlag();
+
+    /* call _ReduceSum function */
+    _ReduceSumAll(source, target);
+    *value = target->Get0D();
+
+    DelTensorBuf(target);
+}
+
+/*
+sum all the items of the tensor
+>> source - the inpute tensor
 << return - the total summation
 */
-DTYPE _ReduceSumAll(const XTensor * source)
+XTensor ReduceSumAll(const XTensor & source)
 {
-    int dims[2] = {1, source->unitNum};
-    int one = 1;
+    int * dimSize = new int[MAX_TENSOR_DIM_NUM];
+    float dr = (!source.isSparse) ? 1.0F : source.denseRatio;
+    XTensor target(0, dimSize, source.dataType, dr, source.devID, source.mem);
+    target.SetTMPFlag();
 
-    XTensor * all = NewTensorBufV2(2, dims, source->dataType, source->denseRatio, source->devID, source->mem);
-    XTensor * result = NewTensorBufV2(1, &one, source->dataType, 1.0F, source->devID, source->mem);
-    
-    _CopyValues(source, all);
-    _ReduceSum(all, result, 1);
-    
-    DTYPE r = result->Get1D(0);
-    
-    DelTensorBuf(result);
-    DelTensorBuf(all);
-    
-    return r;
+    /* call _ReduceSum function */
+    _ReduceSumAll(&source, &target);
 
-    /*int order = source->order;
-    DTYPE summation;
-
-    XTensor * big = NewTensor(source);
-    _CopyValues(source, big);
-    for(int i = order - 1; i >= 0; i--) {
-        if(i == 0)
-            big->Reshape(1, big->unitNum);
-
-        int leadingDim = big->order - 1;
-        int * dimSize;
-        dimSize = getDimSize(big, leadingDim);
-        XTensor * little = NewTensorV2(big->order - 1, dimSize, source->dataType, source->denseRatio, 
-                                     source->devID, source->mem);
-        
-        _ReduceSum(big, little, leadingDim);
-
-        delete big;
-        delete dimSize;
-
-        big = NewTensor(little);
-        _CopyValues(little, big);
-
-        delete little;
+    /* tensor connection */
+    if (source.enableGrad) {
+        XLink::MakeLink(&source, NULL, &target, REDUCE_REDUCESUMALL);
     }
-    summation = big->Get1D(0);
-    delete big;
 
-    return summation;*/
+    /* destroy variables */
+    delete[] dimSize;
+
+    return target;
 }
 
 /*
@@ -98,9 +114,11 @@ sum all the items of the tensor
 >> source - the inpute tensor
 << return - the total summation   
 */
-DTYPE ReduceSumAll(const XTensor & source)
+DTYPE ReduceSumAllValue(const XTensor & source)
 {
-    return _ReduceSumAll(&source);
+    XTensor target;
+    target = ReduceSumAll(source);
+    return target.Get0D();
 }
 
 } // namespace nts(NiuTrans.Tensor)

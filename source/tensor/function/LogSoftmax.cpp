@@ -293,7 +293,7 @@ void _LogSoftmaxBackward(XTensor * gold, XTensor * y, XTensor * x,
                          LOSS_FUNCTION_NAME lossName)
 {
     CheckNTErrors((!dedx->isSparse), "The gradient matrix must be dense!");
-    CheckNTErrors((gold != NULL), "The gold standard cannot be empty!");
+    CheckNTErrors((gold != NULL || lossName == NOLOSS), "The gold standard cannot be empty!");
 
     if(leadDim < 0)
         leadDim = y->order - 1;

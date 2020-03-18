@@ -34,7 +34,7 @@ class XShapeGrad
 public:
     /* compute dE/dx of a node */
     static
-    void MakeGrad(XTensor * node, bool isEfficent);
+    void MakeGrad(XTensor * node, bool isEfficient);
 
     /* indicates whether the node is for a shaping operation */
     static
@@ -42,55 +42,55 @@ public:
 
     /* post processing of a node */
     static
-    void PostProcessing(XTensor * node, int typeId, bool isEfficent);
+    void PostProcessing(XTensor * node, int typeId, bool isEfficient);
 
 private:
     
     /* gradient computation for copying indexed sub-tensors: b = copyindexed(a, srcIndex, indexSize, tgtIndex, copyNum) */
     static
-    void GradCopyIndexed(XTensor * node, bool isEfficent);
+    void GradCopyIndexed(XTensor * node, bool isEfficient);
         
     /* gradient computation for copying indexed sub-tensors: b = gather(a, index) */
     static
-    void GradGather(XTensor * node, bool isEfficent);
+    void GradGather(XTensor * node, bool isEfficient);
 
     /* gradient computation for dropout with index: b = dropoutwithindex(a, index) */
     static
-    void GradDropoutWithIndex(XTensor * node, bool isEfficent);
+    void GradDropoutWithIndex(XTensor * node, bool isEfficient);
 
     /* gradient computation for merge: c = merge(a, b, ...) */
     static
-    void GradMerge(XTensor * node, bool isEfficent);
+    void GradMerge(XTensor * node, bool isEfficient);
 
     /* gradient computation for merging a list of tensors : c = merge(list(a, b, ...)) */
     static
-    void GradMergeList(XTensor * node, bool isEfficent);
+    void GradMergeList(XTensor * node, bool isEfficient);
     
     /* gradient computation for transposing a tensor : b = transpose(a) */
     static
-    void GradTranspose(XTensor * node, bool isEfficent);
+    void GradTranspose(XTensor * node, bool isEfficient);
 
     /* gradient computation for reshaping a tensor: c = reshape(a) */
     static
-    void GradReshape(XTensor * node, bool isEfficent);
+    void GradReshape(XTensor * node, bool isEfficient);
 
     /* gradient computation for split: c = split(a) */
     static
-    void GradSplit(XTensor * node, bool isEfficent);
+    void GradSplit(XTensor * node, bool isEfficient);
 
     /* gradient computation for spliting. we return the list of the splits : list(c_1, ...) = split(a) */
     static
-    void GradSplitList(XTensor * node, bool isEfficent);
+    void GradSplitList(XTensor * node, bool isEfficient);
 
     /* gradient computation for spliting. we return the list of the splits : list(c_1, ...) = split(a).
        this method is called only when all nodes of spliting have been processed. We do this in a post-processing
        manner because we can fuze multiple memory copy jobs one time. This is good for system speed up. */
     static
-    void GradSplitListPost(XTensor * node, bool isEfficent);
+    void GradSplitListPost(XTensor * node, bool isEfficient);
 
     /* gradient computation for unsqueezing a tensor : c = unsqueeze(a) */
     static
-    void GradUnsqueeze(XTensor * node, bool isEfficent);
+    void GradUnsqueeze(XTensor * node, bool isEfficient);
 
 };
 

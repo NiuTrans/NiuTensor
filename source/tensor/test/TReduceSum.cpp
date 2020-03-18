@@ -195,8 +195,8 @@ bool TestReduceSum2()
     XTensor tUser;
 
     /* initialize variables */
-    _SetDataFixedFloat(s, 1.0F);
-    _SetDataFixedFloat(answer, (float)s->GetDim(1));
+    s->SetDataFixed(1);
+    answer->SetDataFixed(s->GetDim(1));
 
     /* call ReduceSum function */
     _ReduceSum(s, t, 1);
@@ -215,7 +215,7 @@ bool TestReduceSum2()
     XTensor tUserGPU;
 
     /* initialize variables */
-    _SetDataFixedFloat(sGPU, 1.0F);
+    sGPU->SetDataFixed(1);
 
     /* call ReduceSum function */
     _ReduceSum(sGPU, tGPU, 1);
@@ -284,8 +284,8 @@ bool TestReduceSum3()
     XTensor tUser;
 
     /* initialize variables */
-    _SetDataFixedFloat(s, 1.0F);
-    _SetDataFixedFloat(answer, (float)s->GetDim(1));
+    s->SetDataFixed(1);
+    answer->SetDataFixed(s->GetDim(1));
 
     /* call ReduceSum function */
     _ReduceSum(s, t, 1);
@@ -304,7 +304,7 @@ bool TestReduceSum3()
     XTensor tUserGPU;
 
     /* initialize variables */
-    _SetDataFixedFloat(sGPU, 1.0F);
+    sGPU->SetDataFixed(1);
 
     /* call ReduceSum function */
     _ReduceSum(sGPU, tGPU, 1);
@@ -373,8 +373,8 @@ bool TestReduceSum4()
     XTensor tUser;
 
     /* initialize variables */
-    _SetDataFixedFloat(s, 1.0F);
-    _SetDataFixedFloat(answer, (float)s->GetDim(1));
+    s->SetDataFixed(1);
+    answer->SetDataFixed(s->GetDim(1));
 
     /* call ReduceSum function */
     _ReduceSum(s, t, 1);
@@ -393,7 +393,7 @@ bool TestReduceSum4()
     XTensor tUserGPU;
 
     /* initialize variables */
-    _SetDataFixedFloat(sGPU, 1.0F);
+    sGPU->SetDataFixed(1);
 
     /* call ReduceSum function */
     _ReduceSum(sGPU, tGPU, 1);
@@ -464,8 +464,8 @@ bool TestReduceSum5()
     XTensor tUser;
 
     /* initialize variables */
-    _SetDataFixedFloat(s, 1.0F);
-    _SetDataFixedFloat(answer, (float)s->GetDim(1));
+    s->SetDataFixed(1);
+    answer->SetDataFixed(s->GetDim(1));
 
     /* call ReduceSum function */
     _ReduceSum(s, t, 1);
@@ -484,7 +484,7 @@ bool TestReduceSum5()
     XTensor tUserGPU;
 
     /* initialize variables */
-    _SetDataFixedFloat(sGPU, 1.0F);
+    sGPU->SetDataFixed(1);
 
     /* call ReduceSum function */
     _ReduceSum(sGPU, tGPU, 1);
@@ -556,8 +556,8 @@ bool TestReduceSum6()
     XTensor tUser;
 
     /* initialize variables */
-    _SetDataFixedFloat(s, 1.0F);
-    _SetDataFixedFloat(answer, (float)s->GetDim(1));
+    s->SetDataFixed(1);
+    answer->SetDataFixed(s->GetDim(1));
 
     /* call ReduceSum function */
     _ReduceSum(s, t, 1);
@@ -576,7 +576,7 @@ bool TestReduceSum6()
     XTensor tUserGPU;
 
     /* initialize variables */
-    _SetDataFixedFloat(sGPU, 1.0F);
+    sGPU->SetDataFixed(1);
 
     /* call ReduceSum function */
     _ReduceSum(sGPU, tGPU, 1);
@@ -607,6 +607,89 @@ bool TestReduceSum6()
 #endif // USE_CUDA
 }
 
+/*
+case 7: test ReduceSum function.
+Sum the items along a dimension of the tensor.
+In this case,
+(4) -> scalar, dim = 0
+*/
+bool TestReduceSum7()
+{
+    /* a tensor of size (2, 4) */
+    int sOrder = 1;
+    int * sDimSize = new int[sOrder];
+    sDimSize[0] = 4;
+
+    int sUnitNum = 1;
+    for (int i = 0; i < sOrder; i++)
+        sUnitNum *= sDimSize[i];
+
+    /* a scalar */
+    int tOrder = 0;
+    int * tDimSize = new int[MAX_TENSOR_DIM_NUM];
+    int tUnitNum = 1;
+
+    DTYPE sData[4] = {0.0F, 1.0F, 2.0F, 3.0F};
+    DTYPE answer[1] = {6.0F};
+
+    /* CPU test */
+    bool cpuTest = true;
+
+    /* create tensors */
+    XTensor * s = NewTensorV2(sOrder, sDimSize);
+    XTensor * t = NewTensorV2(tOrder, tDimSize);
+    XTensor tUser;
+
+    /* initialize variables */
+    s->SetData(sData, sUnitNum);
+    t->SetZeroAll();
+
+    /* call ReduceSum function */
+    _ReduceSum(s, t, 0);
+    tUser = ReduceSum(*s, 0);
+    
+    /* check results */
+    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
+
+#ifdef USE_CUDA
+    /* GPU test */
+    bool gpuTest = true;
+
+    /* create tensors */
+    XTensor * sGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor tUserGPU;
+
+    /* initialize variables */
+    sGPU->SetData(sData, sUnitNum);
+    tGPU->SetZeroAll();
+
+    /* call ReduceSum function */
+    _ReduceSum(sGPU, tGPU, 0);
+    tUserGPU = ReduceSum(*sGPU, 0);
+
+    /* check results */
+    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
+
+    /* destroy variables */
+    delete s;
+    delete t;
+    delete sGPU;
+    delete tGPU;
+    delete[] sDimSize;
+    delete[] tDimSize;
+
+    return cpuTest && gpuTest;
+#else
+    /* destroy variables */
+    delete s;
+    delete t;
+    delete[] sDimSize;
+    delete[] tDimSize;
+
+    return cpuTest;
+#endif // USE_CUDA
+}
 
 /* other cases */
 /*
@@ -672,6 +755,15 @@ bool TestReduceSum()
     }
     else
         XPRINT(0, stdout, ">> case 6 passed!\n");
+
+    /* case 7 test */
+    caseFlag = TestReduceSum7();
+    if (!caseFlag) {
+        returnFlag = false;
+        XPRINT(0, stdout, ">> case 7 failed!\n");
+    }
+    else
+        XPRINT(0, stdout, ">> case 7 passed!\n");
 
     /* other cases test */
     /*

@@ -131,32 +131,20 @@ XTensor T2TEmbedder::Make(XTensor &input)
     XTensor wordEmbedding;
     XTensor posEmbedding;
 
-    bool match = (posEmbedding.order == input.order);
-    if(match){
-        for(int i = 0; i < input.order; i++){
-            if(dims[i] != posEmbedding.GetDim(i))
-                match = false;
-        }
-    }
+    /* make positional embeddings */
+    XTensor position;
+    XTensor embTMP;
 
-    /* we make positional embeddings first */
-    //if(!match){
-    if(true){
-        InitTensor(&posEmbedding, input.order + 1, dims, X_FLOAT, devID);
+    InitTensor1D(&position, input.GetDim(-1), X_INT, devID);
+    position.Range(0, position.unitNum, 1);
+    embTMP = Gather(posEmbeddingBase, position);
+    posEmbedding = Unsqueeze(embTMP, 0, dims[0]);
 
-        XTensor * posTMP = NewTensorBuf(2, dims + 1, X_FLOAT, devID);
-
-        _CopyValues(&posEmbeddingBase, 0, posTMP->unitNum, posTMP, 0);
-        _Unsqueeze(posTMP, &posEmbedding, 0, dims[0]);
-
-        DelTensorBuf(posTMP);
-    }
-
-    /* then we make word embeddings */
+    /* make word embeddings */
     wordEmbedding = Gather(w, input);
     wordEmbedding = Linear(wordEmbedding, (float)sqrt((float)eSize));
 
-    /* we sum over the two embeddings */
+    /* sum over the two embeddings */
     return wordEmbedding + posEmbedding;
 }
 

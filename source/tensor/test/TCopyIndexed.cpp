@@ -606,7 +606,7 @@ bool TestCopyIndexed4()
 
 /* 
 case 5: copy indexed sub-tensors 
-In this case, (3, 2, 3) -> (3, 2, 2), dim = 2, indexSize = 1, 
+In this case, (3, 2, 3) -> (3, 2, 4), dim = 2, indexSize = 2,
 srcIndex = [0, 1], tgtIndex = [0, 2], copyNum = 2.
 */
 bool TestCopyIndexed5()
@@ -622,7 +622,7 @@ bool TestCopyIndexed5()
     for (int i = 0; i < sOrder; i++)
         sUnitNum *= sDimSize[i];
 
-    /* a output tensor of size (3, 2, 2) */
+    /* a output tensor of size (3, 2, 4) */
     int tOrder = 3;
     int * tDimSize = new int[tOrder];
     tDimSize[0] = 3;
@@ -749,6 +749,152 @@ bool TestCopyIndexed5()
 #endif // USE_CUDA
 }
 
+/*
+case 6: copy indexed sub-tensors
+In this case, (3, 2, 3) -> (3, 2, 4), dim = 2, indexSize = 2,
+srcIndex = [0, 2], tgtIndex = [0, 1], copyNum = 1.
+*/
+bool TestCopyIndexed6()
+{
+    /* a input tensor of size (3, 2, 3) */
+    int sOrder = 3;
+    int * sDimSize = new int[sOrder];
+    sDimSize[0] = 3;
+    sDimSize[1] = 2;
+    sDimSize[2] = 3;
+
+    int sUnitNum = 1;
+    for (int i = 0; i < sOrder; i++)
+        sUnitNum *= sDimSize[i];
+
+    /* a output tensor of size (3, 2, 4) */
+    int tOrder = 3;
+    int * tDimSize = new int[tOrder];
+    tDimSize[0] = 3;
+    tDimSize[1] = 2;
+    tDimSize[2] = 4;
+
+    int tUnitNum = 1;
+    for (int i = 0; i < tOrder; i++)
+        tUnitNum *= tDimSize[i];
+
+    /* a index tensor of size (2) */
+    int indexOrder = 1;
+    int * indexDimSize = new int[indexOrder];
+    indexDimSize[0] = 2;
+
+    int indexUnitNum = 1;
+    for (int i = 0; i < indexOrder; i++)
+        indexUnitNum *= indexDimSize[i];
+
+    DTYPE sData[3][2][3] = { { {0.0F, -1.0F, 2.0F},
+                               {2.0F, 1.0F, 3.0F} },
+                             { {1.0F, 2.0F, 4.0F},
+                               {3.0F, 1.0F, 2.0F}},
+                             { {-1.0F, 3.0F, 2.0F},
+                               {1.0F, -1.0F, 0.0F} } };
+
+    DTYPE tData[3][2][4] = { { {5.0F, 5.0F, 5.0F, 5.0F},
+                               {5.0F, 5.0F, 5.0F, 5.0F} },
+                             { {5.0F, 5.0F, 5.0F, 5.0F},
+                               {5.0F, 5.0F, 5.0F, 5.0F}},
+                             { {5.0F, 5.0F, 5.0F, 5.0F},
+                               {5.0F, 5.0F, 5.0F, 5.0F} } };
+
+    DTYPE answer[3][2][4] = { { {2.0F, 5.0F, 5.0F, 0.0F},
+                                {3.0F, 5.0F, 5.0F, 2.0F} },
+                              { {4.0F, 5.0F, 5.0F, 1.0F},
+                                {2.0F, 5.0F, 5.0F, 3.0F}},
+                              { {2.0F, 5.0F, 5.0F, -1.0F},
+                                {0.0F, 5.0F, 5.0F, 1.0F} } };
+    int dim = 2;
+    int indexSize = 2;
+    int srcIndex[2] = {0, 2};
+    int tgtIndex[2] = {3, 0};
+    int copyNum = 1;
+
+    /* CPU test */
+    bool cpuTest = true;
+
+    /* create tensors */
+    XTensor * s = NewTensorV2(sOrder, sDimSize);
+    XTensor * t1 = NewTensorV2(tOrder, tDimSize);
+    XTensor * t2 = NewTensorV2(tOrder, tDimSize);
+    XTensor * sIndex = NewTensorV2(indexOrder, indexDimSize, X_INT);
+    XTensor * tIndex = NewTensorV2(indexOrder, indexDimSize, X_INT);
+
+    /* initialize variables */
+    s->SetData(sData, sUnitNum);
+    t1->SetData(tData, tUnitNum);
+    t2->SetData(tData, tUnitNum);
+    sIndex->SetData(srcIndex, indexUnitNum);
+    tIndex->SetData(tgtIndex, indexUnitNum);
+
+    /* call CopyIndexed function */
+    _CopyIndexed(s, t1, dim, srcIndex, indexSize, tgtIndex, copyNum);
+    _CopyIndexed(s, t2, dim, sIndex, tIndex, copyNum);
+
+    /* check results */
+    cpuTest = _CheckData(t1, answer, tUnitNum) &&
+              _CheckData(t2, answer, tUnitNum);
+
+#ifdef USE_CUDA
+    /* GPU test */
+    bool gpuTest = true;
+
+    /* create tensors */
+    XTensor * sGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU1 = NewTensorV2(sOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU2 = NewTensorV2(sOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * sIndexGPU = NewTensorV2(indexOrder, indexDimSize, X_INT, 1.0F, 0);
+    XTensor * tIndexGPU = NewTensorV2(indexOrder, indexDimSize, X_INT, 1.0F, 0);
+
+    /* initialize variables */
+    sGPU->SetData(sData, sUnitNum);
+    tGPU1->SetData(tData, tUnitNum);
+    tGPU2->SetData(tData, tUnitNum);
+    sIndexGPU->SetData(srcIndex, indexUnitNum);
+    tIndexGPU->SetData(tgtIndex, indexUnitNum);
+
+    /* call CopyIndexed function */
+    _CopyIndexed(sGPU, tGPU1, dim, srcIndex, indexSize, tgtIndex, copyNum);
+    _CopyIndexed(sGPU, tGPU2, dim, sIndexGPU, tIndexGPU, copyNum);
+
+    /* check results */
+    gpuTest = _CheckData(tGPU1, answer, tUnitNum) &&
+              _CheckData(tGPU2, answer, tUnitNum);
+
+    /* destroy variables */
+    delete s;
+    delete t1;
+    delete t2;
+    delete sIndex;
+    delete tIndex;
+    delete sGPU;
+    delete tGPU1;
+    delete tGPU2;
+    delete sIndexGPU;
+    delete tIndexGPU;
+    delete[] sDimSize;
+    delete[] tDimSize;
+    delete[] indexDimSize;
+
+    return cpuTest && gpuTest;
+#else
+    /* destroy variables */
+    delete s;
+    delete t1;
+    delete t2;
+    delete sIndex;
+    delete tIndex;
+    delete[] sDimSize;
+    delete[] tDimSize;
+    delete[] indexDimSize;
+
+    return cpuTest;
+#endif // USE_CUDA
+}
+
 /* other cases */
 /*
 TODO!!
@@ -804,6 +950,15 @@ bool TestCopyIndexed()
     }
     else
         XPRINT(0, stdout, ">> case 5 passed!\n");
+
+    /* case 5 test */
+    caseFlag = TestCopyIndexed6();
+    if (!caseFlag) {
+        returnFlag = false;
+        XPRINT(0, stdout, ">> case 6 failed!\n");
+    }
+    else
+    XPRINT(0, stdout, ">> case 6 passed!\n");
 
     /* other cases test */
     /*

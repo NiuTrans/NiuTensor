@@ -32,7 +32,7 @@ spread a collection tensor to source tensor.
 */
 bool TestSpread1()
 {
-    /* a input tensor of size (2, 4, 3) */
+    /* a input tensor of size (4, 4, 3) */
     int sOrder = 3;
     int * sDimSize = new int[sOrder];
     sDimSize[0] = 4;
@@ -91,7 +91,7 @@ bool TestSpread1()
     XTensor * modify = NewTensorV2(dataOrder, dataDimSize);
 
     /* Initialize variables */
-    _SetDataFixedFloat(s, 0.0F);
+    s->SetZeroAll();
     modify->SetData(data, dataUnitNum);
 
     /* call _Spread function */
@@ -109,7 +109,7 @@ bool TestSpread1()
     XTensor * modifyGPU = NewTensorV2(dataOrder, dataDimSize, X_FLOAT, 1.0F, 0);
 
     /* Initialize variables */
-    _SetDataFixedFloat(sGPU, 0.0F);
+    sGPU->SetZeroAll();
     modifyGPU->SetData(data, dataUnitNum);
     
     /* call _Spread function */

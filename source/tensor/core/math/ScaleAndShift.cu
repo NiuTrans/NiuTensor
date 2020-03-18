@@ -34,9 +34,9 @@ scale and shift all tensor entires b = a * scale + shift (CUDA Kernel)
 >> scale - how much we want to scale it
 >> shift - how much we want to shift it
 */
-template<bool isUnitScale, bool isZeroShift>
+template<class T, bool isUnitScale, bool isZeroShift>
 __global__ 
-void KernelScaleAndShift(DTYPE * a, DTYPE * b, int size, DTYPE scale, DTYPE shift)
+void KernelScaleAndShift(T * a, T * b, int size, T scale, T shift)
 {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
 
@@ -108,13 +108,26 @@ void _CudaScaleAndShift(const XTensor * a, XTensor * b, DTYPE scale, DTYPE shift
 
         if(a->dataType == DEFAULT_DTYPE){
             if(scale == 1.0F && shift == 0)
-                KernelScaleAndShift<true, true> <<<blocks, threads>>>((DTYPE*)a->data, (DTYPE*)b->data, a->unitNum, scale, shift);
+                KernelScaleAndShift<DTYPE, true, true> <<<blocks, threads>>>((DTYPE*)a->data, (DTYPE*)b->data, a->unitNum, scale, shift);
             else if (scale == 1.0F && shift != 0)
-                KernelScaleAndShift<true, false> << <blocks, threads >> >((DTYPE*)a->data, (DTYPE*)b->data, a->unitNum, scale, shift);
+                KernelScaleAndShift<DTYPE, true, false> << <blocks, threads >> >((DTYPE*)a->data, (DTYPE*)b->data, a->unitNum, scale, shift);
             else if(scale != 1.0F && shift == 0)
-                KernelScaleAndShift<false, true> << <blocks, threads >> >((DTYPE*)a->data, (DTYPE*)b->data, a->unitNum, scale, shift);
+                KernelScaleAndShift<DTYPE, false, true> << <blocks, threads >> >((DTYPE*)a->data, (DTYPE*)b->data, a->unitNum, scale, shift);
             else
-                KernelScaleAndShift<false, false> << <blocks, threads >> >((DTYPE*)a->data, (DTYPE*)b->data, a->unitNum, scale, shift);
+                KernelScaleAndShift<DTYPE, false, false> << <blocks, threads >> >((DTYPE*)a->data, (DTYPE*)b->data, a->unitNum, scale, shift);
+        }
+        else if (a->dataType == X_INT) {
+            int scale2 = int(scale);
+            int shift2 = int(shift);
+
+            if (scale == 1.0F && shift == 0)
+                KernelScaleAndShift<int, true, true><<<blocks, threads>>>((int *)a->data, (int *)b->data, a->unitNum, scale2, shift2);
+            else if (scale == 1.0F && shift != 0)
+                KernelScaleAndShift<int, true, false><<<blocks, threads>>>((int *)a->data, (int *)b->data, a->unitNum, scale2, shift2);
+            else if (scale != 1.0F && shift == 0)
+                KernelScaleAndShift<int, false, true><<<blocks, threads>>>((int *)a->data, (int *)b->data, a->unitNum, scale2, shift2);
+            else
+                KernelScaleAndShift<int, false, false><<<blocks, threads>>>((int *)a->data, (int *)b->data, a->unitNum, scale2, shift2);
         }
         else if(a->dataType == X_FLOAT16){
             unsigned short scale2 = FloatToFloat16(scale);

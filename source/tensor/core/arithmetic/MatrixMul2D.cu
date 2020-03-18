@@ -156,6 +156,9 @@ void _CudaMatrixMul2D(const XTensor * a, MATRIX_TRANS_TYPE transposedA,
         if (stream != NULL)
             cublasSetStream(*handle, stream->stream);
 
+        if (beta == 0)
+            c->SetZeroAll();
+
         if (a->dataType == X_FLOAT && b->dataType == X_FLOAT && c->dataType == X_FLOAT) {
             _CudaBLASMatrixMUL(handle, a->data, transposedA, a->dataType, 
                                b->data, transposedB, a->dataType, c->data, c->dataType,

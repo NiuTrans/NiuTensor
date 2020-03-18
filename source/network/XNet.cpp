@@ -316,7 +316,6 @@ void XNet::ClearGrad(XTensor * node)
     }
 
     if(finished){
-        //fprintf(stderr, "del %d %ld\n", node->id, node->grad->unitNum);
         delete node->grad;
         node->grad = NULL;
     }

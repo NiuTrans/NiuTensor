@@ -171,7 +171,7 @@ void T2TPredictor::Predict(T2TStateBundle * next, XTensor * encoding,
     dims[inputEnc->order - 1] = 1;
 
     InitTensor(&first, inputEnc->order, dims, X_INT, inputEnc->devID);
-    _SetDataFixedInt(&first, startSymbol);
+    first.SetDataFixed(startSymbol);
 
     /* add a new word into the input sequence of the decoder side */
     if (inputLast == NULL) {
@@ -195,13 +195,13 @@ void T2TPredictor::Predict(T2TStateBundle * next, XTensor * encoding,
     
     XTensor paddingDec;
     InitTensor(&paddingDec, inputDec.order, dims, X_INT, paddingEnc->devID);
-    SetDataFixedInt(paddingDec, 1);
+    paddingDec.SetDataFixed(1);
     
     XTensor maskDec;
     XTensor maskEncDec;
     
     /* decoder mask */
-    m->MakeMTMaskDec(*inputEnc, inputDec, *paddingEnc, paddingDec, maskDec, maskEncDec);
+    m->MakeMTMaskDec(*paddingEnc, paddingDec, maskDec, maskEncDec);
 
     /* make the decoding network */
     decoding = decoder.Make(inputDec, *encoding, maskDec, maskEncDec, false);

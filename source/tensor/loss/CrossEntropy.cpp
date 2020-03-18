@@ -358,21 +358,21 @@ DTYPE _CrossEntropy(const XTensor * output, const XTensor * gold,
 
     _CrossEntropy(output, gold, lossBuf, weight, padding, leadingDim);
 
-    loss = _ReduceSumAll(lossBuf);
+    _ReduceSumAll(lossBuf, &loss);
 
     if(reduceWay == REDUCE_MEAN) {
-        int nonZeroNum;
+        DTYPE nonZeroNum;
         if(padding == NULL) {
-            nonZeroNum = lossBuf->unitNum;
+            nonZeroNum = (DTYPE)lossBuf->unitNum;
         }
         else {
             XTensor * tmp = NewTensorBufV2(padding, padding->devID, padding->mem);
             _IsNonZero(padding, tmp);
-            nonZeroNum = (int)_ReduceSumAll(tmp);
+            _ReduceSumAll(tmp, &nonZeroNum);
             DelTensorBuf(tmp);
         }
 
-        loss = loss / (DTYPE)nonZeroNum;
+        loss = loss / nonZeroNum;
     }
     else if(reduceWay == REDUCE_SUM) {
         /* don't need to do anything */
@@ -675,8 +675,9 @@ void _CrossEntropyBackward(XTensor * dedy, const XTensor * output,
     if(padding != NULL) {
         XTensor * tmp = NewTensor(padding);
         _IsNonZero(padding, tmp);
-        int nonZeroNum = (int)_ReduceSumAll(tmp);
-        _ScaleAndShiftMe(dedy, (DTYPE)1.0/(DTYPE)nonZeroNum);
+        DTYPE nonZeroNum;
+        _ReduceSumAll(tmp, &nonZeroNum);
+        _ScaleAndShiftMe(dedy, (DTYPE)1.0/nonZeroNum);
         delete tmp;
     }
     else {

@@ -48,7 +48,7 @@ make a new tensor to keep the result and return it
 c(i) = a(i)/b(i)
 where i is the index of the element 
 */
-XTensor Div(const XTensor &a, const XTensor &b, DTYPE alpha = 0.0, int leadingDim = 0);
+XTensor Div(const XTensor &a, const XTensor &b, int leadingDim = 0);
 
 /*
 element-wise division of two tensors:

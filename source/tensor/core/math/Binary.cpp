@@ -44,7 +44,7 @@ T1 BinaryPower(T1 x, T2 num)
         return x * x;
     else {
         if (x == 0 && num < 0)
-            return (T1)1e20F;
+            return (T1)1e9F;
         else
             return (T1)pow(x, num);
     }
@@ -62,9 +62,10 @@ T1 BinaryShift(T1 x, T2 num)
     return (T1)(x + num);
 }
 
-int BinaryMod(int x, int num)
+template<class T1, class T2>
+int BinaryMod(T1 x, T2 num)
 {
-    return x % num;
+    return (int)x % (int)num;
 }
 
 /* define three marco separately, specify the respective function names */
@@ -170,7 +171,7 @@ XTensor funcName(const XTensor &a, T num)                                       
     _funcName(&a, &b, num);                                                          \
     if(a.enableGrad){                                                                \
         XLink::MakeLink(&a, NULL, &b, operationId);                                  \
-        XLink::AddParamToHead(&b, num);                                              \
+        XLink::AddParamToHead(&b, (DTYPE)num);                                       \
     }                                                                                \
     return b;                                                                        \
 }                                                                                    \
@@ -188,7 +189,7 @@ void funcName(const XTensor &a, XTensor &b, T num)                              
     _funcName(&a, &b, num);                                                          \
     if (a.enableGrad) {                                                              \
         XLink::MakeLink(&a, NULL, &b, operationId);                                  \
-        XLink::AddParamToHead(&b, num);                                              \
+        XLink::AddParamToHead(&b, (DTYPE)num);                                       \
     }                                                                                \
 }                                                                                    \
 template void funcName<int>(const XTensor&, XTensor&, int);                          \

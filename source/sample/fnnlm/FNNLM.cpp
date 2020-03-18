@@ -493,7 +493,8 @@ void Train(const char * train, bool isShuffled, FNNModel &model)
                 Update(model, grad, learningRate, true);
 
                 /* get probabilities */
-                float prob = ReduceSumAll(lossTensor);
+                float prob;
+                _ReduceSumAll(&lossTensor, &prob);
                 loss += prob;
             }
 

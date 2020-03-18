@@ -116,7 +116,7 @@ void _IndexToOnehot(const XTensor * index, XTensor * onehot,
     float confidence = 1 - labelSmoothingP;
     float lowconfidence = labelSmoothingP / size;
 
-    _SetDataFixedFloat(onehot, lowconfidence);
+    onehot->SetDataFixed(lowconfidence);
 
 #ifdef USE_CUDA
     if(onehot->devID >= 0 && index->devID >= 0) {

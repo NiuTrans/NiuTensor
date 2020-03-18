@@ -85,7 +85,7 @@ XTensor Stack(const TensorList &smalls, int dim)
 {
     int count = smalls.count;
     CheckNTErrors(count > 0, "Empty list!");
-    CheckNTErrors(dim >= 0, "Illegal dimension to concatenate!");
+    CheckNTErrors(dim >= 0, "Illegal dimension to Stack!");
 
     XTensor * tensor = smalls.GetItem(0);
     int order = tensor->order + 1;
@@ -95,7 +95,7 @@ XTensor Stack(const TensorList &smalls, int dim)
         if (i < dim)
             dimSize[i] = tensor->GetDim(i);
         else if (i > dim)
-            dimSize[i] = tensor->GetDim(i);
+            dimSize[i] = tensor->GetDim(i - 1);
         else if (i == dim)
             dimSize[i] = count;
     }
@@ -149,7 +149,7 @@ void Stack(const TensorList &smalls, XTensor &t, int dim)
 {
     int count = smalls.count;
     CheckNTErrors(count > 0, "Empty list!");
-    CheckNTErrors(dim >= 0, "Illegal dimension to concatenate!");
+    CheckNTErrors(dim >= 0, "Illegal dimension to Stack!");
 
     if (!t.isInit || !CheckStackShape(smalls, t, dim)) {
         XTensor * tensor = smalls.GetItem(0);
@@ -160,7 +160,7 @@ void Stack(const TensorList &smalls, XTensor &t, int dim)
             if (i < dim)
                 dimSize[i] = tensor->GetDim(i);
             else if (i > dim)
-                dimSize[i] = tensor->GetDim(i-1);
+                dimSize[i] = tensor->GetDim(i - 1);
             else if (i == dim)
                 dimSize[i] = count;
         }

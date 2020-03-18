@@ -240,6 +240,104 @@ bool TestReduceSumSquared2()
 #endif // USE_CUDA
 }
 
+/*
+case 3: squared sum of the items along a dimension of the scalar tensor.
+For a 1-dimensional data array a, sum = \sum_i (a_i - shift)^2.
+In this case, (4) -> scalar, dim = 0.
+*/
+bool TestReduceSumSquared3()
+{
+    /* a input tensor of size (4) */
+    int sOrder = 1;
+    int * sDimSize = new int[sOrder];
+    sDimSize[0] = 4;
+
+    int sUnitNum = 1;
+    for (int i = 0; i < sOrder; i++)
+        sUnitNum *= sDimSize[i];
+
+    /* a output scalar tensor */
+    int tOrder = 0;
+    int * tDimSize = new int[MAX_TENSOR_DIM_NUM];
+    int tUnitNum = 1;
+
+    /* a shift tensor of size (1) */
+    int shiftOrder = 0;
+    int * shiftDimSize = new int[MAX_TENSOR_DIM_NUM];
+    int shiftUnitNum = 1;
+
+    DTYPE sData[4] = {0.0F, 1.0F, 2.0F, 3.0F};
+    DTYPE shiftData[1] = {-1.0F};
+    DTYPE answer[1] = {30.0F};
+
+    /* CPU test */
+    bool cpuTest = true;
+
+    /* create tensors */
+    XTensor * s = NewTensorV2(sOrder, sDimSize);
+    XTensor * t = NewTensorV2(tOrder, tDimSize);
+    XTensor * shift = NewTensorV2(shiftOrder, shiftDimSize);
+    XTensor tUser;
+
+    /* initialize variables */
+    s->SetData(sData, sUnitNum);
+    shift->SetData(shiftData, shiftUnitNum);
+    t->SetZeroAll();
+
+    /* call ReduceSumSquared function */
+    _ReduceSumSquared(s, t, 0, shift);
+    tUser = ReduceSumSquared(*s, 0, *shift);
+
+    /* check results */
+    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
+
+#ifdef USE_CUDA
+    /* GPU test */
+    bool gpuTest = true;
+
+    /* create tensors */
+    XTensor * sGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * shiftGPU = NewTensorV2(shiftOrder, shiftDimSize, X_FLOAT, 1.0F, 0);
+    XTensor tUserGPU;
+
+    /* initialize variables */
+    sGPU->SetData(sData, sUnitNum);
+    shiftGPU->SetData(shiftData, shiftUnitNum);
+    tGPU->SetZeroAll();
+
+    /* call ReduceSumSquared function */
+    _ReduceSumSquared(sGPU, tGPU, 0, shiftGPU);
+    tUserGPU = ReduceSumSquared(*sGPU, 0, *shiftGPU);
+
+    /* check results */
+    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
+
+    /* destroy variables */
+    delete s;
+    delete t;
+    delete shift;
+    delete sGPU;
+    delete tGPU;
+    delete shiftGPU;
+    delete[] sDimSize;
+    delete[] tDimSize;
+    delete[] shiftDimSize;
+
+    return cpuTest && gpuTest;
+#else
+    /* destroy variables */
+    delete s;
+    delete t;
+    delete shift;
+    delete[] sDimSize;
+    delete[] tDimSize;
+    delete[] shiftDimSize;
+
+    return cpuTest;
+#endif // USE_CUDA
+}
+
 /* other cases */
 /*
 TODO!!
@@ -264,10 +362,19 @@ bool TestReduceSumSquared()
     caseFlag = TestReduceSumSquared2();
     if (!caseFlag) {
         returnFlag = false;
-        XPRINT(0, stdout, ">> case 1 failed!\n");
+        XPRINT(0, stdout, ">> case 2 failed!\n");
     }
     else
-        XPRINT(0, stdout, ">> case 1 passed!\n");
+        XPRINT(0, stdout, ">> case 2 passed!\n");
+
+    /* case 3 test */
+    caseFlag = TestReduceSumSquared3();
+    if (!caseFlag) {
+        returnFlag = false;
+        XPRINT(0, stdout, ">> case 3 failed!\n");
+    }
+    else
+        XPRINT(0, stdout, ">> case 3 passed!\n");
 
     /* other cases test */
     /*

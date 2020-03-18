@@ -105,7 +105,7 @@ void _ReduceSum(const XTensor * input, XTensor * output, int dim, const XTensor 
                         vecBuf[j] = VectorBuffer::loadu((DTYPE*)(ip) + j * vecBufLength, isExp, power, bias);
                     }
                     for(int j = 1; j < strideNum / 32; j++){
-                        const DTYPE* ptr = (DTYPE*)(ip + j * vecBufLength);
+                        const DTYPE* ptr = (DTYPE*)(ip + (j * 4) * vecBufLength);
                         vecBuf[0] = vecBuf[0] + VectorBuffer::loadu(ptr + 0 * vecBufLength, isExp, power, bias);
                         vecBuf[1] = vecBuf[1] + VectorBuffer::loadu(ptr + 1 * vecBufLength, isExp, power, bias);
                         vecBuf[2] = vecBuf[2] + VectorBuffer::loadu(ptr + 2 * vecBufLength, isExp, power, bias);
@@ -122,7 +122,7 @@ void _ReduceSum(const XTensor * input, XTensor * output, int dim, const XTensor 
             } else{
                 //data is separated
                 for(int i = 0; i < blockNum; i++){
-                    for(int j = 0; j < input->dimSize[input->order - 1] / 32; j++){
+                    for(int j = 0; j < stride / 32; j++){
                         DTYPE * ip = (DTYPE*)input->data + blockSize * i;
                         DTYPE * op = (DTYPE*)output->data + stride * i;
                         DTYPE * sp = shift != NULL ? (DTYPE*)shift->data + stride * i : NULL;
@@ -133,8 +133,7 @@ void _ReduceSum(const XTensor * input, XTensor * output, int dim, const XTensor 
                         }
                         VectorBuffer vecBuf[4];
                         for(int k = 0; k < 4; k++){
-                            vecBuf[k] = VectorBuffer::loadu((DTYPE*)(ip) + (j * 4 + k) * 32 / sizeof(DTYPE), isExp, power, bias + j * 32 / sizeof(DTYPE));
-
+                            vecBuf[k] = VectorBuffer::loadu((DTYPE*)(ip) + (j * 4 + k) * 32 / sizeof(DTYPE), isExp, power, bias + k * 32 / sizeof(DTYPE));
                         }
                         for(int k = 1; k < strideNum; k++){
                             DTYPE * ptr = ip + k * stride + (j * 4) * vecBufLength;

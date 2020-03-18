@@ -132,6 +132,104 @@ bool TestReduceVariance1()
 #endif // USE_CUDA
 }
 
+/*
+case 2: variance of the items along a dimension of the scalar tensor.
+For a 1-dimensional data array a, variance = 1/n * \sum_i (a_i - mean)^2.
+In this case, (4) -> scalar, dim = 0.
+*/
+bool TestReduceVariance2()
+{
+    /* a input tensor of size (4) */
+    int sOrder = 1;
+    int * sDimSize = new int[sOrder];
+    sDimSize[0] = 4;
+
+    int sUnitNum = 1;
+    for (int i = 0; i < sOrder; i++)
+        sUnitNum *= sDimSize[i];
+
+    /* a output scalar tensor */
+    int tOrder = 0;
+    int * tDimSize = new int[MAX_TENSOR_DIM_NUM];
+    int tUnitNum = 1;
+
+    /* a mean scalar tensor */
+    int meanOrder = 0;
+    int * meanDimSize = new int[MAX_TENSOR_DIM_NUM];
+    int meanUnitNum = 1;
+
+    DTYPE sData[4] = {0.0F, 1.0F, 2.0F, 3.0F};
+    DTYPE meanData[1] = {1.5F};
+    DTYPE answer[1] = {1.25F};
+
+    /* CPU test */
+    bool cpuTest = true;
+
+    /* create tensors */
+    XTensor * s = NewTensorV2(sOrder, sDimSize);
+    XTensor * t = NewTensorV2(tOrder, tDimSize);
+    XTensor * mean = NewTensorV2(meanOrder, meanDimSize);
+    XTensor tUser;
+
+    /* initialize variables */
+    s->SetData(sData, sUnitNum);
+    mean->SetData(meanData, meanUnitNum);
+    t->SetZeroAll();
+
+    /* call ReduceVariance function */
+    _ReduceVariance(s, t, 0, mean);
+    tUser = ReduceVariance(*s, 0, *mean);
+
+    /* check results */
+    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
+
+#ifdef USE_CUDA
+    /* GPU test */
+    bool gpuTest = true;
+
+    /* create tensors */
+    XTensor * sGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * meanGPU = NewTensorV2(meanOrder, meanDimSize, X_FLOAT, 1.0F, 0);
+    XTensor tUserGPU;
+
+    /* initialize variables */
+    sGPU->SetData(sData, sUnitNum);
+    meanGPU->SetData(meanData, meanUnitNum);
+    tGPU->SetZeroAll();
+
+    /* call ReduceVariance function */
+    _ReduceVariance(sGPU, tGPU, 0, meanGPU);
+    tUserGPU = ReduceVariance(*sGPU, 0, *meanGPU);
+
+    /* check results */
+    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
+
+    /* destroy variables */
+    delete s;
+    delete t;
+    delete mean;
+    delete sGPU;
+    delete tGPU;
+    delete meanGPU;
+    delete[] sDimSize;
+    delete[] tDimSize;
+    delete[] meanDimSize;
+
+    return cpuTest && gpuTest;
+#else
+    /* destroy variables */
+    delete s;
+    delete t;
+    delete mean;
+    delete[] sDimSize;
+    delete[] tDimSize;
+    delete[] meanDimSize;
+
+    return cpuTest;
+#endif // USE_CUDA
+}
+
 /* other cases */
 /*
 TODO!!
@@ -151,6 +249,15 @@ bool TestReduceVariance()
     }
     else
         XPRINT(0, stdout, ">> case 1 passed!\n");
+
+    /* case 2 test */
+    caseFlag = TestReduceVariance2();
+    if (!caseFlag) {
+        returnFlag = false;
+        XPRINT(0, stdout, ">> case 2 failed!\n");
+    }
+    else
+        XPRINT(0, stdout, ">> case 2 passed!\n");
 
     /* other cases test */
     /*

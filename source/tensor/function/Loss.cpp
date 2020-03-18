@@ -383,15 +383,7 @@ void _LossBackward(XTensor * dedy, XTensor * t, XTensor * y,
                   int leadDim, int tBeg, int tLen, int yBeg)
 {
     if(t == NULL){
-        if(dedy->dataType == X_FLOAT)
-            _SetDataFixedFloat(dedy, 1.0F);
-        else if(dedy->dataType == X_DOUBLE)
-            _SetDataFixedDouble(dedy, 1.0);
-        else if(dedy->dataType == X_INT)
-            _SetDataFixedInt(dedy, 1);
-        else{
-            ShowNTErrors("TODO");
-        }
+        dedy->SetDataFixed(1);
         return;
     }
 

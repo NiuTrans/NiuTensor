@@ -127,6 +127,14 @@ XTensor ConvertDataType(const XTensor & input, TENSOR_DATA_TYPE dataType)
     return output;
 }
 
+/*
+convert data type (return an XTensor structure)
+make a new tensor to keep the result and return it
+
+>> input - the input tensor
+>> output - the output tensor
+<< return - the output tensor with the specified data type
+*/
 void ConvertDataType(const XTensor & input, XTensor & output, TENSOR_DATA_TYPE dataType)
 {
     if (!output.isInit || input.dataType != output.dataType) {

@@ -26,10 +26,10 @@
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
-/* transform a tensor by merging it alone with a dimension, e.g., (M, N/3, 3) -> (M, N) */
+/* transform a tensor by merging it along with a dimension, e.g., (M, N/3, 3) -> (M, N) */
 void _Merge(const XTensor * s, XTensor * t, int whereToMerge, int leadingDim = -1);
 
-/* transform a tensor by merging it alone with a dimension (return an XTensor structure)
+/* transform a tensor by merging it along with a dimension (return an XTensor structure)
    e.g., (M, N/3, 3) -> (M, N) */
 XTensor Merge(const XTensor &s, int whereToMerge, int leadingDim = -1);
 

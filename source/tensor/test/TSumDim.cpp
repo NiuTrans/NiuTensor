@@ -296,8 +296,8 @@ bool TestSumDim3()
     /* initialize variables */
     a->SetZeroAll();
     cMe->SetZeroAll();
-    _SetDataFixedFloat(b, 1.0F);
-    _SetDataFixedFloat(answer, 1.0F);
+    b->SetDataFixed(1);
+    answer->SetDataFixed(1);
 
     /* call SumDim function */
     _SumDim(a, b, c, 1);
@@ -323,7 +323,7 @@ bool TestSumDim3()
     /* Initialize variables */
     aGPU->SetZeroAll();
     cMe->SetZeroAll();
-    _SetDataFixedFloat(bGPU, 1.0F);
+    bGPU->SetDataFixed(1);
 
     /* call sum function */
     _SumDim(aGPU, bGPU, cGPU, 1);
@@ -405,8 +405,8 @@ bool TestSumDim4()
     /* initialize variables */
     a->SetZeroAll();
     cMe->SetZeroAll();
-    _SetDataFixedFloat(b, 1.0F);
-    _SetDataFixedFloat(answer, 1.0F);
+    b->SetDataFixed(1);
+    answer->SetDataFixed(1);
 
     /* call SumDim function */
     _SumDim(a, b, c, 1);
@@ -432,7 +432,7 @@ bool TestSumDim4()
     /* Initialize variables */
     aGPU->SetZeroAll();
     cMe->SetZeroAll();
-    _SetDataFixedFloat(bGPU, 1.0F);
+    bGPU->SetDataFixed(1);
 
     /* call sum function */
     _SumDim(aGPU, bGPU, cGPU, 1);

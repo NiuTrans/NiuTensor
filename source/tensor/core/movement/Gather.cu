@@ -77,7 +77,7 @@ gather indexed sub-tensors(cuda version)
 >> blockNum - block size of data
 */
 __global__
-void KernelGather(DTYPE * sData, DTYPE * tData, int * sIndex, int stride, int strideNum, int blockNum)
+void KernelGather(DTYPE * sData, DTYPE * tData, int * sIndex, int stride, int strideNum, int blockNum, int srcStrideNum)
 {
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
     int idy = blockDim.y * blockIdx.y + threadIdx.y;
@@ -90,7 +90,7 @@ void KernelGather(DTYPE * sData, DTYPE * tData, int * sIndex, int stride, int st
     for (int i = idx * stride + stride * strideNum * blockIndex + offsetInBlock;
         i < stride * strideNum * blockIndex + offsetInBlock + stride * strideNum && i < size;
         i += stride * blockDim.x) {
-        tData[i] = sData[sIndex[i]];
+        tData[i] = sData[sIndex[i] * stride + stride * srcStrideNum * blockIndex + offsetInBlock];
     }
 }
 
@@ -126,13 +126,29 @@ void _CudaGather(const XTensor * s, XTensor * t, XTensor * srcIndex)
     int * sIndex = NULL;
     
     if (srcIndex->devID < 0) {
+        int * sIndexData = (int*)srcIndex->data;
+        for (int i = 0; i < indexSize; i++) {
+            int srcIndexValue = sIndexData[i] * stride;
+            CheckNTErrors(srcIndexValue < s->unitNum, "Wrong index!");
+        }
+
         sIndex = mem != NULL ? 
                   (int*)mem->AllocBuf(mem->devID, sizeof(int) * indexSize) : 
                   (int*)XMemAlloc(mem->devID, sizeof(int) * indexSize);
         XMemCopy(sIndex, devID, srcIndex, -1, sizeof(int) * indexSize);
     }
-    else
+    else {
+        int * sIndexData = new int[sizeof(int) * indexSize];
+        XMemCopy(sIndexData, -1, srcIndex->data, srcIndex->devID, sizeof(int) * indexSize);
+        for (int i = 0; i < indexSize; i++) {
+            int srcIndexValue = sIndexData[i] * stride;
+            CheckNTErrors(srcIndexValue < s->unitNum, "Wrong index!");
+        }
+
         sIndex = (int *)srcIndex->data;
+
+        delete[] sIndexData;
+    }
 
     KernelGather<<<blocks, threads >>>(sData, tData, sIndex, indexSize, stride);
 
@@ -163,6 +179,7 @@ void _CudaGather(const XTensor * s, XTensor * t, XTensor * srcIndex, int dim)
     int blockNum = 1;
     int indexSize = srcIndex->unitNum;
     int strideNum = srcIndex->dimSize[dim];
+    int srcStrideNum = s->dimSize[dim];
     for (int i = 0; i < dim; i++)
         blockNum *= srcIndex->dimSize[i];
     for (int i = dim + 1; i < srcIndex->order; i++)
@@ -170,19 +187,33 @@ void _CudaGather(const XTensor * s, XTensor * t, XTensor * srcIndex, int dim)
 
     int * sIndex = NULL;
     if (srcIndex->devID < 0) {
+        int * sIndexData = (int*)srcIndex->data;
+        for (int i = 0; i < indexSize; i++) {
+            int srcIndexValue = sIndexData[i] * stride;
+            CheckNTErrors(srcIndexValue < s->unitNum, "Wrong index!");
+        }
+
         sIndex = mem != NULL ?
-            (int*)mem->AllocBuf(mem->devID, sizeof(int) * indexSize) :
-            (int*)XMemAlloc(mem->devID, sizeof(int) * indexSize);
+                  (int*)mem->AllocBuf(mem->devID, sizeof(int) * indexSize) :
+                  (int*)XMemAlloc(mem->devID, sizeof(int) * indexSize);
         XMemCopy(sIndex, devID, srcIndex, -1, sizeof(int) * indexSize);
     }
-    else
+    else {
+        int * sIndexData = new int[sizeof(int) * indexSize];
+        XMemCopy(sIndexData, -1, srcIndex->data, srcIndex->devID, sizeof(int) * indexSize);
+        for (int i = 0; i < indexSize; i++) {
+            int srcIndexValue = sIndexData[i] * stride;
+            CheckNTErrors(srcIndexValue < s->unitNum, "Wrong index!");
+        }
+
         sIndex = (int *)srcIndex->data;
+	   delete[] sIndexData;
+    }
 
     int cudaGrids[3];
     int cudaBlocks[3];
     GDevs.GetCudaThread2D(devID, max(32, strideNum), stride*blockNum, MAX_INT, cudaGrids, cudaBlocks);
-
-    KernelGather << <dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1]) >> > ((DTYPE *)s->data, (DTYPE *)t->data, sIndex, stride, strideNum, blockNum);
+    KernelGather << <dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1]) >> > ((DTYPE *)s->data, (DTYPE *)t->data, sIndex, stride, strideNum, blockNum, srcStrideNum);
 }
 #endif // USE_CUDA
 

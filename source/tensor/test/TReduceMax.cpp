@@ -141,6 +141,90 @@ bool TestReduceMax1()
 #endif // USE_CUDA
 }
 
+/*
+case 2: get the max value of the items along a dimension of the scalar tensor.
+In this case,
+(4) -> scalar, dim = 0
+*/
+bool TestReduceMax2()
+{
+    /* a input tensor of size (4) */
+    int sOrder = 1;
+    int * sDimSize = new int[sOrder];
+    sDimSize[0] = 4;
+
+    int sUnitNum = 1;
+    for (int i = 0; i < sOrder; i++)
+        sUnitNum *= sDimSize[i];
+
+    /* a output scalar tensor */
+    int tOrder = 0;
+    int * tDimSize = new int[MAX_TENSOR_DIM_NUM];
+    int tUnitNum = 1;
+
+    DTYPE sData[4] = {0.0F, 5.0F, 2.0F, 3.0F};
+    DTYPE answer[1] = {5.0F};
+
+    /* CPU test */
+    bool cpuTest = true;
+
+    /* create tensors */
+    XTensor * s = NewTensorV2(sOrder, sDimSize);
+    XTensor * t = NewTensorV2(tOrder, tDimSize);
+    XTensor tUser;
+
+    /* initialize variables */
+    s->SetData(sData, sUnitNum);
+    t->SetZeroAll();
+
+    /* call ReduceMax function */
+    _ReduceMax(s, t, 0);
+    tUser = ReduceMax(*s, 0);
+
+    /* check results */
+    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
+
+#ifdef USE_CUDA
+    /* GPU test */
+    bool gpuTest = true;
+
+    /* create tensors */
+    XTensor * sGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor tUserGPU;
+
+    /* initialize variables */
+    sGPU->SetData(sData, sUnitNum);
+    tGPU->SetZeroAll();
+    tGPU->SetZeroAll();
+
+    /* call ReduceMax function */
+    _ReduceMax(sGPU, tGPU, 0);
+    tUserGPU = ReduceMax(*sGPU, 0);
+
+    /* check results */
+    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
+
+    /* destroy variables */
+    delete s;
+    delete t;
+    delete sGPU;
+    delete tGPU;
+    delete[] sDimSize;
+    delete[] tDimSize;
+
+    return cpuTest && gpuTest;
+#else
+    /* destroy variables */
+    delete s;
+    delete t;
+    delete[] sDimSize;
+    delete[] tDimSize;
+
+    return cpuTest;
+#endif // USE_CUDA
+}
+
 /* other cases */
 /*
 TODO!!
@@ -160,6 +244,15 @@ bool TestReduceMax()
     }
     else
         XPRINT(0, stdout, ">> case 1 passed!\n");
+
+    /* case 2 test */
+    caseFlag = TestReduceMax2();
+    if (!caseFlag) {
+        returnFlag = false;
+        XPRINT(0, stdout, ">> case 2 failed!\n");
+    }
+    else
+        XPRINT(0, stdout, ">> case 2 passed!\n");
 
     /* other cases test */
     /*

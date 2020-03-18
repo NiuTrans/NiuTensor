@@ -834,7 +834,7 @@ int CompXFloat(const void * a, const void * b)
 void ResetGPUDevices()
 {
 #ifdef USE_CUDA
-
+#if CUDART_VERSION < 10000
     cudaThreadExit();
     return;
 
@@ -845,6 +845,9 @@ void ResetGPUDevices()
         cudaSetDevice(i);
         cudaDeviceReset();
     }*/
+#else
+    ShowNTErrors("TODO!");
+#endif
 #endif
 }
 

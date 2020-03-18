@@ -220,7 +220,7 @@ void _SumBroadcast(const XTensor * a, const XTensor * b, XTensor * c, DTYPE beta
 {
     CheckNTErrors(a->order == b->order, "Wrong tensor orders!");
     CheckNTErrors(a->order == c->order, "Wrong tensor orders!");
-    CheckNTErrors(a->order > 0, "TODO!");
+    CheckNTErrors(a->order >= 0, "TODO!");
     
     int order = a->order;
     int count = 0;

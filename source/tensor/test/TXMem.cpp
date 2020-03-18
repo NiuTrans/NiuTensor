@@ -64,7 +64,7 @@ bool TestXMemCase1()
             }
 
             for (int i = 0; i < testNum * scalar; i++) {
-                testxmemid++;
+                //testxmemid++;
                 int j = rand() % caseNum;
 
                 //fprintf(stderr, "%d %d %d\n", testxmemid, j, ok);

@@ -16,7 +16,7 @@
  */
 
 /*
- * $Created by: Xu Chen (email: hello_master1954@163.com) 2018-09-27
+ * $Created by: LI Yinqqiao (email: li.yin.qiao.2012@hotmail.com) 2020-01-09
  */
 
 
@@ -28,10 +28,16 @@
 namespace nts{ // namespace nts(NiuTrans.Tensor)
 
 /* sum all the items of the tensor */
-DTYPE _ReduceSumAll(const XTensor * source);
+void _ReduceSumAll(const XTensor * source, XTensor * target);
 
 /* sum all the items of the tensor */
-DTYPE ReduceSumAll(const XTensor & source);
+void _ReduceSumAll(const XTensor * source, DTYPE * target);
+
+/* sum all the items of the tensor */
+XTensor ReduceSumAll(const XTensor & source);
+
+/* sum all the items of the tensor */
+DTYPE ReduceSumAllValue(const XTensor & source);
 
 } // namespace nts(NiuTrans.Tensor)
 

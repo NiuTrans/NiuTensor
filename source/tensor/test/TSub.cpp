@@ -215,6 +215,305 @@ bool TestSub2()
 #endif // USE_CUDA
 }
 
+/* case 3: tensor subtraction c = a - b * \beta, which b is a scalar tensor */
+bool TestSub3()
+{
+    /* a tensor of size (2, 4) */
+    int aOrder = 2;
+    int * aDimSize = new int[aOrder];
+    aDimSize[0] = 2;
+    aDimSize[1] = 4;
+
+    int aUnitNum = 1;
+    for (int i = 0; i < aOrder; i++)
+        aUnitNum *= aDimSize[i];
+
+    /* a scalar */
+    int bOrder = 0;
+    int * bDimSize = new int[MAX_TENSOR_DIM_NUM];
+    int bUnitNum = 1;
+
+
+    /* a tensor of size (2, 4) */
+    int cOrder = 2;
+    int * cDimSize = new int[cOrder];
+    cDimSize[0] = 2;
+    cDimSize[1] = 4;
+
+    int cUnitNum = 1;
+    for (int i = 0; i < cOrder; i++)
+        cUnitNum *= cDimSize[i];
+
+    DTYPE aData[2][4] = { {0.0F, 1.0F, 2.0F, 3.0F},
+                          {4.0F, 5.0F, 6.0F, 7.0F} };
+    DTYPE bData[1] = {-1.0F};
+    DTYPE beta = 2.0F;
+    DTYPE answer[2][4] = { {2.0F, 3.0F, 4.0F, 5.0F},
+                           {6.0F, 7.0F, 8.0F, 9.0F} };
+
+    /* CPU test */
+    bool cpuTest = true;
+
+    /* create tensors */
+    XTensor * a = NewTensorV2(aOrder, aDimSize);
+    XTensor * b = NewTensorV2(bOrder, bDimSize);
+    XTensor cUser;
+
+    /* initialize variables */
+    a->SetData(aData, aUnitNum);
+    b->SetData(bData, bUnitNum);
+
+    /* call Sum function */
+    cUser = Sub(*a, *b, beta);
+
+    /* check results */
+    cpuTest = _CheckData(&cUser, answer, cUnitNum);
+
+#ifdef USE_CUDA
+    /* GPU test */
+    bool gpuTest = true;
+
+    /* create tensor */
+    XTensor * aGPU = NewTensorV2(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * bGPU = NewTensorV2(bOrder, bDimSize, X_FLOAT, 1.0F, 0);
+    XTensor cUserGPU;
+
+    /* Initialize variables */
+    aGPU->SetData(aData, aUnitNum);
+    bGPU->SetData(bData, bUnitNum);
+
+    /* call Sum function */
+    cUserGPU = Sub(*aGPU, *bGPU, beta);
+
+    /* check results */
+    gpuTest = _CheckData(&cUserGPU, answer, cUnitNum);
+
+    /* destroy variables */
+    delete a;
+    delete b;
+    delete aGPU;
+    delete bGPU;
+    delete[] aDimSize;
+    delete[] bDimSize;
+    delete[] cDimSize;
+
+    return cpuTest && gpuTest;
+#else
+    /* destroy variables */
+    delete a;
+    delete b;
+    delete[] aDimSize;
+    delete[] bDimSize;
+    delete[] cDimSize;
+
+    return cpuTest;
+#endif // USE_CUDA
+}
+
+/* case 4: tensor subtraction c = a - b * \beta, which b is a 1d tensor */
+bool TestSub4()
+{
+    /* a tensor of size (3, 4, 2) */
+    int aOrder = 3;
+    int * aDimSize = new int[aOrder];
+    aDimSize[0] = 3;
+    aDimSize[1] = 4;
+    aDimSize[2] = 2;
+
+    int aUnitNum = 1;
+    for (int i = 0; i < aOrder; i++)
+        aUnitNum *= aDimSize[i];
+
+    /* a tensor of size (4) */
+    int bOrder = 1;
+    int * bDimSize = new int[bOrder];
+    bDimSize[0] = 4;
+
+    int bUnitNum = 1;
+    for (int i = 0; i < bOrder; i++)
+        bUnitNum *= bDimSize[i];
+
+    /* a tensor of size (3, 4, 2) */
+    int cOrder = 3;
+    int * cDimSize = new int[cOrder];
+    cDimSize[0] = 3;
+    cDimSize[1] = 4;
+    cDimSize[2] = 2;
+
+    int cUnitNum = 1;
+    for (int i = 0; i < cOrder; i++)
+        cUnitNum *= cDimSize[i];
+
+    DTYPE aData[3][4][2] = { { {0.0F, 1.0F}, {2.0F, 3.0F}, {4.0F, 5.0F}, {6.0F, 7.0F} },
+                             { {0.0F, -1.0F}, {-2.0F, -3.0F}, {-4.0F, -5.0F}, {-6.0F, -7.0F} },
+                             { {0.0F, 1.0F}, {2.0F, 3.0F}, {4.0F, 5.0F}, {6.0F, 7.0F} } };
+    DTYPE bData[4] = {-1.0F, 0.0F, 1.0F, 2.0F};
+    DTYPE beta = 2.0F;
+    DTYPE answer[3][4][2] = { { {2.0F, 3.0F}, {2.0F, 3.0F}, {2.0F, 3.0F}, {2.0F, 3.0F} },
+                              { {2.0F, 1.0F}, {-2.0F, -3.0F}, {-6.0F, -7.0F}, {-10.0F, -11.0F} },
+                              { {2.0F, 3.0F}, {2.0F, 3.0F}, {2.0F, 3.0F}, {2.0F, 3.0F} } };
+
+    /* CPU test */
+    bool cpuTest = true;
+
+    /* create tensors */
+    XTensor * a = NewTensorV2(aOrder, aDimSize);
+    XTensor * b = NewTensorV2(bOrder, bDimSize);
+    XTensor cUser;
+
+    /* initialize variables */
+    a->SetData(aData, aUnitNum);
+    b->SetData(bData, bUnitNum);
+
+    /* call Sum function */
+    cUser = Sub(*a, *b, beta);
+
+    /* check results */
+    cpuTest = _CheckData(&cUser, answer, cUnitNum);
+
+#ifdef USE_CUDA
+    /* GPU test */
+    bool gpuTest = true;
+
+    /* create tensor */
+    XTensor * aGPU = NewTensorV2(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * bGPU = NewTensorV2(bOrder, bDimSize, X_FLOAT, 1.0F, 0);
+    XTensor cUserGPU;
+
+    /* Initialize variables */
+    aGPU->SetData(aData, aUnitNum);
+    bGPU->SetData(bData, bUnitNum);
+
+    /* call Sum function */
+    cUserGPU = Sub(*aGPU, *bGPU, beta);
+
+    /* check results */
+    gpuTest = _CheckData(&cUserGPU, answer, cUnitNum);
+
+    /* destroy variables */
+    delete a;
+    delete b;
+    delete aGPU;
+    delete bGPU;
+    delete[] aDimSize;
+    delete[] bDimSize;
+    delete[] cDimSize;
+
+    return cpuTest && gpuTest;
+#else
+    /* destroy variables */
+    delete a;
+    delete b;
+    delete[] aDimSize;
+    delete[] bDimSize;
+    delete[] cDimSize;
+
+    return cpuTest;
+#endif // USE_CUDA
+}
+
+/* case 5: tensor subtraction c = a - b * \beta, which b is a 1d tensor */
+bool TestSub5()
+{
+    /* a tensor of size (4, 4) */
+    int aOrder = 2;
+    int * aDimSize = new int[aOrder];
+    aDimSize[0] = 4;
+    aDimSize[1] = 4;
+
+    int aUnitNum = 1;
+    for (int i = 0; i < aOrder; i++)
+        aUnitNum *= aDimSize[i];
+
+    /* a tensor of size (4) */
+    int bOrder = 1;
+    int * bDimSize = new int[bOrder];
+    bDimSize[0] = 4;
+
+    int bUnitNum = 1;
+    for (int i = 0; i < bOrder; i++)
+        bUnitNum *= bDimSize[i];
+
+    /* a tensor of size (4, 4) */
+    int cOrder = 2;
+    int * cDimSize = new int[cOrder];
+    cDimSize[0] = 4;
+    cDimSize[1] = 4;
+
+    int cUnitNum = 1;
+    for (int i = 0; i < cOrder; i++)
+        cUnitNum *= cDimSize[i];
+
+    DTYPE aData[4][4] = { {0.0F, 1.0F, 2.0F, 3.0F },
+                          {4.0F, 5.0F, 6.0F, 7.0F },
+                          {0.0F, -1.0F, -2.0F, -3.0F },
+                          {-4.0F, -5.0F, -6.0F, -7.0F } };
+    DTYPE bData[4] = {-1.0F, 0.0F, 1.0F, 2.0F};
+    DTYPE beta = 2.0F;
+    DTYPE answer[4][4] = { {2.0F, 1.0F, 0.0F, -1.0F },
+                           {6.0F, 5.0F, 4.0F, 3.0F },
+                           {2.0F, -1.0F, -4.0F, -7.0F },
+                           {-2.0F, -5.0F, -8.0F, -11.0F } };
+
+    /* CPU test */
+    bool cpuTest = true;
+
+    /* create tensors */
+    XTensor * a = NewTensorV2(aOrder, aDimSize);
+    XTensor * b = NewTensorV2(bOrder, bDimSize);
+    XTensor cUser;
+
+    /* initialize variables */
+    a->SetData(aData, aUnitNum);
+    b->SetData(bData, bUnitNum);
+
+    /* call Sum function */
+    cUser = Sub(*a, *b, beta);
+
+    /* check results */
+    cpuTest = _CheckData(&cUser, answer, cUnitNum);
+
+#ifdef USE_CUDA
+    /* GPU test */
+    bool gpuTest = true;
+
+    /* create tensor */
+    XTensor * aGPU = NewTensorV2(aOrder, aDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * bGPU = NewTensorV2(bOrder, bDimSize, X_FLOAT, 1.0F, 0);
+    XTensor cUserGPU;
+
+    /* Initialize variables */
+    aGPU->SetData(aData, aUnitNum);
+    bGPU->SetData(bData, bUnitNum);
+
+    /* call Sum function */
+    cUserGPU = Sub(*aGPU, *bGPU, beta);
+
+    /* check results */
+    gpuTest = _CheckData(&cUserGPU, answer, cUnitNum);
+
+    /* destroy variables */
+    delete a;
+    delete b;
+    delete aGPU;
+    delete bGPU;
+    delete[] aDimSize;
+    delete[] bDimSize;
+    delete[] cDimSize;
+
+    return cpuTest && gpuTest;
+#else
+    /* destroy variables */
+    delete a;
+    delete b;
+    delete[] aDimSize;
+    delete[] bDimSize;
+    delete[] cDimSize;
+
+    return cpuTest;
+#endif // USE_CUDA
+}
+
 /* other cases */
 /*
     TODO!!
@@ -243,6 +542,33 @@ bool TestSub()
     }
     else
         XPRINT(0, stdout, ">> case 2 passed!\n");
+
+    /* case 3 test */
+    caseFlag = TestSub3();
+    if (!caseFlag) {
+        returnFlag = false;
+        XPRINT(0, stdout, ">> case 3 failed!\n");
+    }
+    else
+    XPRINT(0, stdout, ">> case 3 passed!\n");
+
+    /* case 4 test */
+    caseFlag = TestSub4();
+    if (!caseFlag) {
+        returnFlag = false;
+        XPRINT(0, stdout, ">> case 4 failed!\n");
+    }
+    else
+    XPRINT(0, stdout, ">> case 4 passed!\n");
+
+    /* case 5 test */
+    caseFlag = TestSub5();
+    if (!caseFlag) {
+        returnFlag = false;
+        XPRINT(0, stdout, ">> case 5 failed!\n");
+    }
+    else
+        XPRINT(0, stdout, ">> case 5 passed!\n");
 
     /* other cases test */
     /*

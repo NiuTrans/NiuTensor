@@ -26,6 +26,8 @@
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
+/* calculate result between a tensor and a constant */
+
 /* descale tensor entires
 b = a / num */
 template<class T>

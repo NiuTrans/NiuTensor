@@ -45,6 +45,15 @@ void KernelADD(DTYPE * a, DTYPE * b, DTYPE * c, int size, DTYPE beta)
         c[i] = a[i] + b[i] * beta;
 }
 
+__global__
+void KernelADD(int * a, int * b, int * c, int size, int beta)
+{
+    int i = blockDim.x * blockIdx.x + threadIdx.x;
+
+    if (i < size)
+        c[i] = a[i] + b[i] * beta;
+}
+
 /*
 tensor summation c = a + b * \beta (cuda version)
 >> a - a tensor
@@ -99,6 +108,17 @@ void _CudaSum(const XTensor * a, const XTensor * b, XTensor * c, DTYPE beta)
 
                 KernelADD << <blocks, threads >> >((DTYPE*)a->data, (DTYPE*)b->data, (DTYPE*)c->data, a->unitNum, beta);
             }
+        }
+        else if (a->dataType == X_INT &&
+                 b->dataType == X_INT &&
+                 c->dataType == X_INT)
+        {
+            int gridSize[3], blockSize[3];
+
+            GDevs.GetCudaThread(a->devID, a->unitNum, gridSize, blockSize);
+            dim3 blocks(gridSize[0]);
+            dim3 threads(blockSize[0]);
+            KernelADD << <blocks, threads >> >((int*)a->data, (int*)b->data, (int*)c->data, a->unitNum, (int)beta);
         }
         else {
             // TODO!!

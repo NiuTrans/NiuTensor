@@ -45,18 +45,33 @@ void _Clip(const XTensor * a, XTensor * b, DTYPE lower, DTYPE upper)
 #endif
 
     CheckNTErrors((_IsSameShaped(a, b)), "Input tensors should have the same type!");
-    CheckNTErrors((a->dataType == DEFAULT_DTYPE), "TODO!");
 
-    DTYPE * d = (DTYPE*)a->data;
-    DTYPE * db = (DTYPE*)b->data;
-    for (int i = 0; i < a->unitNum; i++) {
-        if (d[i] > upper)
-            db[i] = upper;
-        else if (d[i] < lower)
-            db[i] = lower;
-        else
-            db[i] = d[i];
+    if (a->dataType == DEFAULT_DTYPE) {
+        DTYPE* d = (DTYPE*)a->data;
+        DTYPE* db = (DTYPE*)b->data;
+        for (int i = 0; i < a->unitNum; i++) {
+            if (d[i] > upper)
+                db[i] = upper;
+            else if (d[i] < lower)
+                db[i] = lower;
+            else
+                db[i] = d[i];
+        }
     }
+    else if (a->dataType == X_INT) {
+        int* d = (int*)a->data;
+        int* db = (int*)b->data;
+        for (int i = 0; i < a->unitNum; i++) {
+            if (d[i] > upper)
+                db[i] = upper;
+            else if (d[i] < lower)
+                db[i] = lower;
+            else
+                db[i] = d[i];
+        }
+    }
+    else
+        ShowNTErrors("TODO!");
 }
 
 /*

@@ -119,7 +119,7 @@ void T2TTrainer::Train(const char * fn, const char * validFN, const char * model
     int ws =0;
     int wordCount = 0;
     int wordCountTotal = 0;
-    int wordCountBatch = 0;
+    int batchCountTotal = 0;
     bool isEnd = false;
     float loss = 0;
     float lr = 0;
@@ -174,9 +174,6 @@ void T2TTrainer::Train(const char * fn, const char * validFN, const char * model
         /* gold standard */
         XTensor gold;
         
-        /* label smoothed gold standard (if needed) */
-        XTensor goldSmoothed;
-        
         while (batchLoader.LoadBatch(file, model->isLM, 
                                      &batchEnc, &paddingEnc, &batchDec, &paddingDec, &gold, &label,
                                      NULL, vSize, vSizeTgt,
@@ -197,51 +194,34 @@ void T2TTrainer::Train(const char * fn, const char * validFN, const char * model
                 ShowNTErrors("Illegal model type!");
             }
 
-            /* back-propagation for obtaining gradients */
-            //if (labelSmoothingP > 0)
-            //    LabelSmooth(&gold, &goldSmoothed, labelSmoothingP);
-
+            /* get loss and probabilities */
             XTensor labelOnehot;
+            XTensor lossTensor;
 
             labelOnehot = IndexToOnehot(label, vSizeTgt, labelSmoothingP);
-            
-            /* make paddings for the output */
-            //if (output.GetDim(0) > 0)
-                //PadOutput(&output, &labelOnehot, &paddingDec);
-
-            /* get probabilities */
-            //float prob = GetProb(&output, &labelOnehot, NULL);
-            XTensor lossTensor;
             lossTensor = CrossEntropy(output, labelOnehot, paddingDec);
-            float prob = ReduceSumAll(lossTensor);
+            float lossBatch = ReduceSumAllValue(lossTensor);
 
-            DTYPE lossLocal = prob / wc;
+            DTYPE lossLocal = lossBatch / wc;
             bool doUpdate = (!IsNAN(lossLocal) && !IsINF(lossLocal) && lossLocal < 1e3F);
           
-            //XTensor &g = labelSmoothingP > 0 ? goldSmoothed : gold;  
-
             if (doUpdate) {
-                
-                /* recale the output for normalized loss */
-                //RescaleOutput(&output, &labelOnehot, &paddingDec);
-                
                 /* back-propagation */
                 net.Backward(lossTensor);
-                //net.Backward(output, labelOnehot, paddingDec, CROSSENTROPY);
-                //net.Backward(output, label, labelSmoothingP, CROSSENTROPY);
                 
                 gradStep += 1;
-                loss += prob;
+                loss += lossBatch;
                 wordCount += wc;
                 wordCountTotal += wc;
-                
-                //totalW = wc + ws;
-                wordCountBatch += ws;
+                batchCountTotal += ws;
+
                 /* update the parameters */
                 if(gradStep == updateStep){
                     
                     /* learning rate */
-                    lr = lrate * (1.0F / (float)sqrt((float)d)) * (float)MIN(pow((float)validStep + 1, -0.5F - lrbias), ((float)validStep + 1) * pow((float)nwarmup, -1.5F - lrbias));
+                    lr = lrate * (1.0F / (float)sqrt((float)d)) * 
+                         (float)MIN(pow((float)validStep + 1, -0.5F - lrbias), 
+                         ((float)validStep + 1) * pow((float)nwarmup, -1.5F - lrbias));
                     
                     /* model update */
                     Update(model, lr);
@@ -260,8 +240,10 @@ void T2TTrainer::Train(const char * fn, const char * validFN, const char * model
             
             if (step % 100 == 0) {
                 double elapsed = GetClockSec() - startT;
-                XPRINT8(0, stderr, "[INFO] elapsed=%.1fs, step=%d, epoch=%d, tword=%d, sword=%d, loss=%.3f, ppl=%.3f, sppl=%.3f",
-                        elapsed, step, epoch, wordCountTotal, wordCountBatch, loss/wordCount, exp(loss/wordCount), exp(prob/wc));
+                XPRINT8(0, stderr, "[INFO] elapsed=%.1fs, step=%d, epoch=%d, total word=%d, total batch=%d, loss=%.3f, ppl=%.3f, sppl=%.3f",
+                        elapsed, step, epoch, 
+                        wordCountTotal, batchCountTotal,
+                        loss/wordCount, exp(loss/wordCount), exp(lossBatch /wc));
                 if (!doUpdate)
                     XPRINT(0, stderr, " (no update)");
                 XPRINT(0, stderr, "\n");
@@ -301,12 +283,11 @@ test the model
 >> ofn - output data file
 >> model - model that is trained
 */
-void T2TTrainer::Test(const char * fn, const char * ofn, T2TModel * model)
+void T2TTrainer::Validate(const char * fn, const char * ofn, T2TModel * model)
 {
     int wc = 0;
     int ws = 0;
     int wordCount = 0;
-    int wordCountTotal = 0;
     int sentCount = 0;
     float loss = 0;
 
@@ -316,13 +297,7 @@ void T2TTrainer::Test(const char * fn, const char * ofn, T2TModel * model)
     FILE * ofile = fopen(ofn, "wb");
     CheckNTErrors(ofile, "Cannot open the output file");
 
-    int devID = model->devID;
-
-    XNet net;
-    
     double startT = GetClockSec();
-        
-    wordCount = 0;
         
     /* batch of input sequences */
     XTensor batchEnc;
@@ -346,7 +321,7 @@ void T2TTrainer::Test(const char * fn, const char * ofn, T2TModel * model)
     while(batchLoader.LoadBatch(file, model->isLM, 
                                 &batchEnc, &paddingEnc, &batchDec, &paddingDec, &gold, &label,
                                 seqs, vSize, vSizeTgt,
-                                1, 1, false, ws, wc, devID, false))
+                                1, 1, false, ws, wc, model->devID, false))
     {
         CheckNTErrors(batchEnc.order == 2, "wrong tensor order of the sequence batch");
             
@@ -366,15 +341,11 @@ void T2TTrainer::Test(const char * fn, const char * ofn, T2TModel * model)
         int length = output.GetDim(1);
 
         /* prediction probabilities */
-        XTensor probs;
-        InitTensor1D(&probs, bSize * length);
-
         XTensor labelOnehot;
-
+        XTensor lossTensor;
         labelOnehot = IndexToOnehot(label, vSizeTgt, 0);
-
-        /* get probabilities */
-        float prob = GetProb(&output, &labelOnehot, &probs);
+        lossTensor = CrossEntropy(output, labelOnehot, paddingDec);
+        float lossBatch = ReduceSumAllValue(lossTensor);
 
         /* dump the test result */
         for(int s = 0; s < bSize; s++){
@@ -390,7 +361,7 @@ void T2TTrainer::Test(const char * fn, const char * ofn, T2TModel * model)
             fprintf(ofile, "||| ");
             for(int i = 0; i < length; i++){
                 if(seq[i] >= 0){
-                    DTYPE p = probs.Get1D(s * length + i);
+                    DTYPE p = lossTensor.Get2D(s, i);
                     fprintf(ofile, "%.3e ", p);
                     sum += p;
                 }
@@ -400,12 +371,12 @@ void T2TTrainer::Test(const char * fn, const char * ofn, T2TModel * model)
             fprintf(ofile, "||| %e\n", sum);
         }
             
-        loss += -prob;
+        loss += lossBatch;
+
         wordCount += wc;
-        wordCountTotal += wc;
-        sentCount += 1;
+        sentCount += bSize;
     }
-        
+
     fclose(file);
     fclose(ofile);
 
@@ -413,8 +384,8 @@ void T2TTrainer::Test(const char * fn, const char * ofn, T2TModel * model)
     
     double elapsed = GetClockSec() - startT;
 
-    XPRINT3(0, stderr, "[INFO] test finished (took %.1fs, word=%d, and ppl=%.3f)\n",
-            elapsed,wordCountTotal, exp(loss / wordCount));
+    XPRINT5(0, stderr, "[INFO] test finished (took %.1fs, sentence=%d, word=%d, loss=%.3f and ppl=%.3f)\n",
+            elapsed, sentCount, wordCount, loss / wordCount, exp(loss / wordCount));
 }
 
 /* 
@@ -428,64 +399,25 @@ make a checkpoint
 void T2TTrainer::MakeCheckpoint(T2TModel * model, const char * validFN, const char * modelFN, const char * label, int id)
 {
     char * fn = new char[MAX_LINE_LENGTH];
-    char * fn2 = new char[MAX_LINE_LENGTH];
     sprintf(fn, "%s.%s.%03d", modelFN, label, id);
-    sprintf(fn2, "%s.%s.%03d.output", modelFN, label, id);
-
     model->Dump(fn);
-    //if(validFN != NULL){
-        //T2TTrainer trainer;
-        //trainer.Init(argNum, argArray);
-        //trainer.Test(validFN, fn2, model);
-    //}
-
     delete[] fn;
-    delete[] fn2;
-}
 
-/*
-get word probabilities for a batch of sequences
->> output - word distribution for each position
->> gold - gold standard
->> wordProbs - word probability for gold prediction
-*/
-float T2TTrainer::GetProb(XTensor * output, XTensor * gold, XTensor * wordProbs)
-{
-    XTensor probs;
-    InitTensorV2(&probs, output);
-    
-    _Multiply(output, gold, &probs);
-    
-    /* probability of each word */
-    XTensor wprobs;
-    InitTensor1D(&wprobs, output->unitNum/output->GetDim(-1), X_FLOAT, output->devID);
-    
-    int dims[2] = {output->unitNum/output->GetDim(-1), output->GetDim(-1)};
-    probs.Reshape(2, dims);
-    _ReduceSum(&probs, &wprobs, 1);
-    
-    if(wordProbs != NULL)
-        _CopyValues(&wprobs, wordProbs);
-    
-    /* reshape the tensor to fit it into the reduce procedure
-       TODO: XTensor supports scalars */
-    dims[0] = 1;
-    dims[1] = probs.unitNum;
-    probs.Reshape(2, dims);
-    
-    /* probability for the batch */
-    XTensor result;
-    InitTensor1D(&result, 1, X_FLOAT, output->devID);
-    _ReduceSum(&probs, &result, 1);
-    
-    return result.Get1D(0);
+    char* fn2 = new char[MAX_LINE_LENGTH];
+    sprintf(fn2, "%s.%s.%03d.output", modelFN, label, id);
+    if(validFN != NULL){
+        T2TTrainer trainer;
+        trainer.Init(argNum, argArray);
+        trainer.Validate(validFN, fn2, model);
+    }
+    delete[] fn2;
 }
 
 /* 
 update the model by delta rule
-\theta_new = \theta - \lrate * grad
+\theta_{new} = \theta - \lrate * grad
 where
-\lrate = d^-0.5 * min(stepNum^-0.5, stepNum * warmupStepNum^-1.5)
+\lrate = d^-0.5 * min(stepNum^{-0.5}, stepNum * warmupStepNum^{-1.5})
 >> model - the t2t model
 >> lr - learning rate
 */
@@ -531,7 +463,6 @@ void T2TTrainer::Update(T2TModel * model, const float lr)
             _Sum(para, v2, para, -e);
 
             DelTensorBuf(v2);
-
         }
         else{
             /* the delta rule */
@@ -572,88 +503,6 @@ void T2TTrainer::PrepareModel(T2TModel * model)
 
     adamBeta1T = 1.0F;
     adamBeta2T = 1.0F;
-}
-
-/* 
-do padding on the output 
->> output - output tensor of the network
->> gold - gold standard
->> padding - padding of a batch of sentences
->> lsP - smoothing factor
-*/
-void T2TTrainer::PadOutput(XTensor * output, XTensor * gold, XTensor * padding)
-{
-    if(output == NULL || padding == NULL)
-        return;
-    
-    int on = output->order;
-    int * dimso = new int[on];
-
-    memcpy(dimso, output->dimSize, sizeof(int) * on);
-
-    output->Reshape(output->unitNum/dimso[output->order - 1], dimso[output->order - 1]);
-
-    XTensor * padding2 = NewTensorBuf(1, &padding->unitNum, X_FLOAT, padding->devID);
-
-    _CopyValues(padding, padding2);
-    _MultiplyDim(output, padding2, output, 0);
-    _ScaleAndShiftMe(padding2, 1e9F, -1e9F);
-    _SumDim(output, padding2, output, 0);
-    
-    output->Reshape(on, dimso);
-    
-    if(gold != NULL){
-        gold->Reshape(gold->unitNum/dimso[gold->order - 1], dimso[gold->order - 1]);
-        _CopyValues(padding, padding2);
-        _MultiplyDim(gold, padding2, gold, 0);
-        gold->Reshape(on, dimso);
-    }
-
-    delete[] dimso;
-    DelTensorBuf(padding2);
-}
-
-/*
-recale the output and gold tensors for normalized loss
->> output - output tensor of the network
->> gold - gold standard
->> padding - padding of a batch of sentences
-*/
-void T2TTrainer::RescaleOutput(XTensor * output, XTensor * gold, XTensor * padding)
-{
-    CheckNTErrors(output->order == 3, "Wrong dimension number!");
-    CheckNTErrors(gold->order == 3, "Wrong dimension number!");
-
-    DTYPE count = _ReduceSumAll(padding);
-    
-    _ExpMe(output);
-    _ScaleAndShiftMe(output, 1/count);
-    _LogMe(output);
-
-    _ScaleAndShiftMe(gold, 1/count);
-}
-    
-/*
-perform label smoothing
->> gold - gold standard
->> smoothed - result of label smoothing
->> p - smoothing factor
-*/
-void T2TTrainer::LabelSmooth(XTensor * gold, XTensor * smoothed, DTYPE p)
-{
-    CheckNTErrors(p >= 0 && p <= 1.0F, "Smoothing factor must be in range [0,1]");
-    
-    int n = gold->GetDim(-1);
-    DTYPE q = 1.0F - p;
-    DTYPE gift = p / n;
-    
-    InitTensor(smoothed, gold);
-    _CopyValues(gold, smoothed);
-    
-    if(p == 0)
-        return;
-
-    _ScaleAndShiftMe(smoothed, q, gift);
 }
 
 }

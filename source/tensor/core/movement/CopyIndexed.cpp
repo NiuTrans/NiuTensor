@@ -146,7 +146,7 @@ void _CopyIndexed(const XTensor * s, XTensor * t, int dim,
             CheckNTErrors(s->GetDim(i) == t->GetDim(i), "Unmatched dimensions");
         }
         else {
-            CheckNTErrors(t->GetDim(i) == indexSize * copyNum, "Unmatched dimensions");
+            CheckNTErrors(t->GetDim(i) >= indexSize * copyNum, "Unmatched dimensions");
         }
     }
 

@@ -29,8 +29,8 @@ namespace nts { // namespace nts(NiuTrans.Tensor)
 #ifdef USE_CUDA
 
 /* set each entry to its clip value (CUDA Kernel) */
-__global__
-void KernelClip(DTYPE * a, DTYPE * b, DTYPE lower, DTYPE upper, int size);
+template <class T> __global__
+void KernelClip(T * a, T * b, T lower, T upper, int size);
 
 /* set each entry to its clip value (CUDA Kernel) with float16 data type*/
 __global__

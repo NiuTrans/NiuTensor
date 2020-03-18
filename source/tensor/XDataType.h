@@ -50,6 +50,15 @@ extern TENSOR_DATA_TYPE GetDataType(const char * typeName);
 unsigned short FloatToFloat16(float f);
 float Float16ToFloat(unsigned short h);
 
+#define CheckDataType(a, b) \
+{ \
+    if(GetDataTypeName(a) != GetDataTypeName(a)){ \
+        fprintf(stderr, "[ERROR] (%s line %d): we must run the code on the same datatype (%s vs %s)\n", \
+                __FILENAME__, __LINE__, GetDataTypeName(a), GetDataTypeName(b)); \
+        exit(1); \
+    } \
+} \
+
 } /* end of the nts (NiuTrans.Tensor) namespace */
 
 #endif

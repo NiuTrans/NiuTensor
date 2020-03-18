@@ -30,32 +30,17 @@ namespace nts { // namespace nts(NiuTrans.Tensor)
 /* generate data items with a xavier initialization */
 void _SetDataFanInOut(XTensor * tensor, DTYPE gain = 1.0F);
 
-/* generate data items with a fixed value p */
-void _SetDataFixed(XTensor * tensor, void * valuePointer);
+/* generate data items with a fixed value */
+template<class T>
+void _SetDataFixed(XTensor * tensor, T value);
 
-/* generate data items with a fixed value p (in default type) */
-void SetDataFixed(XTensor &tensor, DTYPE p);
-    
-/* generate data items with a fixed value p (in integer) */
-void SetDataFixedInt(XTensor &tensor, int p);
-
-/* generate data items with a fixed value p (in int) */
-void _SetDataFixedInt(XTensor * tensor, int p);
-
-/* generate data items with a fixed value p (in float) */
-void _SetDataFixedFloat(XTensor * tensor, float p);
-
-/* generate data items with a fixed value p (in double) */
-void _SetDataFixedDouble(XTensor * tensor, double p);
-
-/* generate data items with a fixed value p only if the condition entry is non-zero */
-void _SetDataFixedCond(XTensor * tensor, XTensor * condition, DTYPE p);
-
-/* generate data items with a fixed value p only if the condition entry is non-zero */
-void _SetDataFixedCondInt(XTensor * tensor, XTensor * condition, int p);
+/* generate data items with a fixed value only if the condition entry is non-zero */
+template<class T>
+void _SetDataFixedCond(XTensor* tensor, XTensor* condition, T value);
 
 /* set data items along with a given dimension (and keep the remaining items unchanged) */
-void _SetDataDim(XTensor * tensor, int beg, int len, int dim, DTYPE p);
+template<class T>
+void _SetDataDim(XTensor * tensor, int beg, int len, int dim, T p);
 
 /* modify data items along with a given index and dimension (and keep the remaining items unchanged) */
 void _SetDataIndexed(XTensor * source, XTensor * modify, int dim, int index);

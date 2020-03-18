@@ -47,34 +47,62 @@ void _ScaleAndShift(const XTensor * a, XTensor * b, DTYPE scale, DTYPE shift)
         return;
     }
 #endif
-
-    CheckNTErrors((a->dataType == DEFAULT_DTYPE), "The tensor is not in the default data type!");
-
-    /* sparse tensor */
-    if(a->isSparse){
-        int num = a->unitNumNonZero;
-        char * d = (char*)a->data + sizeof(int);
-        char * f = d + (sizeof(int) + sizeof(DTYPE)) * 0 + sizeof(int);
-        char * db = (char*)b->data + sizeof(int);
-        char * fb = db + (sizeof(int) + sizeof(DTYPE)) * 0 + sizeof(int);
-        for(int i = 0; i < num; i++){
-            DTYPE * v = (DTYPE*)f;
-            DTYPE * vb = (DTYPE*)fb;
-            *vb = *v * scale + shift;
-            f += sizeof(int) + sizeof(DTYPE);
-            fb += sizeof(int) + sizeof(DTYPE);
+    if (a->dataType == DEFAULT_DTYPE) {
+        /* sparse tensor */
+        if(a->isSparse) {
+            int num = a->unitNumNonZero;
+            char * d = (char*)a->data + sizeof(int);
+            char * f = d + (sizeof(int) + sizeof(DTYPE)) * 0 + sizeof(int);
+            char * db = (char*)b->data + sizeof(int);
+            char * fb = db + (sizeof(int) + sizeof(DTYPE)) * 0 + sizeof(int);
+            for(int i = 0; i < num; i++){
+                DTYPE * v = (DTYPE*)f;
+                DTYPE * vb = (DTYPE*)fb;
+                *vb = *v * scale + shift;
+                f += sizeof(int) + sizeof(DTYPE);
+                fb += sizeof(int) + sizeof(DTYPE);
+            }
+        }
+        /* dense tensor */
+        else {
+            DTYPE * va = (DTYPE*)a->data;
+            DTYPE * vb = (DTYPE*)b->data;
+            for(int i = 0; i < b->unitNum; i++){
+                *vb = *va * scale + shift;
+                va++;
+                vb++;
+            }
         }
     }
-    /* dense tensor */
-    else{
-        DTYPE * va = (DTYPE*)a->data;
-        DTYPE * vb = (DTYPE*)b->data;
-        for(int i = 0; i < b->unitNum; i++){
-            *vb = *va * scale + shift;
-            va++;
-            vb++;
+    else if (a->dataType == X_INT) {
+        /* sparse tensor */
+        if(a->isSparse) {
+            int num = a->unitNumNonZero;
+            char * d = (char*)a->data + sizeof(int);
+            char * f = d + (sizeof(int) + sizeof(int)) * 0 + sizeof(int);
+            char * db = (char*)b->data + sizeof(int);
+            char * fb = db + (sizeof(int) + sizeof(int)) * 0 + sizeof(int);
+            for(int i = 0; i < num; i++){
+                int * v = (int*)f;
+                int * vb = (int*)fb;
+                *vb = *v * scale + shift;
+                f += sizeof(int) + sizeof(int);
+                fb += sizeof(int) + sizeof(int);
+            }
+        }
+        /* dense tensor */
+        else {
+            int * va = (int*)a->data;
+            int * vb = (int*)b->data;
+            for(int i = 0; i < b->unitNum; i++){
+                *vb = *va * scale + shift;
+                va++;
+                vb++;
+            }
         }
     }
+    else
+        ShowNTErrors("TODO!");
 }
 
 /* 

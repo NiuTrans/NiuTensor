@@ -31,37 +31,54 @@ namespace nts{
 /* compute dE/dx of a node */
 void XFuncGrad::MakeGrad(XTensor * node, bool isEfficient)
 {
+    if (!isEfficient) {
+        CheckNTErrors(node->grad != NULL, "No gradient found!");
+    }
+    else {
+        CheckNTErrors(!node->isGrad || node->grad != NULL, "No gradient found!");
+    }
+
     XLink &income = node->income;
     int operID = income.typeID;
 
-    CheckNTErrors(node->grad != NULL, "No gradient found!");
     CheckNTErrors(income.tailNum == 1, "Too many input tensors for the function!");
 
     XTensor * input = income.tails[0];
     XTensor * output = node;
 
-    XNoder::MakeGrad(input);
+    if (!isEfficient || input->isGrad) {
+        XNoder::MakeGrad(input);
 
-    if(operID == FUNC_HARDTANH)
-        _HardTanHBackward(output, input, output->grad, input->grad);
-    else if(operID == FUNC_IDENTITY)
-        _IdentityBackward(output, input, output->grad, input->grad);
-    else if(operID == FUNC_LOGSOFTMAX){
-        int leadDim = income.GetParamInt(0);
-        CheckNTErrors(leadDim >= 0 && leadDim < input->order, "wrong leading dimension in logsoftmax!");
-        _LogSoftmaxBackward(NULL, output, input, output->grad, input->grad, NULL, leadDim, NOLOSS);
-    }
-    else if(operID == FUNC_RECTIFY)
-        _RectifyBackward(output, input, output->grad, input->grad);
-    else if(operID == FUNC_SIGMOID)
-        _SigmoidBackward(output, input, output->grad, input->grad);
-    else if(operID == FUNC_SOFTMAX){
-        int leadDim = income.GetParamInt(0);
-        CheckNTErrors(leadDim >= 0 && leadDim < input->order, "wrong leading dimension in softmax!");
-        _SoftmaxBackward(NULL, output, input, output->grad, input->grad, NULL, leadDim, NOLOSS);
-    }
-    else{
-        ShowNTErrors("Wrong activation function type!");
+        XTensor * dedx = input->grad;
+        XTensor * dedy = output->grad;
+        //XTensor * tmp = NewTensorBufV2(output, output->devID, output->mem);
+        XTensor * tmp = NewTensor(output);
+
+        if (operID == FUNC_HARDTANH)
+            _HardTanHBackward(output, input, dedy, tmp);
+        else if (operID == FUNC_IDENTITY)
+            _IdentityBackward(output, input, dedy, tmp);
+        else if (operID == FUNC_LOGSOFTMAX) {
+            int leadDim = income.GetParamInt(0);
+            CheckNTErrors(leadDim >= 0 && leadDim < input->order, "wrong leading dimension in logsoftmax!");
+            _LogSoftmaxBackward(NULL, output, input, dedy, tmp, NULL, leadDim, NOLOSS);
+        }
+        else if (operID == FUNC_RECTIFY)
+            _RectifyBackward(output, input, dedy, tmp);
+        else if (operID == FUNC_SIGMOID)
+            _SigmoidBackward(output, input, dedy, tmp);
+        else if (operID == FUNC_SOFTMAX) {
+            int leadDim = income.GetParamInt(0);
+            CheckNTErrors(leadDim >= 0 && leadDim < input->order, "wrong leading dimension in softmax!");
+            _SoftmaxBackward(NULL, output, input, dedy, tmp, NULL, leadDim, NOLOSS);
+        }
+        else {
+            ShowNTErrors("Wrong activation function type!");
+        }
+
+        _SumMe(dedx, tmp);
+        //DelTensorBuf(tmp);
+        DelTensor(tmp);
     }
 
     node->visitMark = NODE_FINISHED;

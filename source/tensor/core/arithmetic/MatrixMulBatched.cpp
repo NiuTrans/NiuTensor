@@ -118,6 +118,9 @@ void _MatrixMulBatchedGPU(const XTensor * a, MATRIX_TRANS_TYPE transposedA,
         blockNum *= a->dimSize[i];
     }
 
+    if (beta == 0)
+        c->SetZeroAll();
+
     int devIDBackup = 0;
     ProtectCudaDev(a->devID, devIDBackup);
 
@@ -260,7 +263,7 @@ void _MatrixMulBatchedCPU(const TensorList * a, MATRIX_TRANS_TYPE transposedA,
         CheckNTErrors((bi->order == 2), "2d tensor (i.e., matrix) is required!");
         CheckNTErrors((ci->order == 2), "2d tensor (i.e., matrix) is required!");
 #ifdef USE_BLAS
-            _MatrixMULCPU(ai, transposedA, bi, transposedB, ci, alpha, beta);
+        _MatrixMULCPU(ai, transposedA, bi, transposedB, ci, alpha, beta);
 #else
         _MatrixMul2D(ai, transposedA, bi, transposedB, ci, alpha, beta);
 #endif

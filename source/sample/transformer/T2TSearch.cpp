@@ -89,7 +89,7 @@ void T2TSearch::Search(T2TModel * model, XTensor * input, XTensor * padding, XTe
     Prepare(input->unitNum/input->GetDim(-1), beamSize);
 
     /* encoder mask */
-    model->MakeMTMaskEnc(*input, *padding, maskEnc);
+    model->MakeMTMaskEnc(*padding, maskEnc);
 
     //input->Dump(stderr, "input:");
     //maskEnc.Dump(stderr, "maskenc:");
@@ -503,7 +503,7 @@ void T2TSearch::Dump(XTensor * output)
     int * words = new int[maxLength];
 
     InitTensor(output, 3, dims, X_INT);
-    SetDataFixedInt(*output, -1);
+    output->SetDataFixed(-1);
 
     /* heap for an input sentence in the batch */
     for(int h = 0; h < batchSize; h++){

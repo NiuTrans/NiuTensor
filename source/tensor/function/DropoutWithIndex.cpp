@@ -70,7 +70,7 @@ XTensor DropoutWithIndex(const XTensor &x, XTensor &maskIndex, DTYPE scale)
 
     InitTensor1DV2(&c, x.unitNum, x.dataType, x.devID, x.mem);
 
-    _SetDataFixedFloat(&c, 1.0F);
+    c.SetDataFixed(1.0);
 
     _DropoutWithIndex(&x, &maskIndex, &c);
 

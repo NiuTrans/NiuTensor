@@ -27,10 +27,10 @@
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
 /* get the top-k items along a given dimension */
-void _TopK(const XTensor * a, XTensor * b, XTensor * index, int dim, int k);
+void _TopK(const XTensor * a, XTensor * b, XTensor * index, int dim, int k, bool isSorted = false);
 
 /* get the top-k items along a given dimension */
-void TopK(XTensor &a, XTensor &b, XTensor &index, int dim, int k);
+void TopK(XTensor &a, XTensor &b, XTensor &index, int dim, int k, bool isSorted = false);
 
 } // namespace nts(NiuTrans.Tensor)
 

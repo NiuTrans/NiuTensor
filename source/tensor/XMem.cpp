@@ -31,8 +31,8 @@
 /* the nts (NiuTrans.Tensor) namespace */
 namespace nts{
     
-int testxmemid = 0;
-void * recordp = NULL;
+//int testxmemid = 0;
+//void * recordp = NULL;
 
 /*
 for managing the memories

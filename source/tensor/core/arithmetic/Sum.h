@@ -26,6 +26,9 @@
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
+/* return a dimension if the operation is performed as broadcast(e.g. SumDim function) */
+int GetBroadcastDimIndex(const XTensor & a, const XTensor & b);
+
 /* tensor summation c = a + b * \beta */
 void _Sum(const XTensor * a, const XTensor * b, XTensor * c, DTYPE beta = (DTYPE)1.0);
 

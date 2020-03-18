@@ -50,7 +50,7 @@ void _MatrixMul2D(const XTensor * a, MATRIX_TRANS_TYPE transposedA,
                   XPRunner * parallelRunner, XStream * stream)
 {
     CheckNTErrors((a && b && c), "Empty input tensors!");
-    CheckNTErrors((a->dataType == b->dataType), "Input tensors should                have the same data type!");
+    CheckNTErrors((a->dataType == b->dataType), "Input tensors should have the same data type!");
     CheckNTErrors((a->order == 2 && b->order == 2 && c->order == 2),
                   "Input tensors must have a order = 2!");
 
@@ -83,9 +83,9 @@ void _MatrixMul2D(const XTensor * a, MATRIX_TRANS_TYPE transposedA,
             c->dataType == DEFAULT_DTYPE)
         {
 #if defined(USE_BLAS)
-                _MatrixMULCPU(a, transposedA, b, transposedB, c, alpha, beta);
+            _MatrixMULCPU(a, transposedA, b, transposedB, c, alpha, beta);
 #else
-                _MatrixMul2DParallel(a, transposedA, b, transposedB, c, alpha, beta, parallelRunner);
+            _MatrixMul2DParallel(a, transposedA, b, transposedB, c, alpha, beta, parallelRunner);
 #endif
         }
         else {

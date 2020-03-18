@@ -56,7 +56,7 @@ T1 BinaryCudaPower(T1 x, T2 num)
         return (T1)(x * x);
     else {
         if (x == 0 && num < 0)
-            return (T1)1e20F;
+            return (T1)1e9F;
         else
             return (T1)pow((float)x, (float)num);
     }

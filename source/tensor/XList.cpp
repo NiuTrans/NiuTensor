@@ -249,26 +249,6 @@ inline int TensorListBase<T>::FindFirst(const T& item)
     return -1;
 }
 
-template <>
-inline int TensorListBase<Example>::FindFirst(const Example& item)
-{
-    for (int i = 0; i < count; i++) {
-        if (item.id == items[i].id)
-            return i;
-    }
-    return -1;
-}
-
-template <>
-inline int TensorListBase<Result>::FindFirst(const Result& item)
-{
-    for (int i = 0; i < count; i++) {
-        if (item.id == items[i].id)
-            return i;
-    }
-    return -1;
-}
-
 /* clear the data array */
 template <typename T>
 void TensorListBase<T>::Clear()
@@ -383,8 +363,7 @@ template struct TensorListBase<long>;
 template struct TensorListBase<float>;
 template struct TensorListBase<short>;
 template struct TensorListBase<XTensor*>;
-template struct TensorListBase<Result>;
-template struct TensorListBase<Example>;
+template struct TensorListBase<uint64_t>;
 template struct TensorListBase<void*>;
 
 } /* end of the nts (NiuTrans.Tensor) namespace */

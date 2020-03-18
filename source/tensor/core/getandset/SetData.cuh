@@ -28,31 +28,24 @@
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
-/* generate data items with a fixed value p (in int) */
-void _CudaSetDataFixedInt(XTensor * tensor, int p);
+/* generate data items with a fixed value */
+template<class T>
+void _CudaSetDataFixed(XTensor * tensor, T value);
 
-/* generate data items with a fixed value p (in float) */
-void _CudaSetDataFixedFloat(XTensor * tensor, float p);
-
-/* generate data items with a fixed value p (in double) */
-void _CudaSetDataFixedDouble(XTensor * tensor, double p);
-
-/* generate data items with a fixed value p (in float) only 
-   if the condition entry is non-zero */
-void _CudaSetDataFixedCondFloat(XTensor * tensor, XTensor * condition, float p);
-
-/* generate data items with a fixed value p (in int) only 
-   if the condition entry is non-zero */
-void _CudaSetDataFixedCondInt(XTensor * tensor, XTensor * condition, int p);
+/* generate data items with a fixed value p
+   only if the condition entry is non-zero */
+template<class T>
+void _CudaSetDataFixedCond(XTensor * tensor, XTensor * condition, T p);
 
 /* set data items along with a given dimension (and keep the remaining items unchanged) */
-void _CudaSetDataDim(XTensor * tensor, int beg, int len, int dim, DTYPE p);
+template<class T>
+void _CudaSetDataDim(XTensor * tensor, int beg, int len, int dim, T p);
 
 /* modify data items along with a given index and dimension (and keep the remaining items unchanged) */
 void _CudaSetDataIndexed(XTensor * source, XTensor * modify, int dim, int index);
 
 /* generate data as lower triangular matrics for last two dimensions (cuda version) */
-void _CudaSetDataLowTri(XTensor * tensor, DTYPE p, int shift);
+void _CudaSetDataLowTri(XTensor * tensor, DTYPE value, int shift);
 
 /* generate data items with a uniform distribution in [lower, upper] */
 void _CudaSetDataRand(const XTensor * tensor, DTYPE lower, DTYPE upper);

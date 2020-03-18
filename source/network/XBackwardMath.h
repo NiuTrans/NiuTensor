@@ -173,6 +173,10 @@ private:
     static
     void GradReduceSum(XTensor * node, bool isEfficient);
 
+    /* gradient for reduceSumAll */
+    static
+    void GradReduceSumAll(XTensor * node, bool isEfficient);
+
     /* gradient for reduceSumSquared */
     static
     void GradReduceSumSquared(XTensor * node, bool isEfficient);

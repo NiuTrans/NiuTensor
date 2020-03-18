@@ -136,6 +136,85 @@ bool TestReduceMean1()
 #endif // USE_CUDA
 }
 
+/* case 2: get the mean value along a dimension of the scalar tensor */
+bool TestReduceMean2()
+{
+    /* a tensor of size (4) */
+    int sOrder = 1;
+    int * sDimSize = new int[sOrder];
+    sDimSize[0] = 4;
+
+    int sUnitNum = 1;
+    for (int i = 0; i < sOrder; i++)
+        sUnitNum *= sDimSize[i];
+
+    /* a scalar tensor */
+    int tOrder = 0;
+    int * tDimSize = new int[MAX_TENSOR_DIM_NUM];
+    int tUnitNum = 1;
+
+    DTYPE sData[4] = {0.0F, 1.0F, 2.0F, 3.0F};
+    DTYPE answer[1] = {1.5F};
+
+    /* CPU test */
+    bool cpuTest = true;
+
+    /* create tensors */
+    XTensor * s = NewTensorV2(sOrder, sDimSize);
+    XTensor * t = NewTensorV2(tOrder, tDimSize);
+    XTensor tUser;
+
+    /* initialize variables */
+    s->SetData(sData, sUnitNum);
+    t->SetZeroAll();
+
+    /* call ReduceMean function */
+    _ReduceMean(s, t, 0);
+    tUser = ReduceMean(*s, 0);
+
+    /* check results */
+    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
+
+#ifdef USE_CUDA
+    /* GPU test */
+    bool gpuTest = true;
+
+    /* create tensor */
+    XTensor * sGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(tOrder, tDimSize, X_FLOAT, 1.0F, 0);
+    XTensor tUserGPU;
+
+    /* Initialize variables */
+    sGPU->SetData(sData, sUnitNum);
+    tGPU->SetZeroAll();
+
+    /* call ReduceMean function */
+    _ReduceMean(sGPU, tGPU, 0);
+    tUserGPU = ReduceMean(*sGPU, 0);
+
+    /* check results */
+    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
+
+    /* destroy variables */
+    delete s;
+    delete t;
+    delete sGPU;
+    delete tGPU;
+    delete[] sDimSize;
+    delete[] tDimSize;
+
+    return cpuTest && gpuTest;
+#else
+    /* destroy variables */
+    delete s;
+    delete t;
+    delete[] sDimSize;
+    delete[] tDimSize;
+
+    return cpuTest;
+#endif // USE_CUDA
+}
+
 /* other cases */
 /*
 TODO!!
@@ -155,6 +234,15 @@ bool TestReduceMean()
     }
     else
         XPRINT(0, stdout, ">> case 1 passed!\n");
+
+    /* case 2 test */
+    caseFlag = TestReduceMean2();
+    if (!caseFlag) {
+        returnFlag = false;
+        XPRINT(0, stdout, ">> case 2 failed!\n");
+    }
+    else
+        XPRINT(0, stdout, ">> case 2 passed!\n");
 
     ///* other cases test */
     ///*

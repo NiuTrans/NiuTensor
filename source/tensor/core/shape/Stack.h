@@ -31,7 +31,7 @@ namespace nts { // namespace nts(NiuTrans.Tensor)
 void _Stack(const TensorList * smalls, XTensor * t, int dim);
 
 /* stack small tensors into a big tensor along with a dimension (return an XTensor structure) */
-XTensor Stack(const TensorList &list, int leadingDim);
+XTensor Stack(const TensorList &list, int dim);
 
 /* stack small tensors into a big tensor along with a dimension */
 void Stack(const TensorList &smalls, XTensor &t, int dim);

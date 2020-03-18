@@ -22,8 +22,8 @@
 */
 
 #include "../../XDevice.h"
+#include "../../XTensor.h"
 #include "../../XUtility.h"
-#include "Sub.cuh"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
@@ -39,7 +39,7 @@ c = a - b * \beta
 >> alpha - value
 */
 __global__
-    void KernelMASK(DTYPE * a, int * mask, DTYPE * c, int size, DTYPE alpha)
+void KernelMASK(DTYPE * a, int * mask, DTYPE * c, int size, DTYPE alpha)
 {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
 

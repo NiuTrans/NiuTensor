@@ -43,12 +43,43 @@ void _Gather(const XTensor * s, XTensor * t, XTensor * srcIndex, int dim)
     CheckNTErrors((s && t), "Invalid tensors!");
     CheckNTErrors(s->devID == t->devID, "the data must be kept on the same device!");
     CheckNTErrors((t->unitSize == srcIndex->unitSize), "Unmatched tensors!");
+    CheckNTErrors((srcIndex->dataType == X_INT), "The index tensor should be INT type!");
+    CheckNTErrors((srcIndex->order == s->order), "index's order should be the same with source's");
 #ifdef USE_CUDA
     if (s->devID >= 0 && t->devID >= 0) {
         _CudaGather(s, t, srcIndex, dim);
         return;
     }
 #endif
+    int stride = 1;
+    int blockNum = 1;
+    for (int i = dim + 1; i < s->order; ++i)
+    {
+        stride *= s->GetDim(i);
+    }
+    for (int i = 0; i < dim; ++i)
+    {
+        blockNum *= s->GetDim(i);
+    }
+    int indexStrideNum = srcIndex->GetDim(dim);
+    int srcStrideNum = stride * s->GetDim(dim);
+    int tgtBlockSize = stride * indexStrideNum;
+
+    DTYPE * sData = (DTYPE*)s->data;
+    DTYPE * tData = (DTYPE*)t->data;
+    int * sIndexData = (int*)srcIndex->data;
+    for (int blockIndex = 0; blockIndex < blockNum; ++blockIndex)
+    {
+        for (int i = 0; i < indexStrideNum; i++) {
+            for (int j = 0; j < stride; j++)
+            {
+                int sIndex = sIndexData[i * stride + blockIndex * indexStrideNum + j] * stride + blockIndex * srcStrideNum + j;
+                CheckNTErrors(sIndex < s->unitNum, "Wrong index!");
+                int tIndex = i * stride + blockIndex * tgtBlockSize + j;
+                tData[tIndex] = sData[sIndex];
+            }
+        }
+    }
 }
 
 /*
@@ -64,27 +95,30 @@ void _Gather(const XTensor * s, XTensor * t, XTensor * srcIndex)
     CheckNTErrors(s->devID == t->devID, "the data must be kept on the same device!");
     CheckNTErrors((s->unitSize == t->unitSize), "Unmatched tensors!");
 
+    if (s->devID >= 0) {
 #ifdef USE_CUDA
-    if (s->devID >= 0 && t->devID >= 0) {
         _CudaGather(s, t, srcIndex);
-        return;
-    }
+#else
+        ShowNTErrors("Plesae specify USE_CUDA and recompile the code!");
 #endif
+    }
+    else {
+        int stride = 1;
+        int indexSize = 1;
 
-    int stride = 1;
-    int indexSize = 1;
+        stride = s->GetDim(-1);
+        indexSize = srcIndex->unitNum;
 
-    stride = s->GetDim(-1);
-    indexSize = srcIndex->unitNum;
+        DTYPE * sData = (DTYPE*)s->data;
+        DTYPE * tData = (DTYPE*)t->data;
+        int * sIndexData = (int*)srcIndex->data;
 
-    DTYPE * sData = (DTYPE*)s->data;
-    DTYPE * tData = (DTYPE*)t->data;
-    int * sIndexData = (int*)srcIndex->data;
-
-    for (int i = 0; i < indexSize; i++) {
-        int sIndex = sIndexData[i] * stride;
-        for (int j = 0; j < stride; j++)
-            tData[i * stride + j] = sData[sIndex + j];
+        for (int i = 0; i < indexSize; i++) {
+            int sIndex = sIndexData[i] * stride;
+            CheckNTErrors(sIndex < s->unitNum, "Wrong index!");
+            for (int j = 0; j < stride; j++)
+                tData[i * stride + j] = sData[sIndex + j];
+        }
     }
 }
 

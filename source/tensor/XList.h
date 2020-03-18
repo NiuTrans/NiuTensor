@@ -26,6 +26,8 @@
 #include "XMem.h"
 #include "XGlobal.h"
 
+#include <cstdint>
+
 #ifndef __TensorList_H__
 #define __TensorList_H__
 
@@ -118,7 +120,14 @@ public:
     void Shuffle(int nround = 10, int beg = -1, int len = 0);
 
     /* short */
-    T& operator[] (int i) { return GetItem(i); };
+    T& operator[] (int i) { 
+        CheckNTErrors(i >= -count && i < count, "Index of a list item is out of scope!");
+        CheckNTErrors(count > 0, "Cannt index the item in an empty list!");
+        if (i < 0)
+            return items[count + i];
+        else
+            return items[i];
+    };
     T& Get(int i) { return GetItem(i); };
     void Set(int i, T item) { SetItem(i, item); };
 };
@@ -132,19 +141,7 @@ typedef TensorListBase<char*> StrList;
 typedef TensorListBase<long> LongList;
 typedef TensorListBase<float> FloatList;
 typedef TensorListBase<short> ShortList;
-
-struct Example {
-    int id;
-    IntList data;
-};
-
-struct Result {
-    int id;
-    IntList data;
-};
-
-typedef TensorListBase<Result> ResultList;
-typedef TensorListBase<Example> ExampleList;
+typedef TensorListBase<uint64_t> UInt64List;
 typedef TensorListBase<XTensor*> TensorList;
 
 } /* end of the nts (NiuTrans.Tensor) namespace */

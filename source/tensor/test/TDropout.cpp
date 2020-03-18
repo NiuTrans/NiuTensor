@@ -50,7 +50,7 @@ bool TestDropout1()
     XTensor yUser;
 
     /* initialize variables */
-    _SetDataFixedFloat(x, 1.0F);
+    x->SetDataFixed(1);
     y->SetZeroAll();
 
     /* call Dropout function */
@@ -88,7 +88,7 @@ bool TestDropout1()
     XTensor yUserGPU;
 
     /* initialize variables */
-    _SetDataFixedFloat(xGPU, 1.0F);
+    xGPU->SetDataFixed(1);
     yGPU->SetZeroAll();
 
     /* call Dropout function */
@@ -157,10 +157,10 @@ bool TestDropout2()
     XTensor * dedy = NewTensorV2(order, dimSize);
 
     /* initialize variables */
-    _SetDataFixedFloat(x, 1.0F);
+    x->SetDataFixed(1.0);
     y->SetZeroAll();
     dedx->SetZeroAll();
-    _SetDataFixedFloat(dedy, 1.5F);
+    dedy->SetDataFixed(1.5);
 
     /* call Dropout function */
     float dropProb = 0.5F;
@@ -183,10 +183,10 @@ bool TestDropout2()
     XTensor * dedyGPU = NewTensorV2(order, dimSize, X_FLOAT, 1.0F, 0);
 
     /* initialize variables */
-    _SetDataFixedFloat(xGPU, 1.0F);
+    xGPU->SetDataFixed(1.0);
     yGPU->SetZeroAll();
     dedxGPU->SetZeroAll();
-    _SetDataFixedFloat(dedyGPU, 1.5F);
+    dedyGPU->SetDataFixed(1.5);
 
     /* call Dropout function */
     _Dropout(xGPU, yGPU, seed, dropProb);

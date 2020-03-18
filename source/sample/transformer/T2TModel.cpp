@@ -114,64 +114,28 @@ make the network for language modeling (with the output softmax layer)
 */
 void T2TModel::MakeLM(XTensor &input, XTensor &output, XTensor &padding, bool isTraining)
 {
-    XTensor encoding;
-    
-    /* generate mask to see "previous" words only */
-    //int len = input.GetDim(input.order - 2);
-    //int * dims = new int[input.order + 1];
-    //for(int i = 0; i < input.order; i++)
-    //    dims[i + 1] = input.GetDim(i);
-    //dims[0] = nhead;
-    //dims[input.order] = len;
-    //XTensor mask(input.order + 1, dims, X_FLOAT, 1.0F, input.devID, input.mem);
-
-    int len = input.GetDim(input.order - 1);
-    int * dims = new int[input.order + 2];
-    for(int i = 0; i < input.order; i++)
-        dims[i + 1] = input.GetDim(i);
+    int len = padding.GetDim(padding.order - 1);
+    int * dims = new int[padding.order + 2];
+    for(int i = 0; i < padding.order; i++)
+        dims[i + 1] = padding.GetDim(i);
     dims[0] = nhead;
-    dims[input.order + 1] = len;
+    dims[padding.order + 1] = len;
     XTensor mask;
-    InitTensor(&mask, input.order + 2, dims, X_FLOAT, padding.devID);
+    InitTensor(&mask, padding.order + 2, dims, X_FLOAT, padding.devID);
+
+    delete[] dims;
 
     /* a upper triangular matrix where the cells of the upper triangular are set to -1e-9.
         this matrix can be used to prevent the attention to current or following words in
         a given sequence. */
     _SetDataLowTri(&mask, 1e9F, 0);
-    _ScaleAndShiftMe(&mask, 1.0F, -1e9F);
-        
-    int * dimsPadding = new int[padding.order + 2];
-    for(int i = 0; i < padding.order - 1; i++)
-        dimsPadding[i] = padding.GetDim(i);
-    dimsPadding[padding.order - 1] = padding.GetDim(-1);
-    dimsPadding[padding.order] = padding.GetDim(-1);
+    ScaleAndShiftMe(mask, 1.0F, -1e9F);
 
-    XTensor * padding2 = NewTensorBuf(padding.order + 1, dimsPadding, padding.dataType,
-                                        padding.devID);
-
-    for(int i = 0; i < padding2->order; i++)
-        dimsPadding[i + 1] = padding2->GetDim(i);
-    dimsPadding[0] = nhead;
-
-    //XTensor * padding3 = NewTensorBuf(padding.order + 2, dimsPadding, padding.dataType,
-    //                                    padding.devID);
-    //    
-    ///* mask of the padding */
-    //_Unsqueeze(&padding, padding2, padding.order - 1, padding.GetDim(-1));
-    //_Unsqueeze(padding2, padding3, 0, nhead);
-    //    
-    //_ScaleAndShiftMe(padding3, 1e9F, -1e9F);
-    //    
-    ////_Sum(&mask, padding3, &mask);
+    /* forward */
+    XTensor encoding;
 
     encoding = MakeEncoder(input, mask, isTraining);
     outputLayer->Make(encoding, output);
-
-    delete[] dims;
-    delete[] dimsPadding;
-        
-    //DelTensorBuf(padding3);
-    DelTensorBuf(padding2);
 }
 
 /* 
@@ -183,7 +147,9 @@ make the network for machine translation (with the output softmax layer)
 >> paddingDec - padding of the sequences (on the decoder side)
 >> isTraining - indicates whether the model is for training
 */
-void T2TModel::MakeMT(XTensor &inputEnc, XTensor &inputDec, XTensor &output, XTensor &paddingEnc, XTensor &paddingDec, bool isTraining)
+void T2TModel::MakeMT(XTensor &inputEnc, XTensor &inputDec, XTensor &output, 
+                      XTensor &paddingEnc, XTensor &paddingDec,
+                      bool isTraining)
 {
     XTensor encoding;
     XTensor decoding;
@@ -192,10 +158,10 @@ void T2TModel::MakeMT(XTensor &inputEnc, XTensor &inputDec, XTensor &output, XTe
     XTensor maskEncDec;
 
     /* encoder mask */
-    MakeMTMaskEnc(inputEnc, paddingEnc, maskEnc);
+    MakeMTMaskEnc(paddingEnc, maskEnc);
     
     /* decoder mask */
-    MakeMTMaskDec(inputEnc, inputDec, paddingEnc, paddingDec, maskDec, maskEncDec);
+    MakeMTMaskDec(paddingEnc, paddingDec, maskDec, maskEncDec);
 
     encoding = MakeEncoder(inputEnc, maskEnc, isTraining);
 
@@ -289,40 +255,21 @@ make the mask of the encoder
 >> paddingEnc - padding of the encoder input
 >> maskEnc - mask of the encoder self-attention
 */
-void T2TModel::MakeMTMaskEnc(XTensor &inputEnc, XTensor &paddingEnc, XTensor &maskEnc)
+void T2TModel::MakeMTMaskEnc(XTensor &paddingEnc, XTensor &maskEnc)
 {
-    /* padding on the source side */
-    int * dimsPadding = new int[paddingEnc.order + 2];
-    for (int i = 0; i < paddingEnc.order - 1; i++)
-        dimsPadding[i] = paddingEnc.GetDim(i);
-    dimsPadding[paddingEnc.order - 1] = paddingEnc.GetDim(-1);
-    dimsPadding[paddingEnc.order] = paddingEnc.GetDim(-1);
-    
-    XTensor * padding2 = NewTensorBuf(paddingEnc.order + 1, dimsPadding, paddingEnc.dataType,
-                                        paddingEnc.devID);
-    
-    for (int i = 0; i < padding2->order; i++)
-        dimsPadding[i + 1] = padding2->GetDim(i);
-    dimsPadding[0] = nhead;
-    
-    XTensor * padding3 = NewTensorBuf(paddingEnc.order + 2, dimsPadding, paddingEnc.dataType,
-                                        paddingEnc.devID);
+    XTensor padding2;
+    XTensor padding3;
     
     /* mask of the padding */
-    _Unsqueeze(&paddingEnc, padding2, paddingEnc.order - 1, paddingEnc.GetDim(-1));
-    _Unsqueeze(padding2, padding3, 0, nhead);
+    Unsqueeze(paddingEnc, padding2, paddingEnc.order - 1, paddingEnc.GetDim(-1));
+    Unsqueeze(padding2, padding3, 0, nhead);
+    ScaleAndShiftMe(padding3, 1e9F, -1e9F);
     
-    _ScaleAndShiftMe(padding3, 1e9F, -1e9F);
-    
-    InitTensor(&maskEnc, padding3);
+    InitTensor(&maskEnc, &padding3);
     maskEnc.SetZeroAll();
     
     /* generate the mask on the source language side (for padding) */
-    _Sum(&maskEnc, padding3, &maskEnc);
-    
-    DelTensorBuf(padding3);
-    DelTensorBuf(padding2);
-    delete[] dimsPadding;
+    SumMe(maskEnc, padding3);
 }
     
 /*
@@ -334,54 +281,33 @@ make the mask of the decoder
 >> maksDec - mask of the decoder self-attention
 >> maksEncDec - mask of the decoder enc-dec attention
 */
-void T2TModel::MakeMTMaskDec(XTensor &inputEnc, XTensor &inputDec,
-                             XTensor &paddingEnc, XTensor &paddingDec,
+void T2TModel::MakeMTMaskDec(XTensor &paddingEnc, XTensor &paddingDec,
                              XTensor &maskDec, XTensor &maskEncDec)
 {
-    int len = inputDec.GetDim(inputDec.order - 1);
-    int * dims = new int[inputDec.order + 2];
-    for(int i = 0; i < inputDec.order; i++)
-        dims[i + 1] = inputDec.GetDim(i);
+    int len = paddingDec.GetDim(paddingDec.order - 1);
+    int * dims = new int[paddingDec.order + 2];
+    for(int i = 0; i < paddingDec.order; i++)
+        dims[i + 1] = paddingDec.GetDim(i);
     dims[0] = nhead;
-    dims[inputDec.order + 1] = len;
-    InitTensor(&maskDec, inputDec.order + 2, dims, X_FLOAT, paddingDec.devID);
+    dims[paddingDec.order + 1] = len;
+    InitTensor(&maskDec, paddingDec.order + 2, dims, X_FLOAT, paddingDec.devID);
     
     /* An upper triangular matrix where the cells of the upper triangular are set to -1e-9.
        This matrix can be used to block the attention to current or following words in
        a given sequence. */
     _SetDataLowTri(&maskDec, 1e9F, 0);
-
-    //maskDec.Dump(stderr, "mask: ");
-
-    _ScaleAndShiftMe(&maskDec, 1.0F, -1e9F);
+    ScaleAndShiftMe(maskDec, 1.0F, -1e9F);
     
-    //maskDec.Dump(stderr, "mask: ");
-
     /* encoder-decoder mask that prevents the attention to padding dummy words */
-    dims[inputDec.order + 1] = inputEnc.GetDim(inputEnc.order - 1);
-    InitTensor(&maskEncDec, inputDec.order + 2, dims, X_FLOAT, paddingEnc.devID);
+    XTensor maskEncDecTMP;
     
-    XTensor * maskEncDecTMPEnc = NewTensorBuf(paddingEnc.order + 1, dims + 1, paddingEnc.dataType,
-                                                paddingEnc.devID);
-    XTensor * maskEncDecTMPDec = NewTensorBuf(maskEncDecTMPEnc, paddingEnc.devID);
+    Unsqueeze(paddingEnc, maskEncDecTMP, paddingEnc.order - 1, paddingDec.GetDim(-1));
+    ScaleAndShiftMe(maskEncDecTMP, 1e9F, -1e9F);
+    Unsqueeze(maskEncDecTMP, maskEncDec, 0, dims[0]);
     
-    _Unsqueeze(&paddingEnc, maskEncDecTMPEnc, paddingEnc.order - 1, paddingDec.GetDim(-1));
-
-    //paddingEnc.Dump(stderr, "paddingenc:");
-    //maskEncDecTMPEnc->Dump(stderr, "maskencdectmpenc:");
-
-    _ScaleAndShiftMe(maskEncDecTMPEnc, 1e9F, -1e9F);
-
-    //maskEncDecTMPEnc->Dump(stderr, "maskencdectmpenc:");
-
-    _Unsqueeze(maskEncDecTMPEnc, &maskEncDec, 0, dims[0]);
-
-    //maskEncDecTMPEnc->Dump(stderr, "maskencdectmpenc:");
-    
-    DelTensorBuf(maskEncDecTMPDec);
-    DelTensorBuf(maskEncDecTMPEnc);
     delete[] dims;
 }
+
 /* 
 get parameter matrics
 >> list - the list that keeps the parameter matrics

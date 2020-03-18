@@ -167,6 +167,16 @@ XTensor Unsqueeze(const XTensor &a, int dim, int dSize)
     return b;
 }
 
+/*
+insert a dimension by copying the blocks for x times
+(where x is the size of the inerted dimension) (returna a XTensor structure)
+make a new tensor to keep the result and return it
+
+>> a - the input tensor
+>> b - the output tensor
+>> dim - where to insert the dimension
+>> dSize - size of the newly-inserted dimension
+*/
 void Unsqueeze(const XTensor &a, XTensor &b, int dim, int dSize)
 {
     if (!b.isInit || !CheckUnsqueezeSize(&a, &b, dim, dSize)) {

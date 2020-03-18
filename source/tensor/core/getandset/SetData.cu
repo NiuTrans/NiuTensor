@@ -1,25 +1,25 @@
 /* 
-* NiuTrans.Tensor - an open-source tensor library
-* Copyright (C) 2018, Natural Language Processing Lab, Northestern University.
-* All rights reserved.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-*   http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+ * NiuTrans.Tensor - an open-source tensor library
+ * Copyright (C) 2018, Natural Language Processing Lab, Northestern University.
+ * All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 /*
-* $Created by: XIAO Tong (email: xiaotong@mail.neu.edu.cn) 2018-07-18
-* I'm surprised that I did not write this file till today.
-*/
+ * $Created by: XIAO Tong (email: xiaotong@mail.neu.edu.cn) 2018-07-18
+ * I'm surprised that I did not write this file till today.
+ */
 
 #include <curand.h>
 #include <time.h>
@@ -32,30 +32,35 @@ namespace nts { // namespace nts(NiuTrans.Tensor)
 
 #ifdef USE_CUDA
 
-/* 
-set an integer data array with a fixed value p (in int) 
+/*
+set a data array with a fixed value
+
 >> d - pointer to the data array
+>> v - the initial value
 >> size - size of the array
->> p - the initial value
 */
-__global__ 
-void KernelSetDataFixedInt(int * d, int size, int p)
+template<class T>
+__global__
+void KernelSetDataFixed(T * d, T v, int size)
 {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
 
     if (i < size)
-        d[i] = p;
+        d[i] = v;
 }
+template __global__ void KernelSetDataFixed<int>(int *, int, int);
+template __global__ void KernelSetDataFixed<float>(float *, float, int);
+template __global__ void KernelSetDataFixed<double>(double *, double, int);
 
 /* 
-generate data items with a fixed value p (in int) 
->> tensor - the tensor for initialization
->> p - the initial value
-*/
-void _CudaSetDataFixedInt(XTensor * tensor, int p)
-{
-    CheckNTErrors(tensor->dataType == X_INT, "the tensor must be in X_INT!");
+generate data items with a fixed value 
 
+>> tensor - the tensor for initialization
+>> value - the initial value
+*/
+template<class T>
+void _CudaSetDataFixed(XTensor * tensor, T value)
+{
     int gridSize[3];
     int blockSize[3];
 
@@ -65,92 +70,23 @@ void _CudaSetDataFixedInt(XTensor * tensor, int p)
     dim3 threads(blockSize[0]);
 
     int devIDBackup;
+
     ProtectCudaDev(tensor->devID, devIDBackup);
 
-    KernelSetDataFixedInt <<<blocks, threads >>>((int*)tensor->data, tensor->unitNum, p);
+    if (tensor->dataType == X_INT)
+        KernelSetDataFixed << <blocks, threads >> > ((int*)tensor->data, (int)value, tensor->unitNum);
+    else if (tensor->dataType == X_FLOAT)
+        KernelSetDataFixed << <blocks, threads >> > ((float*)tensor->data, (float)value, tensor->unitNum);
+    else if (tensor->dataType == X_DOUBLE)
+        KernelSetDataFixed << <blocks, threads >> > ((double*)tensor->data, (double)value, tensor->unitNum);
+    else
+        ShowNTErrors("TODO! Unsupported datatype!")
 
     BacktoCudaDev(tensor->devID, devIDBackup);
 }
-
-/* 
-set a float data array with a fixed value p (in int) 
->> d - pointer to the data array
->> size - size of the array
->> p - the initial value
-*/
-__global__ 
-void KernelSetDataFixedFloat(float * d, int size, float p)
-{
-    int i = blockDim.x * blockIdx.x + threadIdx.x;
-
-    if (i < size)
-        d[i] = p;
-}
-
-/* 
-generate data items with a fixed value p (in float)
->> tensor - the tensor for initialization
->> p - the initial value
-*/
-void _CudaSetDataFixedFloat(XTensor * tensor, float p)
-{
-    CheckNTErrors(tensor->dataType == X_FLOAT, "the tensor must be in X_FLOAT!");
-
-    int gridSize[3];
-    int blockSize[3];
-
-    GDevs.GetCudaThread(tensor->devID, tensor->unitNum, gridSize, blockSize);
-
-    dim3 blocks(gridSize[0]);
-    dim3 threads(blockSize[0]);
-
-    int devIDBackup;
-    ProtectCudaDev(tensor->devID, devIDBackup);
-
-    KernelSetDataFixedFloat <<<blocks, threads >>>((float*)tensor->data, tensor->unitNum, p);
-
-    BacktoCudaDev(tensor->devID, devIDBackup);
-}
-
-/* 
-set a double data array with a fixed value p (in int) 
->> d - pointer to the data array
->> size - size of the array
->> p - the initial value
-*/
-__global__ 
-void KernelSetDataFixedDouble(double * d, int size, double p)
-{
-    int i = blockDim.x * blockIdx.x + threadIdx.x;
-
-    if (i < size)
-        d[i] = p;
-}
-
-/* 
-generate data items with a fixed value p (in double) 
->> tensor - the tensor for initialization
->> p - the initial value
-*/
-void _CudaSetDataFixedDouble(XTensor * tensor, double p)
-{
-    CheckNTErrors(tensor->dataType == X_DOUBLE, "the tensor must be in X_DOUBLE!");
-
-    int gridSize[3];
-    int blockSize[3];
-
-    GDevs.GetCudaThread(tensor->devID, tensor->unitNum, gridSize, blockSize);
-
-    dim3 blocks(gridSize[0]);
-    dim3 threads(blockSize[0]);
-
-    int devIDBackup;
-    ProtectCudaDev(tensor->devID, devIDBackup);
-
-    KernelSetDataFixedDouble <<<blocks, threads >>>((double*)tensor->data, tensor->unitNum, p);
-
-    BacktoCudaDev(tensor->devID, devIDBackup);
-}
+template void _CudaSetDataFixed<int>(XTensor *, int);
+template void _CudaSetDataFixed<float>(XTensor *, float);
+template void _CudaSetDataFixed<double>(XTensor *, double);
 
 /* 
 set a float data array with a fixed value p (in int) only 
@@ -160,28 +96,30 @@ if the condition entry is non-zero
 >> size - size of the array
 >> p - the initial value
 */
+template<class T>
 __global__ 
-void KernelSetDataFixedCondFloat(float * d, float * c, int size, float p)
+void KernelSetDataFixedCond(T * d, T * c, T value, int size)
 {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
 
     if (i < size && c[i] != 0)
-        d[i] = p;
+        d[i] = value;
 }
-
+template __global__ void KernelSetDataFixedCond<int>(int*, int*, int, int);
+template __global__ void KernelSetDataFixedCond<float>(float*, float*, float, int);
+template __global__ void KernelSetDataFixedCond<double>(double*, double*, double, int);
 /* 
-generate data items with a fixed value p (in float) only 
-if the condition entry is non-zero 
+generate data items with a fixed value p 
+only if the condition entry is non-zero 
+
 >> tensor - the tensor for initialization
 >> condition - the condition tensor whose entry would be check to
                set the corresponding entry in "tensor"
->> p - the initial value   
+>> value - the initial value   
 */
-void _CudaSetDataFixedCondFloat(XTensor * tensor, XTensor * condition, float p)
+template<class T>
+void _CudaSetDataFixedCond(XTensor* tensor, XTensor* condition, T value)
 {
-    CheckNTErrors(tensor->dataType == X_FLOAT, "the tensor must be in X_FLOAT!");
-    CheckNTErrors(condition->unitSize == sizeof(float), "TODO!");
-
     int gridSize[3];
     int blockSize[3];
 
@@ -193,58 +131,24 @@ void _CudaSetDataFixedCondFloat(XTensor * tensor, XTensor * condition, float p)
     int devIDBackup;
     ProtectCudaDev(tensor->devID, devIDBackup);
 
-    KernelSetDataFixedCondFloat <<<blocks, threads >>>((float*)tensor->data, (float*)condition->data, 
-                                                               tensor->unitNum, p);
+    if (tensor->dataType == X_INT)
+        KernelSetDataFixedCond <<< blocks, threads >>> ((int*)tensor->data, (int*)condition->data,
+                                                       (int)value, tensor->unitNum);
+    else if (tensor->dataType == X_FLOAT)
+        KernelSetDataFixedCond <<< blocks, threads >>> ((float*)tensor->data, (float*)condition->data,
+                                                       (float)value, tensor->unitNum);
+
+    else if (tensor->dataType == X_DOUBLE)
+        KernelSetDataFixedCond <<< blocks, threads >>> ((double*)tensor->data, (double*)condition->data,
+                                                       (double)value, tensor->unitNum);
+    else
+        ShowNTErrors("TODO! Unsupported datatype!")
 
     BacktoCudaDev(tensor->devID, devIDBackup);
 }
-
-/* 
-set a float data array with a fixed value p (in int) only 
-if the condition entry is non-zero 
->> d - pointer to the data array
->> c - pointer to the condition array
->> size - size of the array
->> p - the initial value
-*/
-__global__ 
-void KernelSetDataFixedCondInt(int * d, float * c, int size, int p)
-{
-    int i = blockDim.x * blockIdx.x + threadIdx.x;
-
-    if (i < size && c[i] != 0)
-        d[i] = p;
-}
-
-/* 
-generate data items with a fixed value p (in int) only 
-if the condition entry is non-zero 
->> tensor - the tensor for initialization
->> condition - the condition tensor whose entry would be check to
-               set the corresponding entry in "tensor"
->> p - the initial value   
-*/
-void _CudaSetDataFixedCondInt(XTensor * tensor, XTensor * condition, int p)
-{
-    CheckNTErrors(tensor->dataType == X_FLOAT, "the tensor must be in X_FLOAT!");
-    CheckNTErrors(condition->unitSize == sizeof(float), "TODO!");
-
-    int gridSize[3];
-    int blockSize[3];
-
-    GDevs.GetCudaThread(tensor->devID, tensor->unitNum, gridSize, blockSize);
-
-    dim3 blocks(gridSize[0]);
-    dim3 threads(blockSize[0]);
-
-    int devIDBackup;
-    ProtectCudaDev(tensor->devID, devIDBackup);
-
-    KernelSetDataFixedCondInt <<<blocks, threads >>>((int*)tensor->data, (float*)condition->data, 
-                                                           tensor->unitNum, p);
-
-    BacktoCudaDev(tensor->devID, devIDBackup);
-}
+template void _CudaSetDataFixedCond<int>(XTensor*, XTensor*, int);
+template void _CudaSetDataFixedCond<float>(XTensor*, XTensor*, float);
+template void _CudaSetDataFixedCond<double>(XTensor*, XTensor*, double);
 
 /* 
 set data array with a uniform distribution in [low, high] 
@@ -309,8 +213,9 @@ set data items along with a given dimension (and keep the remaining items unchan
 >> blockSize - size of a data block
 >> blockNum - number of data blocks
 */
+template<class T>
 __global__
-void KernelSetDataDim(DTYPE * d, int beg, int len, int blockSize, int blockNum, DTYPE p)
+void KernelSetDataDim(T * d, int beg, int len, int blockSize, int blockNum, T p)
 {
     /* offset in each block */
     int i = blockDim.x * blockIdx.x + threadIdx.x;
@@ -326,6 +231,9 @@ void KernelSetDataDim(DTYPE * d, int beg, int len, int blockSize, int blockNum, 
 
     d[blockSize * j + i] = p;
 }
+template __global__ void KernelSetDataDim<int>(int*, int, int, int, int, int);
+template __global__ void KernelSetDataDim<float>(float*, int, int, int, int, float);
+template __global__ void KernelSetDataDim<double>(double*, int, int, int, int, double);
 
 /* 
 set data items along with a given dimension (and keep the remaining items unchanged) - cuda version
@@ -343,7 +251,8 @@ e.g., given a 3 * 3 tensor
       7 8 9
       i.e., we set all entries of row 1 to 0
 */
-void _CudaSetDataDim(XTensor * tensor, int beg, int len, int dim, DTYPE p)
+template<class T>
+void _CudaSetDataDim(XTensor * tensor, int beg, int len, int dim, T p)
 {
     int n = tensor->order;
 
@@ -372,11 +281,24 @@ void _CudaSetDataDim(XTensor * tensor, int beg, int len, int dim, DTYPE p)
     int devIDBackup;
     ProtectCudaDev(tensor->devID, devIDBackup);
 
-    KernelSetDataDim<<<blocks, threads >>>((DTYPE*)tensor->data, beg * stride, 
-                                            len * stride, blockSize, blockNum, p);
+    if (tensor->dataType == X_INT)
+        KernelSetDataDim << <blocks, threads >> > ((int*)tensor->data, beg * stride,
+                                                    len * stride, blockSize, blockNum, (int)p);
+    else if (tensor->dataType == X_FLOAT)
+        KernelSetDataDim << <blocks, threads >> > ((float*)tensor->data, beg * stride,
+                                                    len * stride, blockSize, blockNum, (float)p);
+
+    else if (tensor->dataType == X_DOUBLE)
+        KernelSetDataDim << <blocks, threads >> > ((double*)tensor->data, beg * stride,
+                                                    len * stride, blockSize, blockNum, (double)p);
+    else
+        ShowNTErrors("TODO! Unsupported datatype!")
 
     BacktoCudaDev(tensor->devID, devIDBackup);
 }
+template void _CudaSetDataDim<int>(XTensor*, int, int, int, int);
+template void _CudaSetDataDim<float>(XTensor*, int, int, int, float);
+template void _CudaSetDataDim<double>(XTensor*, int, int, int, double);
 
 /* 
 modify data items along with a given index and dimension 
@@ -462,6 +384,7 @@ void _CudaSetDataIndexed(XTensor * source, XTensor * modify, int dim, int index)
 
 /* 
 set lower triangular matrics for each block
+
 >> d - pointer to the data array
 >> l - row number (or column number) of each block, i.e, 
        a block is l * l matrix
@@ -469,15 +392,15 @@ set lower triangular matrics for each block
 >> blockNum - number of the blocks
 >> p - the value for each entry of the lower triangular matrics
 >> shift - the offset from diagonal
-e.g., for a 3* 3 tensor, 
-      when p = 1 ans shift = 0, we have
-      1 0 0
-      1 1 0
-      1 1 1
-      when p = 2 and shift = -1, we have
-      0 0 0
-      2 0 0
-      2 2 0
+   e.g., for a 3* 3 tensor, 
+         when p = 1 ans shift = 0, we have
+         1 0 0
+         1 1 0
+         1 1 1
+         when p = 2 and shift = -1, we have
+         0 0 0
+         2 0 0
+         2 2 0
 */
 __global__
 void KernelSetDataLowTri(DTYPE * d, int l, int blockSize, int blockNum, DTYPE p, int shift)
@@ -501,35 +424,28 @@ void KernelSetDataLowTri(DTYPE * d, int l, int blockSize, int blockNum, DTYPE p,
         *d2 = 0;
 }
 
-/* 
+/*
 generate data as lower triangular matrics for last two dimensions (cuda version)
+
 >> tensor - the tensor whose data to be set
->> p - the value for each entry of the lower triangular matrics
+>> value - the value for each entry of the lower triangular matrics
 >> shift - the offset from diagonal
-e.g., for a 3* 3 tensor, 
-      when p = 1 ans shift = 0, we have
-      1 0 0
-      1 1 0
-      1 1 1
-      when p = 2 and shift = -1, we have
-      0 0 0
-      2 0 0
-      2 2 0
+
+   e.g., for a 3 * 3 tensor,
+         when value = 1 ans shift = 0, we have
+         1 0 0
+         1 1 0
+         1 1 1
+         when value = 2 and shift = -1, we have
+         0 0 0
+         2 0 0
+         2 2 0
 */
-void _CudaSetDataLowTri(XTensor * tensor, DTYPE p, int shift)
+void _CudaSetDataLowTri(XTensor * tensor, DTYPE value, int shift)
 {
-    int n = tensor->order;
-
-    CheckNTErrors(tensor->dataType == DEFAULT_DTYPE, "TODO!");
-    CheckNTErrors(n >= 2, "The tensor must have a order no less than 2!");
-    CheckNTErrors(tensor->GetDim(n - 1) == tensor->GetDim(n - 2), 
-                 "The last two dimensions must be of the same size!");
-
-    int l = tensor->GetDim(-1);
-    int blockNum = 1;
-    int blockSize = l * l;
-    for(int i = 0; i < n - 2; i++)
-        blockNum *= tensor->GetDim(i);
+    int size = tensor->GetDim(-1);
+    int blockSize = size * size;
+    int blockNum = tensor->unitNum / blockSize;
 
     int cudaGrids[3];
     int cudaBlocks[3];
@@ -542,7 +458,7 @@ void _CudaSetDataLowTri(XTensor * tensor, DTYPE p, int shift)
     int devIDBackup;
     ProtectCudaDev(tensor->devID, devIDBackup);
 
-    KernelSetDataLowTri<<<blocks, threads >>>((DTYPE*)tensor->data, l, blockSize, blockNum, p, shift);
+    KernelSetDataLowTri<<<blocks, threads >>>((DTYPE*)tensor->data, size, blockSize, blockNum, value, shift);
 
     BacktoCudaDev(tensor->devID, devIDBackup);
 }

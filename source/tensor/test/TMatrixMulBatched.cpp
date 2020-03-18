@@ -27,7 +27,7 @@ namespace nts { // namespace nts(NiuTrans.Tensor)
 
 /* 
 case 1: matrix multiplication of the two tensors. 
-In this case, a=(2, 3), b=(2, 3) -> c=(2, 2), transposedA=X_NOTRANS, transposedB=X_NOTRANS.
+In this case, a=(2, 3), b=(3, 2) -> c=(2, 2), transposedA=X_NOTRANS, transposedB=X_NOTRANS.
 */
 bool TestMatrixMulBatched1()
 {

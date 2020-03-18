@@ -55,7 +55,7 @@ bool TestReduceSumAll1()
     s->SetData(sData, sUnitNum);
 
     /* call ReduceSumAll function */
-    summation = _ReduceSumAll(s);
+    summation = ReduceSumAllValue(*s);
 
     /* check results */
     cpuTest = (fabs(answer - summation) < 1e-4F);
@@ -71,7 +71,7 @@ bool TestReduceSumAll1()
     sGPU->SetData(sData, sUnitNum);
 
     /* call ReduceSumAll function */
-    summation = _ReduceSumAll(sGPU);
+    summation = ReduceSumAllValue(*sGPU);
 
     /* check results */
     gpuTest = (fabs(answer - summation) < 1e-4F);

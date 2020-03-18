@@ -37,7 +37,6 @@
 #include "arithmetic/Multiply.h"
 #include "arithmetic/MultiplyDim.h"
 #include "arithmetic/Sub.h"
-#include "arithmetic/SubDim.h"
 #include "arithmetic/Sum.h"
 #include "arithmetic/SumDim.h"
 #include "arithmetic/XTensorBLAS.h"
@@ -91,9 +90,9 @@
 #include "sort/Sort.h"
 #include "sort/TopK.h"
 
-#include "utilities/XMatrixSegment.h"
-#include "utilities/FlushToMem.h"
 #include "utilities/CheckData.h"
+#include "utilities/FlushToMem.h"
 #include "utilities/SetAscendingOrder.h"
+#include "utilities/XMatrixSegment.h"
 
 #endif // __CHEADER_H__

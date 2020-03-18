@@ -147,7 +147,11 @@ void XStream::StreamSynchronize()
 void XStream::ThreadSynchronize()
 {
 #ifdef USE_CUDA
+#if CUDART_VERSION < 10000
     cudaThreadSynchronize();
+#else
+    ShowNTErrors("TODO!");
+#endif
 #endif
 }
 

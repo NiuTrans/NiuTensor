@@ -480,12 +480,10 @@ public:
 /* managing the memories */
 extern XMemManager GMems;
 
+//extern XMem * GMem;
 
-
-extern XMem * GMem;
-
-extern int testxmemid;
-extern void * recordp;
+//extern int testxmemid;
+//extern void * recordp;
 
 } /* end of the nts (NiuTrans.Tensor) namespace */
 

@@ -30,7 +30,6 @@
 
 #include <math.h>
 #include "XGlobal.h"
-#include "XMem.h"
 #include "XPRunner.h"
 #include "XStream.h"
 #include "XHeap.h"
@@ -304,6 +303,10 @@ public:
     /* generate data items with a range by start, end and the step */
     void Range(DTYPE lower, DTYPE upper, DTYPE step);
 
+    /* generate data items with a fixed value */
+    template<class T>
+    void SetDataFixed(T num);
+
     /* set tensor items by a uniform distribution */
     void SetDataRand(DTYPE lower = 0.0F, DTYPE upper = 1.0F);
 
@@ -328,6 +331,9 @@ public:
     /* get the pointer to a cell */
     void * GetCell(int index[], int size = -1) const;
 
+    /* get the default type value of a cell in a 0d tensor */
+    DTYPE Get0D() const;
+
     /* get the default type value of a cell in a 1d tensor */
     DTYPE Get1D(int i) const;
 
@@ -339,7 +345,10 @@ public:
 
     /* get the int value of a cell by its offset */
     int GetInt(int offset) const;
-    
+
+    /* get the int value of a cell in a 0d tensor */
+    int Get0DInt() const;
+
     /* get the int value of a cell in a 1d tensor */
     int Get1DInt(int i) const;
 
@@ -361,6 +370,9 @@ public:
     /* set the value of a cell with its offset in the array */
     bool Set(DTYPE value, int offset);
 
+    /* set the value of a cell in a 0d tensor */
+    bool Set0D(DTYPE value);
+
     /* set the value of a cell in a 1d tensor */
     bool Set1D(DTYPE value, int i);
 
@@ -375,6 +387,9 @@ public:
     
     /* set the integer value of a cell */
     bool SetInt(int value, int index[], int size = -1);
+
+    /* set the integer value of a cell in a 0d tensor */
+    bool Set0DInt(int value);
 
     /* set the integer value of a cell in a 1d tensor */
     bool Set1DInt(int value, int i);
@@ -412,11 +427,11 @@ public:
     bool BinarySearch(int key, DTYPE &value, void * &position) const;
 
     /* dump data to a file */
-    void Dump(FILE * file, const char * label = NULL, const int n = -1, const int beg = 0, const int verbose = 0);
+    void Dump(FILE * file = stderr, const char * label = NULL, const int n = -1, const int beg = 0, const int verbose = 0);
 
     /* dump data to a file */
     static
-    void Dump(const XTensor * tensor, FILE * file, const char * label = NULL, const int n = -1, const int beg = 0, const int verbose = 0);
+    void Dump(const XTensor * tensor, FILE * file = stderr, const char * label = NULL, const int n = -1, const int beg = 0, const int verbose = 0);
 
     /* dump data to a binary file */
     void BinaryDump(FILE * file);

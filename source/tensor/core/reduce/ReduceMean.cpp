@@ -42,7 +42,7 @@ void _ReduceMean(const XTensor * input, XTensor * output, int dim)
     int num = input->dimSize[dim];
 
     _ReduceSum(input, output, dim);
-    _ScaleAndShiftMe(output, (DTYPE)1/num, 0);
+    _ScaleAndShiftMe(output, 1.0F/(DTYPE)(num), 0);
 }
 
 /* 

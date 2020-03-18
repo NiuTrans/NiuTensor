@@ -36,8 +36,9 @@ set each entry to its clip value (CUDA Kernel)
 >> upper - the upper border
 >> size - size of the data array
 */
+template <class T>
 __global__
-void KernelClip(DTYPE * a, DTYPE * b, DTYPE lower, DTYPE upper, int size)
+void KernelClip(T * a, T * b, T lower, T upper, int size)
 {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
 
@@ -90,10 +91,16 @@ void _CudaClip(const XTensor * a, XTensor * b, DTYPE lower, DTYPE upper)
     ProtectCudaDev(a->devID, devIDBackup);
 
     if (a->dataType == DEFAULT_DTYPE) {
-        KernelClip << <blocks, threads >> >((DTYPE*)a->data, (DTYPE*)b->data, lower, upper, a->unitNum);
+        KernelClip<DTYPE> << <blocks, threads >> >((DTYPE *)a->data, (DTYPE *)b->data, lower, upper, a->unitNum);
+    }
+    else if (a->dataType == X_INT) {
+        int lower1 = (int)lower;
+        int upper1 = (int)upper;
+
+        KernelClip<int> << <blocks, threads >> >((int *)a->data, (int *)b->data, lower1, upper1, a->unitNum);
     }
     else if (a->dataType == X_FLOAT16) {
-        KernelClip << <blocks, threads >> >((__half*)a->data, (__half*)b->data, lower, upper, a->unitNum);
+        ShowNTErrors("TODO!");
     }
     else {
         ShowNTErrors("TODO!");
