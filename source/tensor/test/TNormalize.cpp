@@ -70,7 +70,7 @@ bool TestNormalize1()
     for (int i = 0; i < varOrder; i++)
         varUnitNum *= varDimSize[i];
 
-    /* a scalar tensor of size (2, 3) */
+    /* a scale tensor of size (2, 3) */
     int aOrder = 2;
     int * aDimSize = new int[aOrder];
     aDimSize[0] = 2;
@@ -127,8 +127,9 @@ bool TestNormalize1()
     tUser = Normalize(*s, 0, *mean, *var, *a, *b, 0.0F);
     
     /* check results */
-    cpuTest = _CheckData(t, answer, tUnitNum, 1e-4F)
-        && _CheckData(tMe, answer, tUnitNum, 1e-4F) && _CheckData(&tUser, answer, tUnitNum, 1e-4F);
+    cpuTest = _CheckData(t, answer, tUnitNum, 1e-4F) &&
+              _CheckData(tMe, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUser, answer, tUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -159,8 +160,9 @@ bool TestNormalize1()
     tUserGPU = Normalize(*sGPU, 0, *meanGPU, *varGPU, *aGPU, *bGPU, 0.0F);
 
     /* check results */
-    gpuTest = _CheckData(tGPU, answer, tUnitNum, 1e-4F)
-        && _CheckData(tMeGPU, answer, tUnitNum, 1e-4F) && _CheckData(&tUserGPU, answer, tUnitNum, 1e-4F);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum, 1e-4F) &&
+              _CheckData(tMeGPU, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUserGPU, answer, tUnitNum, 1e-4F);
 
     /* destroy variables */
     delete s;

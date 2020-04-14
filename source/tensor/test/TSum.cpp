@@ -66,8 +66,9 @@ bool TestSum1()
     cUser = Sum(*a, *b);
 
     /* check results */
-    cpuTest = _CheckData(c, answer, unitNum)
-              && _CheckData(cMe, answer, unitNum) && _CheckData(&cUser, answer, unitNum);
+    cpuTest = _CheckData(c, answer, unitNum, 1e-4F) &&
+              _CheckData(cMe, answer, unitNum, 1e-4F) &&
+              _CheckData(&cUser, answer, unitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -92,8 +93,9 @@ bool TestSum1()
     cUserGPU = Sum(*aGPU, *bGPU);
 
     /* check results */
-    gpuTest = _CheckData(cGPU, answer, unitNum)
-              && _CheckData(cMeGPU, answer, unitNum) && _CheckData(&cUserGPU, answer, unitNum);
+    gpuTest = _CheckData(cGPU, answer, unitNum, 1e-4F) &&
+              _CheckData(cMeGPU, answer, unitNum, 1e-4F) &&
+              _CheckData(&cUserGPU, answer, unitNum, 1e-4F);
 
     /* destroy variables */
     delete a;
@@ -162,8 +164,9 @@ bool TestSum2()
     cUser = Sum(*a, *b, beta);
 
     /* check results */
-    cpuTest = _CheckData(c, answer, unitNum)
-              && _CheckData(cMe, answer, unitNum) && _CheckData(&cUser, answer, unitNum);
+    cpuTest = _CheckData(c, answer, unitNum, 1e-4F) &&
+              _CheckData(cMe, answer, unitNum, 1e-4F) &&
+              _CheckData(&cUser, answer, unitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -188,8 +191,9 @@ bool TestSum2()
     cUserGPU = Sum(*aGPU, *bGPU, beta);
 
     /* check results */
-    gpuTest = _CheckData(cGPU, answer, unitNum)
-              && _CheckData(cMeGPU, answer, unitNum) && _CheckData(&cUserGPU, answer, unitNum);
+    gpuTest = _CheckData(cGPU, answer, unitNum, 1e-4F) &&
+              _CheckData(cMeGPU, answer, unitNum, 1e-4F) &&
+              _CheckData(&cUserGPU, answer, unitNum, 1e-4F);
 
     /* destroy variables */
     delete a;
@@ -267,7 +271,7 @@ bool TestSum3()
     cUser = Sum(*a, *b, beta);
 
     /* check results */
-    cpuTest = _CheckData(&cUser, answer, cUnitNum);
+    cpuTest = _CheckData(&cUser, answer, cUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -286,7 +290,7 @@ bool TestSum3()
     cUserGPU = Sum(*aGPU, *bGPU, beta);
 
     /* check results */
-    gpuTest = _CheckData(&cUserGPU, answer, cUnitNum);
+    gpuTest = _CheckData(&cUserGPU, answer, cUnitNum, 1e-4F);
 
     /* destroy variables */
     delete a;
@@ -369,7 +373,7 @@ bool TestSum4()
     cUser = Sum(*a, *b, beta);
 
     /* check results */
-    cpuTest = _CheckData(&cUser, answer, cUnitNum);
+    cpuTest = _CheckData(&cUser, answer, cUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -388,7 +392,7 @@ bool TestSum4()
     cUserGPU = Sum(*aGPU, *bGPU, beta);
 
     /* check results */
-    gpuTest = _CheckData(&cUserGPU, answer, cUnitNum);
+    gpuTest = _CheckData(&cUserGPU, answer, cUnitNum, 1e-4F);
 
     /* destroy variables */
     delete a;
@@ -471,7 +475,7 @@ bool TestSum5()
     cUser = Sum(*a, *b, beta);
 
     /* check results */
-    cpuTest = _CheckData(&cUser, answer, cUnitNum);
+    cpuTest = _CheckData(&cUser, answer, cUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -490,7 +494,7 @@ bool TestSum5()
     cUserGPU = Sum(*aGPU, *bGPU, beta);
 
     /* check results */
-    gpuTest = _CheckData(&cUserGPU, answer, cUnitNum);
+    gpuTest = _CheckData(&cUserGPU, answer, cUnitNum, 1e-4F);
 
     /* destroy variables */
     delete a;

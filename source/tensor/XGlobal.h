@@ -100,7 +100,7 @@ namespace nts {
 } \
 
 #define MAX_FILE_NAME_LENGTH 1024 * 2
-#define MAX_LINE_LENGTH 1024*1024
+#define MAX_LINE_LENGTH 1024 * 1024
 #define MAX_SENTENCE_LEN 512
 #define X_MILLION 1000000
 #define MAX_INT 2147483647
@@ -108,7 +108,7 @@ namespace nts {
 #define FIELD_SEP " ||| "
 #define FLOAT_MIN float(-1.0E38)
 #define FLOAT16_MIN float(-65504)
-#define MILLION 1000000
+#define MILLION 1024 * 1024
 #define LOG_E_10 2.302585
 #define LEADING_DIM 1
 

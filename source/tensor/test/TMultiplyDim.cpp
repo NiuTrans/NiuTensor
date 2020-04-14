@@ -80,9 +80,9 @@ bool TestMultiplyDim1()
     cUser = MultiplyDim(*a, *b, 0);
 
     /* check results */
-    cpuTest = _CheckData(c, answer, aUnitNum) &&
-              _CheckData(cMe, answer, aUnitNum) &&
-              _CheckData(&cUser, answer, aUnitNum);
+    cpuTest = _CheckData(c, answer, aUnitNum, 1e-4F) &&
+              _CheckData(cMe, answer, aUnitNum, 1e-4F) &&
+              _CheckData(&cUser, answer, aUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -107,9 +107,9 @@ bool TestMultiplyDim1()
     cUserGPU = MultiplyDim(*aGPU, *bGPU, 0);
 
     /* check results */
-    gpuTest = _CheckData(cGPU, answer, aUnitNum) &&
-              _CheckData(cMeGPU, answer, aUnitNum) &&
-              _CheckData(&cUserGPU, answer, aUnitNum);
+    gpuTest = _CheckData(cGPU, answer, aUnitNum, 1e-4F) &&
+              _CheckData(cMeGPU, answer, aUnitNum, 1e-4F) &&
+              _CheckData(&cUserGPU, answer, aUnitNum, 1e-4F);
 
     /* destroy variables */
     delete a;
@@ -192,9 +192,9 @@ bool TestMultiplyDim2()
     cUser = MultiplyDim(*a, *b, 1);
 
     /* check results */
-    cpuTest = _CheckData(c, answer, aUnitNum) &&
-              _CheckData(cMe, answer, aUnitNum) &&
-              _CheckData(&cUser, answer, aUnitNum);
+    cpuTest = _CheckData(c, answer, aUnitNum, 1e-4F) &&
+              _CheckData(cMe, answer, aUnitNum, 1e-4F) &&
+              _CheckData(&cUser, answer, aUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -219,9 +219,9 @@ bool TestMultiplyDim2()
     cUserGPU = MultiplyDim(*aGPU, *bGPU, 1);
 
     /* check results */
-    gpuTest = _CheckData(cGPU, answer, aUnitNum) &&
-              _CheckData(cMeGPU, answer, aUnitNum) &&
-              _CheckData(&cUserGPU, answer, aUnitNum);
+    gpuTest = _CheckData(cGPU, answer, aUnitNum, 1e-4F) &&
+              _CheckData(cMeGPU, answer, aUnitNum, 1e-4F) &&
+              _CheckData(&cUserGPU, answer, aUnitNum, 1e-4F);
 
     /* destroy variables */
     delete a;

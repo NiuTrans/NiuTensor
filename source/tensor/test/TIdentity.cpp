@@ -63,7 +63,8 @@ bool TestIdentity1()
     yUser = Identity(*x);
     
     /* check result */
-    cpuTest = _CheckData(y, answer, unitNum, 1e-4F) && _CheckData(&yUser, answer, unitNum, 1e-4F);
+    cpuTest = _CheckData(y, answer, unitNum, 1e-4F) &&
+              _CheckData(&yUser, answer, unitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -83,7 +84,8 @@ bool TestIdentity1()
     yUserGPU = Identity(*xGPU);
     
     /* check result */
-    gpuTest = _CheckData(yGPU, answer, unitNum, 1e-4F) && _CheckData(&yUserGPU, answer, unitNum, 1e-4F);
+    gpuTest = _CheckData(yGPU, answer, unitNum, 1e-4F) &&
+              _CheckData(&yUserGPU, answer, unitNum, 1e-4F);
 
     /* destroy variables */
     delete x;

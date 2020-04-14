@@ -83,7 +83,8 @@ bool TestReduceSumSquared1()
     tUser = ReduceSumSquared(*s, 0, *shift);
 
     /* check results */
-    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUser, answer, tUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -105,7 +106,8 @@ bool TestReduceSumSquared1()
     tUserGPU = ReduceSumSquared(*sGPU, 0, *shiftGPU);
 
     /* check results */
-    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUserGPU, answer, tUnitNum, 1e-4F);
 
     /* destroy variables */
     delete s;
@@ -191,7 +193,8 @@ bool TestReduceSumSquared2()
     tUser = ReduceSumSquared(*s, 1, *shift);
 
     /* check results */
-    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUser, answer, tUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -213,7 +216,8 @@ bool TestReduceSumSquared2()
     tUserGPU = ReduceSumSquared(*sGPU, 1, *shiftGPU);
 
     /* check results */
-    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUserGPU, answer, tUnitNum, 1e-4F);
 
     /* destroy variables */
     delete s;
@@ -289,7 +293,8 @@ bool TestReduceSumSquared3()
     tUser = ReduceSumSquared(*s, 0, *shift);
 
     /* check results */
-    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUser, answer, tUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -311,7 +316,8 @@ bool TestReduceSumSquared3()
     tUserGPU = ReduceSumSquared(*sGPU, 0, *shiftGPU);
 
     /* check results */
-    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUserGPU, answer, tUnitNum, 1e-4F);
 
     /* destroy variables */
     delete s;

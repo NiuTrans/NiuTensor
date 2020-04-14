@@ -93,7 +93,8 @@ bool TestConcatenate1()
     tUser = Concatenate(*sList, 1);
 
     /* check results */
-    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUser, answer, tUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -122,7 +123,8 @@ bool TestConcatenate1()
     tUserGPU = Concatenate(*sList, 1);
 
     /* check results */
-    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUserGPU, answer, tUnitNum, 1e-4F);
 
     /* destroy variables */
     delete sList;
@@ -222,7 +224,8 @@ bool TestConcatenate2()
     tUser = Concatenate(*sList, 0);
 
     /* check results */
-    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUser, answer, tUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -251,7 +254,8 @@ bool TestConcatenate2()
     tUserGPU = Concatenate(*sList, 0);
 
     /* check results */
-    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUserGPU, answer, tUnitNum, 1e-4F);
 
     /* destroy variables */
     delete sList;
@@ -349,7 +353,8 @@ bool TestConcatenate3()
     tUser = Concatenate(*sList, 1);
 
     /* check results */
-    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUser, answer, tUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -378,7 +383,8 @@ bool TestConcatenate3()
     tUserGPU = Concatenate(*sList, 1);
 
     /* check results */
-    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUserGPU, answer, tUnitNum, 1e-4F);
 
     /* destroy variables */
     delete sList;
@@ -469,7 +475,8 @@ bool TestConcatenate4()
     tUser = Concatenate(*s1, *s2, 1);
 
     /* check results */
-    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUser, answer, tUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -491,7 +498,8 @@ bool TestConcatenate4()
     tUserGPU = Concatenate(*sGPU1, *sGPU2, 1);
 
     /* check results */
-    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUserGPU, answer, tUnitNum, 1e-4F);
 
     /* destroy variables */
     delete s1;

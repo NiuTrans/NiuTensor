@@ -103,7 +103,6 @@ XTensor MulAndShift(const XTensor &x, const XTensor &w, const XTensor &b,
     DelTensorBuf(tmp);
 
     return c;
-
 }
 
 /*
@@ -114,17 +113,17 @@ operation c = x * w + b  MulAndShift
 >> parallelRunner - parallel processing module
 << return - the result of matrix multiplication
 */
-XTensor MulAndShift(const XTensor& x, MATRIX_TRANS_TYPE transposedA,
-                    const XTensor& w, MATRIX_TRANS_TYPE transposedB,
+XTensor MulAndShift(const XTensor& x, MATRIX_TRANS_TYPE transposedX,
+                    const XTensor& w, MATRIX_TRANS_TYPE transposedW,
                     const XTensor& b, DTYPE alpha, XPRunner* parallelRunner)
 {
     CheckNTErrors(x.dataType == w.dataType, "Input tensors should have the same data type!");
     CheckNTErrors(x.order >= 2 && w.order >= 2, "Input tensors must have a order >= 2!");
 
-    int xn = transposedA == X_TRANS ? x.dimSize[x.order - 1] : x.dimSize[x.order - 2];
-    int xm = transposedA == X_TRANS ? x.dimSize[x.order - 2] : x.dimSize[x.order - 1];
-    int wn = transposedB == X_TRANS ? w.dimSize[w.order - 1] : w.dimSize[w.order - 2];
-    int wm = transposedB == X_TRANS ? w.dimSize[w.order - 2] : w.dimSize[w.order - 1];
+    int xn = transposedX == X_TRANS ? x.dimSize[x.order - 1] : x.dimSize[x.order - 2];
+    int xm = transposedX == X_TRANS ? x.dimSize[x.order - 2] : x.dimSize[x.order - 1];
+    int wn = transposedW == X_TRANS ? w.dimSize[w.order - 1] : w.dimSize[w.order - 2];
+    int wm = transposedW == X_TRANS ? w.dimSize[w.order - 2] : w.dimSize[w.order - 1];
 
     int order = x.order + w.order - 2;
     int sub = 0;
@@ -141,7 +140,7 @@ XTensor MulAndShift(const XTensor& x, MATRIX_TRANS_TYPE transposedA,
     XTensor * tmp = NewTensorBufV2(order, dimSize, x.dataType, dr, x.devID, x.mem);
 
     /* call _MatrixMul function */
-    _MatrixMul(&x, transposedA, &w, transposedB, tmp, alpha, 0, parallelRunner);
+    _MatrixMul(&x, transposedX, &w, transposedW, tmp, alpha, 0, parallelRunner);
 
     XTensor c(tmp);
     c.SetTMPFlag();
@@ -169,8 +168,8 @@ XTensor MulAndShift(const XTensor& x, MATRIX_TRANS_TYPE transposedA,
     if (w.enableGrad && b.enableGrad) {
         XLink::MakeLink(&x, &w, &b, &c, MATH_MULANDSHIFT);
         XLink::AddParamToHeadInt(&c, n);
-        XLink::AddParamToHeadTrans(&c, transposedA);
-        XLink::AddParamToHeadTrans(&c, transposedB);
+        XLink::AddParamToHeadTrans(&c, transposedX);
+        XLink::AddParamToHeadTrans(&c, transposedW);
     }
 
     /* destroy variables */

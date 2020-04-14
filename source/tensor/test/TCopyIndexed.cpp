@@ -105,9 +105,9 @@ bool TestCopyIndexed1()
     tUser = CopyIndexed(*s, dim, *sIndex, *tIndex, copyNum);
 
     /* check results */
-    cpuTest = _CheckData(t1, answer, tUnitNum) && 
-              _CheckData(t2, answer, tUnitNum) &&
-              _CheckData(&tUser, answer, tUnitNum);
+    cpuTest = _CheckData(t1, answer, tUnitNum, 1e-4F) &&
+              _CheckData(t2, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUser, answer, tUnitNum, 1e-4F);
     
 #ifdef USE_CUDA
     /* GPU test */
@@ -134,9 +134,9 @@ bool TestCopyIndexed1()
     tUserGPU = CopyIndexed(*sGPU, dim, *sIndexGPU, *tIndexGPU, copyNum);
 
     /* check results */
-    gpuTest = _CheckData(tGPU1, answer, tUnitNum) &&
-              _CheckData(tGPU2, answer, tUnitNum) &&
-              _CheckData(&tUserGPU, answer, tUnitNum);
+    gpuTest = _CheckData(tGPU1, answer, tUnitNum, 1e-4F) &&
+              _CheckData(tGPU2, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUserGPU, answer, tUnitNum, 1e-4F);
 
     /* destroy variables */
     delete s;
@@ -250,9 +250,9 @@ bool TestCopyIndexed2()
     tUser = CopyIndexed(*s, dim, *sIndex, *tIndex);
     
     /* check results */
-    cpuTest = _CheckData(t1, answer, tUnitNum) &&
-              _CheckData(t2, answer, tUnitNum) &&
-              _CheckData(&tUser, answer, tUnitNum);
+    cpuTest = _CheckData(t1, answer, tUnitNum, 1e-4F) &&
+              _CheckData(t2, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUser, answer, tUnitNum, 1e-4F);
     
 #ifdef USE_CUDA
     /* GPU test */
@@ -279,9 +279,9 @@ bool TestCopyIndexed2()
     tUserGPU = CopyIndexed(*sGPU, dim, *sIndexGPU, *tIndexGPU, copyNum);
 
     /* check results */
-    gpuTest = _CheckData(tGPU1, answer, tUnitNum) &&
-              _CheckData(tGPU2, answer, tUnitNum) &&
-              _CheckData(&tUserGPU, answer, tUnitNum);
+    gpuTest = _CheckData(tGPU1, answer, tUnitNum, 1e-4F) &&
+              _CheckData(tGPU2, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUserGPU, answer, tUnitNum, 1e-4F);
 
     /* destroy variables */
     delete s;
@@ -395,9 +395,9 @@ bool TestCopyIndexed3()
     tUser = CopyIndexed(*s, dim, *sIndex, *tIndex, copyNum);
     
     /* check results */
-    cpuTest = _CheckData(t1, answer, tUnitNum) &&
-              _CheckData(t2, answer, tUnitNum) &&
-              _CheckData(&tUser, answer, tUnitNum);
+    cpuTest = _CheckData(t1, answer, tUnitNum, 1e-4F) &&
+              _CheckData(t2, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUser, answer, tUnitNum, 1e-4F);
     
 #ifdef USE_CUDA
     /* GPU test */
@@ -424,9 +424,9 @@ bool TestCopyIndexed3()
     tUserGPU = CopyIndexed(*sGPU, dim, *sIndexGPU, *tIndexGPU, copyNum);
 
     /* check results */
-    gpuTest = _CheckData(tGPU1, answer, tUnitNum) &&
-              _CheckData(tGPU2, answer, tUnitNum) &&
-              _CheckData(&tUserGPU, answer, tUnitNum);
+    gpuTest = _CheckData(tGPU1, answer, tUnitNum, 1e-4F) &&
+              _CheckData(tGPU2, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUserGPU, answer, tUnitNum, 1e-4F);
 
     /* destroy variables */
     delete s;
@@ -540,9 +540,9 @@ bool TestCopyIndexed4()
     tUser = CopyIndexed(*s, dim, *sIndex, *tIndex, copyNum);
 
     /* check results */
-    cpuTest = _CheckData(t1, answer, tUnitNum) && 
-              _CheckData(t2, answer, tUnitNum) &&
-              _CheckData(&tUser, answer, tUnitNum);
+    cpuTest = _CheckData(t1, answer, tUnitNum, 1e-4F) &&
+              _CheckData(t2, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUser, answer, tUnitNum, 1e-4F);
     
 #ifdef USE_CUDA
     /* GPU test */
@@ -569,9 +569,9 @@ bool TestCopyIndexed4()
     tUserGPU = CopyIndexed(*sGPU, dim, *sIndexGPU, *tIndexGPU, copyNum);
 
     /* check results */
-    gpuTest = _CheckData(tGPU1, answer, tUnitNum) && 
-              _CheckData(tGPU2, answer, tUnitNum) &&
-              _CheckData(&tUserGPU, answer, tUnitNum);
+    gpuTest = _CheckData(tGPU1, answer, tUnitNum, 1e-4F) &&
+              _CheckData(tGPU2, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUserGPU, answer, tUnitNum, 1e-4F);
 
     /* destroy variables */
     delete s;
@@ -685,9 +685,9 @@ bool TestCopyIndexed5()
     tUser = CopyIndexed(*s, dim, *sIndex, *tIndex, copyNum);
 
     /* check results */
-    cpuTest = _CheckData(t1, answer, tUnitNum) &&
-              _CheckData(t2, answer, tUnitNum) &&
-              _CheckData(&tUser, answer, tUnitNum);
+    cpuTest = _CheckData(t1, answer, tUnitNum, 1e-4F) &&
+              _CheckData(t2, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUser, answer, tUnitNum, 1e-4F);
     
 #ifdef USE_CUDA
     /* GPU test */
@@ -714,9 +714,9 @@ bool TestCopyIndexed5()
     tUserGPU = CopyIndexed(*sGPU, dim, *sIndexGPU, *tIndexGPU, copyNum);
 
     /* check results */
-    gpuTest = _CheckData(tGPU1, answer, tUnitNum) &&
-              _CheckData(tGPU2, answer, tUnitNum) &&
-              _CheckData(&tUserGPU, answer, tUnitNum);
+    gpuTest = _CheckData(tGPU1, answer, tUnitNum, 1e-4F) &&
+              _CheckData(tGPU2, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUserGPU, answer, tUnitNum, 1e-4F);
 
     /* destroy variables */
     delete s;
@@ -835,8 +835,8 @@ bool TestCopyIndexed6()
     _CopyIndexed(s, t2, dim, sIndex, tIndex, copyNum);
 
     /* check results */
-    cpuTest = _CheckData(t1, answer, tUnitNum) &&
-              _CheckData(t2, answer, tUnitNum);
+    cpuTest = _CheckData(t1, answer, tUnitNum, 1e-4F) &&
+              _CheckData(t2, answer, tUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -861,8 +861,8 @@ bool TestCopyIndexed6()
     _CopyIndexed(sGPU, tGPU2, dim, sIndexGPU, tIndexGPU, copyNum);
 
     /* check results */
-    gpuTest = _CheckData(tGPU1, answer, tUnitNum) &&
-              _CheckData(tGPU2, answer, tUnitNum);
+    gpuTest = _CheckData(tGPU1, answer, tUnitNum, 1e-4F) &&
+              _CheckData(tGPU2, answer, tUnitNum, 1e-4F);
 
     /* destroy variables */
     delete s;

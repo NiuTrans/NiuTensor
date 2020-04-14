@@ -100,8 +100,10 @@ bool TestUnsqueeze1()
     tUser2 = Unsqueeze(*s, 2, 2);
 
     /* check results */
-    cpuTest = _CheckData(t1, answer1, tUnitNum1) && _CheckData(&tUser1, answer1, tUnitNum1) &&
-              _CheckData(t2, answer2, tUnitNum2) && _CheckData(&tUser2, answer2, tUnitNum2);
+    cpuTest = _CheckData(t1, answer1, tUnitNum1, 1e-4F) &&
+              _CheckData(&tUser1, answer1, tUnitNum1, 1e-4F) &&
+              _CheckData(t2, answer2, tUnitNum2, 1e-4F) &&
+              _CheckData(&tUser2, answer2, tUnitNum2, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -126,8 +128,10 @@ bool TestUnsqueeze1()
     tUserGPU2 = Unsqueeze(*sGPU, 2, 2);
 
     /* check results */
-    gpuTest = _CheckData(tGPU1, answer1, tUnitNum1) && _CheckData(&tUserGPU1, answer1, tUnitNum1)
-        && _CheckData(tGPU2, answer2, tUnitNum2) && _CheckData(&tUserGPU2, answer2, tUnitNum2);
+    gpuTest = _CheckData(tGPU1, answer1, tUnitNum1, 1e-4F) &&
+              _CheckData(&tUserGPU1, answer1, tUnitNum1, 1e-4F) &&
+              _CheckData(tGPU2, answer2, tUnitNum2, 1e-4F) &&
+              _CheckData(&tUserGPU2, answer2, tUnitNum2, 1e-4F);
 
     /* destroy variables */
     delete s;

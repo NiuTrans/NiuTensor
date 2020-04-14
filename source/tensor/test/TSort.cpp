@@ -62,9 +62,9 @@ bool TestSort1()
     _SortMe(aMe, index, 0);
     Sort(*a, bUser, *index, 0);
 
-    cpuTest = _CheckData(b, answer, unitNum) &&
-              _CheckData(aMe, answer, unitNum) &&
-              _CheckData(&bUser, answer, unitNum);
+    cpuTest = _CheckData(b, answer, unitNum, 1e-4F) &&
+              _CheckData(aMe, answer, unitNum, 1e-4F) &&
+              _CheckData(&bUser, answer, unitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -88,9 +88,9 @@ bool TestSort1()
     Sort(*aGPU, bUserGPU, *indexGPU, 0);
 
     /* check results */
-    gpuTest = _CheckData(bGPU, answer, unitNum) &&
-              _CheckData(aMeGPU, answer, unitNum) &&
-              _CheckData(&bUserGPU, answer, unitNum);
+    gpuTest = _CheckData(bGPU, answer, unitNum, 1e-4F) &&
+              _CheckData(aMeGPU, answer, unitNum, 1e-4F) &&
+              _CheckData(&bUserGPU, answer, unitNum, 1e-4F);
 
     /* destroy variables */
     delete a;
@@ -154,9 +154,9 @@ bool TestSort2()
     Sort(*a, bUser, *index, 1);
 
     /* check results */
-    cpuTest = _CheckData(b, answer, unitNum) &&
-              _CheckData(aMe, answer, unitNum) &&
-              _CheckData(&bUser, answer, unitNum);
+    cpuTest = _CheckData(b, answer, unitNum, 1e-4F) &&
+              _CheckData(aMe, answer, unitNum, 1e-4F) &&
+              _CheckData(&bUser, answer, unitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -180,9 +180,9 @@ bool TestSort2()
     Sort(*aGPU, bUserGPU, *indexGPU, 1);
 
     /* check results */
-    gpuTest = _CheckData(bGPU, answer, unitNum) &&
-              _CheckData(aMeGPU, answer, unitNum) &&
-              _CheckData(&bUserGPU, answer, unitNum);
+    gpuTest = _CheckData(bGPU, answer, unitNum, 1e-4F) &&
+              _CheckData(aMeGPU, answer, unitNum, 1e-4F) &&
+              _CheckData(&bUserGPU, answer, unitNum, 1e-4F);
 
     /* destroy variables */
     delete a;

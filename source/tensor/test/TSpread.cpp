@@ -98,7 +98,7 @@ bool TestSpread1()
     _Spread(s, modify, 0, srcIndex, 2, tgtIndex);
     
     /* check results */
-    cpuTest = _CheckData(s, answer, sUnitNum, 1e-5F);
+    cpuTest = _CheckData(s, answer, sUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -115,7 +115,7 @@ bool TestSpread1()
     /* call _Spread function */
     _Spread(sGPU, modifyGPU, 0, srcIndex, 2, tgtIndex);
     
-    gpuTest = _CheckData(sGPU, answer, sUnitNum, 1e-5F);
+    gpuTest = _CheckData(sGPU, answer, sUnitNum, 1e-4F);
 
     /* destroy variables */
     delete s;
@@ -207,8 +207,8 @@ bool TestSpread2()
     _SpreadForGather(s2, t, sIndex);
 
     /* check results */
-    cpuTest = _CheckData(s1, answer, sUnitNum) &&
-              _CheckData(s2, answer, sUnitNum);
+    cpuTest = _CheckData(s1, answer, sUnitNum, 1e-4F) &&
+              _CheckData(s2, answer, sUnitNum, 1e-4F);
     
 #ifdef USE_CUDA
     /* GPU test */
@@ -233,8 +233,8 @@ bool TestSpread2()
     _SpreadForGather(sGPU2, tGPU, sIndexGPU);
 
     /* check results */
-    gpuTest = _CheckData(sGPU1, answer, sUnitNum) &&
-              _CheckData(sGPU2, answer, sUnitNum);
+    gpuTest = _CheckData(sGPU1, answer, sUnitNum, 1e-4F) &&
+              _CheckData(sGPU2, answer, sUnitNum, 1e-4F);
 
     /* destroy variables */
     delete s1;
@@ -342,8 +342,8 @@ bool TestSpread3()
     _SpreadForCopyIndexed(s2, t, dim, sIndex, tIndex, 1);
 
     /* check results */
-    cpuTest = _CheckData(s1, answer, sUnitNum) &&
-              _CheckData(s2, answer, sUnitNum);
+    cpuTest = _CheckData(s1, answer, sUnitNum, 1e-4F) &&
+              _CheckData(s2, answer, sUnitNum, 1e-4F);
     
 #ifdef USE_CUDA
     /* GPU test */
@@ -368,8 +368,8 @@ bool TestSpread3()
     _SpreadForCopyIndexed(sGPU2, tGPU, dim, sIndexGPU, tIndexGPU, 1);
 
     /* check results */
-    gpuTest = _CheckData(sGPU1, answer, sUnitNum) &&
-              _CheckData(sGPU2, answer, sUnitNum);
+    gpuTest = _CheckData(sGPU1, answer, sUnitNum, 1e-4F) &&
+              _CheckData(sGPU2, answer, sUnitNum, 1e-4F);
 
     /* destroy variables */
     delete s1;

@@ -90,8 +90,8 @@ bool TestGather1()
     tUser = Gather(*s, *index);
 
     /* check results */
-    cpuTest = _CheckData(t, answer, tUnitNum) &&
-              _CheckData(&tUser, answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUser, answer, tUnitNum, 1e-4F);
     
 #ifdef USE_CUDA
     /* GPU test */
@@ -113,8 +113,8 @@ bool TestGather1()
     tUserGPU = Gather(*sGPU, *indexGPU);
 
     /* check results */
-    gpuTest = _CheckData(tGPU, answer, tUnitNum) &&
-              _CheckData(&tUserGPU, answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUserGPU, answer, tUnitNum, 1e-4F);
 
     /* destroy variables */
     delete s;

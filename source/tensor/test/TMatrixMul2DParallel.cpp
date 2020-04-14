@@ -86,7 +86,7 @@ bool TestMatrixMul2DParallel1()
     _MatrixMul2DParallel(s1, X_NOTRANS, s2, X_NOTRANS, t);
 
     /* check results */
-    cpuTest = _CheckData(t, answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum, 1e-4F);
 
     /* destroy variables */
     delete s1;
@@ -162,7 +162,7 @@ bool TestMatrixMul2DParallel2()
     _MatrixMul2DParallel(s1, X_TRANS, s2, X_NOTRANS, t);
 
     /* check results */
-    cpuTest = _CheckData(t, answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum, 1e-4F);
 
     /* destroy variables */
     delete s1;

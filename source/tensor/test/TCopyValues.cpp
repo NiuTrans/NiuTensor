@@ -58,7 +58,8 @@ bool TestCopyValues1()
     tUser = CopyValues(*s);
 
     /* check results */
-    cpuTest = _CheckData(t, sData, sUnitNum) && _CheckData(&tUser, sData, sUnitNum);
+    cpuTest = _CheckData(t, sData, sUnitNum, 1e-4F) &&
+              _CheckData(&tUser, sData, sUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -78,7 +79,8 @@ bool TestCopyValues1()
     tUserGPU = CopyValues(*sGPU);
 
     /* check results */
-    gpuTest = _CheckData(tGPU, sData, sUnitNum) && _CheckData(&tUser, sData, sUnitNum);
+    gpuTest = _CheckData(tGPU, sData, sUnitNum, 1e-4F) &&
+              _CheckData(&tUser, sData, sUnitNum, 1e-4F);
 
     /* destroy variables */
     delete s;

@@ -520,9 +520,8 @@ relocate the data on the target device
 */
 void XTensor::SetDevice(int myDevId, XMem* myMem)
 {
-    if(myMem == NULL){
+    if(myMem == NULL)
         myMem = GMems.GetMem(myDevId);
-    }
     FlushToMem(myMem);
     isInGlobalMem = false;
 }
@@ -1914,6 +1913,7 @@ void XTensor::FlushToMem(XMem* targetMem)
         else if (mem != targetMem) {
             void* tmpData = targetMem->Alloc(targetMem->devID, GetDataSizeInChar());
             XMemCopy(tmpData, targetMem->devID, data, devID, GetDataSizeInChar());
+            mem->Release(data, GetDataSizeInChar(), signature);
             data = tmpData;
             mem = targetMem;
             devID = mem->devID;
@@ -1925,12 +1925,21 @@ void XTensor::FlushToMem(XMem* targetMem)
     else {
         if (devID >= 0) {
 #ifdef USE_CUDA
-            CudaGPUToCPUFlush(this);
-            mem = targetMem;
-            devID = mem->devID;
+            CudaGPUToCPUFlush(this, targetMem->devID, targetMem);
 #else
             ShowNTErrors("Recompile the code with USE_CUDA!");
 #endif
+        }
+        else if (mem != targetMem) {
+            void* tmpData = targetMem->Alloc(targetMem->devID, GetDataSizeInChar());
+            XMemCopy(tmpData, targetMem->devID, data, devID, GetDataSizeInChar());
+            if (mem != NULL)
+                mem->Release(data, GetDataSizeInChar(), signature);
+            else
+                XMemFree(devID, data);
+            data = tmpData;
+            mem = targetMem;
+            devID = mem->devID;
         }
     }
 }

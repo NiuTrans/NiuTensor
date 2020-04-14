@@ -157,7 +157,28 @@ where i is the index of the item
 */
 void MultiplyMe(XTensor& a, const XTensor& b, DTYPE alpha, int leadingDim)
 {
-    _Multiply(&a, &b, &a, alpha, leadingDim);
+    if (b.order == 0){
+        DTYPE scale = b.Get0D() + alpha;
+
+        _ScaleAndShift(&a, &a, scale, 0.0F);
+    }
+    else {
+        int n = GetBroadcastDimIndex(a, b);
+
+        if (n == -1) {
+            CheckNTErrors(a.dimSize[leadingDim] == b.dimSize[leadingDim], "TODO!");
+
+            /* call _Multiply function */
+            _Multiply(&a, &b, &a, alpha, leadingDim);
+        }
+        else if (n >= 0 && n < a.order) {
+            /* call _MultiplyDim function */
+            _MultiplyDim(&a, &b, &a, n, alpha);
+        }
+        else {
+            ShowNTErrors("Something is wrong!");
+        }
+    }
 }
 
 /*

@@ -77,7 +77,8 @@ bool TestSplit1()
     tUser = Split(*s, 0, 2);
 
     /* check results */
-    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUser, answer, tUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -97,7 +98,8 @@ bool TestSplit1()
     tUserGPU = Split(*sGPU, 0, 2);
 
     /* check results */
-    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUserGPU, answer, tUnitNum, 1e-4F);
 
     /* destroy variables */
     delete s;
@@ -173,7 +175,8 @@ bool TestSplit2()
     tUser = Split(*s, 1, 2);
 
     /* check results */
-    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUser, answer, tUnitNum, 1e-4F);
 
 
 #ifdef USE_CUDA
@@ -194,7 +197,8 @@ bool TestSplit2()
     tUserGPU = Split(*sGPU, 1, 2);
 
     /* check results */
-    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUserGPU, answer, tUnitNum, 1e-4F);
 
     /* destroy variables */
     delete s;
@@ -293,8 +297,10 @@ bool TestSplit3()
     Split(*s, tUserList, 1, 2);
 
     /* check results */
-    cpuTest = _CheckData(t1, answer1, tUnitNum1) && _CheckData((XTensor *)tUserList.Get(0), answer1, tUnitNum1) &&
-              _CheckData(t2, answer2, tUnitNum2) && _CheckData((XTensor *)tUserList.Get(1), answer2, tUnitNum2);
+    cpuTest = _CheckData(t1, answer1, tUnitNum1, 1e-4F) &&
+              _CheckData((XTensor *)tUserList.Get(0), answer1, tUnitNum1, 1e-4F) &&
+              _CheckData(t2, answer2, tUnitNum2, 1e-4F) &&
+              _CheckData((XTensor *)tUserList.Get(1), answer2, tUnitNum2, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -328,8 +334,10 @@ bool TestSplit3()
     Split(*sGPU, tUserList, 1, 2);
 
     /* check results */
-    gpuTest = _CheckData(tGPU1, answer1, tUnitNum1) && _CheckData((XTensor *)tUserList.Get(0), answer1, tUnitNum1) &&
-              _CheckData(tGPU2, answer2, tUnitNum2) && _CheckData((XTensor *)tUserList.Get(1), answer2, tUnitNum2);
+    gpuTest = _CheckData(tGPU1, answer1, tUnitNum1, 1e-4F) &&
+              _CheckData((XTensor *)tUserList.Get(0), answer1, tUnitNum1, 1e-4F) &&
+              _CheckData(tGPU2, answer2, tUnitNum2, 1e-4F) &&
+              _CheckData((XTensor *)tUserList.Get(1), answer2, tUnitNum2, 1e-4F);
 
     /* destroy variables */
     delete s;

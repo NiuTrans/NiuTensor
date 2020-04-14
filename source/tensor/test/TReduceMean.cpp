@@ -82,8 +82,10 @@ bool TestReduceMean1()
     tUser2 = ReduceMean(*s, 1);
 
     /* check results */
-    cpuTest = _CheckData(t1, answer1, tUnitNum1) && _CheckData(&tUser1, answer1, tUnitNum1)
-        && _CheckData(t2, answer2, tUnitNum2) && _CheckData(&tUser2, answer2, tUnitNum2);
+    cpuTest = _CheckData(t1, answer1, tUnitNum1, 1e-4F) &&
+              _CheckData(&tUser1, answer1, tUnitNum1, 1e-4F) &&
+              _CheckData(t2, answer2, tUnitNum2, 1e-4F) &&
+              _CheckData(&tUser2, answer2, tUnitNum2, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -108,8 +110,10 @@ bool TestReduceMean1()
     tUserGPU2 = ReduceMean(*sGPU, 1);
 
     /* check results */
-    gpuTest = _CheckData(tGPU1, answer1, tUnitNum1) && _CheckData(&tUserGPU1, answer1, tUnitNum1)
-        && _CheckData(tGPU2, answer2, tUnitNum2) && _CheckData(&tUserGPU2, answer2, tUnitNum2);
+    gpuTest = _CheckData(tGPU1, answer1, tUnitNum1, 1e-4F) &&
+              _CheckData(&tUserGPU1, answer1, tUnitNum1, 1e-4F) &&
+              _CheckData(tGPU2, answer2, tUnitNum2, 1e-4F) &&
+              _CheckData(&tUserGPU2, answer2, tUnitNum2, 1e-4F);
 
     /* destroy variables */
     delete s;
@@ -173,7 +177,8 @@ bool TestReduceMean2()
     tUser = ReduceMean(*s, 0);
 
     /* check results */
-    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUser, answer, tUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -193,7 +198,8 @@ bool TestReduceMean2()
     tUserGPU = ReduceMean(*sGPU, 0);
 
     /* check results */
-    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUserGPU, answer, tUnitNum, 1e-4F);
 
     /* destroy variables */
     delete s;

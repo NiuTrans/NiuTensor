@@ -88,7 +88,8 @@ bool TestMatrixMulBatched1()
     tUser = MatrixMulBatched(*s1, X_NOTRANS, *s2, X_NOTRANS);
     
     /* check results */
-    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUser, answer, tUnitNum, 1e-4F);
     
 #ifdef USE_CUDA
     /* GPU test */
@@ -110,7 +111,8 @@ bool TestMatrixMulBatched1()
     tUserGPU = MatrixMulBatched(*sGPU1, X_NOTRANS, *sGPU2, X_NOTRANS);
     
     /* check results */
-    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUserGPU, answer, tUnitNum, 1e-4F);
     
     /* destroy variables */
     delete s1;
@@ -210,7 +212,8 @@ bool TestMatrixMulBatched2()
     tUser = MatrixMulBatched(*s1, X_NOTRANS, *s2, X_NOTRANS);
 
     /* check results */
-    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUser, answer, tUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -232,7 +235,8 @@ bool TestMatrixMulBatched2()
     tUserGPU = MatrixMulBatched(*sGPU1, X_NOTRANS, *sGPU2, X_NOTRANS);
 
     /* check results */
-    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUserGPU, answer, tUnitNum, 1e-4F);
 
     /* destroy variables */
     delete s1;

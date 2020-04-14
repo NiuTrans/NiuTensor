@@ -64,7 +64,7 @@ bool TestConvertDataType1()
     _ConvertDataType(a, b);
 
     /* check results */
-    cpuTest = _CheckData(b, answer, aUnitNum);
+    cpuTest = _CheckData(b, answer, aUnitNum, 1e-4F);
     
 #ifdef USE_CUDA
     /* GPU test */
@@ -81,7 +81,7 @@ bool TestConvertDataType1()
     _ConvertDataType(aGPU, bGPU);
 
     /* check results */
-    gpuTest = _CheckData(bGPU, answer, aUnitNum);
+    gpuTest = _CheckData(bGPU, answer, aUnitNum, 1e-4F);
 
     /* destroy variables */
     delete a;

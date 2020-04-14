@@ -115,6 +115,8 @@ const char * GetOPName(int type)
     else if ((type & DATA_BASE) != 0){
         if (type == GETANDSET_SELECT)
             return "G_SELECT";
+        else if (type == GETANDSET_CONVERTDATATYPE)
+            return "G_CONVERTDATATYPE";
         else if (type == MOVEMENT_COPYINDEXED)
             return "M_COPYINDEXED";
         else if (type == MOVEMENT_COPYVALUES)

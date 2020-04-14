@@ -64,7 +64,8 @@ bool TestSoftmax1()
     yUser = Softmax(*x, 1);
     
     /* check result */
-    cpuTest = _CheckData(y, answer, unitNum, 1e-4F) && _CheckData(&yUser, answer, unitNum, 1e-4F);
+    cpuTest = _CheckData(y, answer, unitNum, 1e-4F) &&
+              _CheckData(&yUser, answer, unitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -84,7 +85,8 @@ bool TestSoftmax1()
     yUserGPU = Softmax(*xGPU, 1);
     
     /* check result */
-    gpuTest = _CheckData(yGPU, answer, unitNum, 1e-4F) && _CheckData(&yUserGPU, answer, unitNum, 1e-4F);
+    gpuTest = _CheckData(yGPU, answer, unitNum, 1e-4F) &&
+              _CheckData(&yUserGPU, answer, unitNum, 1e-4F);
 
     /* destroy variables */
     delete x;
@@ -150,8 +152,8 @@ bool TestSoftmax2()
     _SoftmaxBackward(g, y, x, dedy, dedx, NULL, 1, CROSSENTROPY);
     
     /* check result */
-    cpuTest = _CheckData(y, yAnswer, unitNum, 1e-4F)
-              && _CheckData(dedx, dedxAnswer, unitNum, 1e-4F);
+    cpuTest = _CheckData(y, yAnswer, unitNum, 1e-4F) &&
+              _CheckData(dedx, dedxAnswer, unitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -178,8 +180,8 @@ bool TestSoftmax2()
     _SoftmaxBackward(gGPU, yGPU, xGPU, dedyGPU, dedxGPU, NULL, 1, CROSSENTROPY);
     
     /* check result */
-    gpuTest = _CheckData(yGPU, yAnswer, unitNum, 1e-4F)
-              && _CheckData(dedxGPU, dedxAnswer, unitNum, 1e-4F);
+    gpuTest = _CheckData(yGPU, yAnswer, unitNum, 1e-4F) &&
+              _CheckData(dedxGPU, dedxAnswer, unitNum, 1e-4F);
 
     /* destroy variables */
     delete x;

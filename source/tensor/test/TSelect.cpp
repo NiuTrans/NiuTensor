@@ -79,7 +79,8 @@ bool TestSelect1()
     tUser = SelectRange(*s, 2, 1, 3);
 
     /* check results */
-    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUser, answer, tUnitNum, 1e-4F);
     
 #ifdef USE_CUDA
     /* GPU test */
@@ -99,7 +100,8 @@ bool TestSelect1()
     tUserGPU = SelectRange(*sGPU, 2, 1, 3);
 
     /* check results */
-    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUserGPU, answer, tUnitNum, 1e-4F);
     
     /* destroy variables */
     delete s;

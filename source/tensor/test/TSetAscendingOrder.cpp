@@ -54,7 +54,7 @@ bool TestSetAscendingOrder1()
     SetAscendingOrder(*s, 1);
     
     /* check results */
-    cpuTest = _CheckData(s, answer, sUnitNum);
+    cpuTest = _CheckData(s, answer, sUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -70,7 +70,7 @@ bool TestSetAscendingOrder1()
     SetAscendingOrder(*sGPU, 1);
 
     /* check results */
-    gpuTest = _CheckData(sGPU, answer, sUnitNum);
+    gpuTest = _CheckData(sGPU, answer, sUnitNum, 1e-4F);
 
     /* destroy variables */
     delete s;

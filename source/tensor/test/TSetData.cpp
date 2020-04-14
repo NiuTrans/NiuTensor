@@ -126,7 +126,7 @@ bool TestSetData2()
     _SetDataIndexed(s, modify, 0, 1);
 
     /* check results */
-    cpuTest = _CheckData(s, answer, sUnitNum, 1e-5F);
+    cpuTest = _CheckData(s, answer, sUnitNum, 1e-4F);
     
 #ifdef USE_CUDA
     /* GPU test */
@@ -143,7 +143,7 @@ bool TestSetData2()
     /* call SetDataIndexed function */
     _SetDataIndexed(sGPU, modifyGPU, 0, 1);
     
-    gpuTest = _CheckData(sGPU, answer, sUnitNum, 1e-5F);
+    gpuTest = _CheckData(sGPU, answer, sUnitNum, 1e-4F);
 
     /* destroy variables */
     delete s;
@@ -220,7 +220,7 @@ bool TestSetData3()
     _SetDataIndexed(s, modify, 1, 1);
     
     /* check results */
-    cpuTest = _CheckData(s, answer, sUnitNum, 1e-5F);
+    cpuTest = _CheckData(s, answer, sUnitNum, 1e-4F);
     
 #ifdef USE_CUDA
     /* GPU test */
@@ -237,7 +237,7 @@ bool TestSetData3()
     /* call SetDataIndexed function */
     _SetDataIndexed(sGPU, modifyGPU, 1, 1);
     
-    gpuTest = _CheckData(sGPU, answer, sUnitNum, 1e-5F);
+    gpuTest = _CheckData(sGPU, answer, sUnitNum, 1e-4F);
 
     /* destroy variables */
     delete s;

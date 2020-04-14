@@ -146,7 +146,7 @@ void _DivMe(XTensor * a, const XTensor * b, DTYPE alpha, int leadingDim)
 element-wise division of two tensors (do it on site)
 keep the result in the input tensor a and return nothing
 
-a(i) = a(i)*b(i) + \alpha * a(i)
+a(i) = a(i)/b(i) + \alpha * a(i)
 where i is the index of the item
 
 >> a - tensor a (where keep the result)
@@ -154,9 +154,28 @@ where i is the index of the item
 >> alpha - the coefficient
 >> leadingDim - the dimension along which we perform broadcasting
 */
-void DivMe(XTensor& a, const XTensor& b, DTYPE alpha, int leadingDim)
+void DivMe(XTensor & a, const XTensor & b, DTYPE alpha, int leadingDim)
 {
-    _Div(&a, &b, &a, alpha, leadingDim);
+    if (b.order == 0){
+        DTYPE scale = 1.0F / b.Get0D() + alpha;
+
+        _ScaleAndShift(&a, &a, scale, 0.0F);
+    }
+    else {
+        int n = GetBroadcastDimIndex(a, b);
+
+        if (n == -1) {
+            CheckNTErrors(a.dimSize[leadingDim] == b.dimSize[leadingDim], "TODO!");
+
+            /* call _Div function */
+            _Div(&a, &b, &a, alpha, leadingDim);
+        }
+        else if (n >= 0 && n < a.order)
+            /* call _DivDim function */
+            _DivDim(&a, &b, &a, n, alpha);
+        else
+            ShowNTErrors("Something is wrong!");
+    }
 }
 
 /*
@@ -172,7 +191,7 @@ where i is the index of the item
 >> leadingDim - the dimension along which we perform broadcasting
 << return - the product of the tensors
 */
-XTensor Div(const XTensor &a, const XTensor &b, int leadingDim)
+XTensor Div(const XTensor & a, const XTensor & b, int leadingDim)
 {
     XTensor c(&a);
     c.SetTMPFlag();
@@ -226,7 +245,7 @@ where i is the index of the item
 >> alpha - the coefficient
 >> leadingDim - the dimension along which we perform broadcasting
 */
-void Div(const XTensor &a, const XTensor &b, XTensor &c, DTYPE alpha, int leadingDim)
+void Div(const XTensor & a, const XTensor & b, XTensor & c, DTYPE alpha, int leadingDim)
 {
     if (!c.isInit || !IsSameShaped(a, c)) {
         InitTensorV2(&c, &a);

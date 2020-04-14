@@ -36,9 +36,6 @@ XTensor LogSoftmax(const XTensor &x, int leadDim);
 /* log scale softmax y = log(e^x / \sum_{i} e^{x_i}) (with both argument of x and y) */
 void LogSoftmax(const XTensor &x, XTensor &y, int leadDim);
 
-/* log scale softmax y = log(e^x / \sum_{i} e^{x_i}) (with both argument of x and y) */
-void LogSoftmax(const XTensor &x, XTensor &y, int leadDim);
-
 /* de/dx */
 void _LogSoftmaxBackward(XTensor * gold, XTensor * y, XTensor * x, 
                          XTensor * dedy, XTensor * dedx, 

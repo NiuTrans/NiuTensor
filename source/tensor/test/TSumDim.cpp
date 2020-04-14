@@ -82,9 +82,9 @@ bool TestSumDim1()
     cUser = SumDim(*a, *b, 0);
 
     /* check results */
-    cpuTest = _CheckData(c, answer, aUnitNum) &&
-              _CheckData(cMe, answer, aUnitNum) &&
-              _CheckData(&cUser, answer, aUnitNum);
+    cpuTest = _CheckData(c, answer, aUnitNum, 1e-4F) &&
+              _CheckData(cMe, answer, aUnitNum, 1e-4F) &&
+              _CheckData(&cUser, answer, aUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -109,9 +109,9 @@ bool TestSumDim1()
     cUserGPU = SumDim(*aGPU, *bGPU, 0);
 
     /* check results */
-    gpuTest = _CheckData(cGPU, answer, aUnitNum) &&
-              _CheckData(cMeGPU, answer, aUnitNum) &&
-              _CheckData(&cUserGPU, answer, aUnitNum);
+    gpuTest = _CheckData(cGPU, answer, aUnitNum, 1e-4F) &&
+              _CheckData(cMeGPU, answer, aUnitNum, 1e-4F) &&
+              _CheckData(&cUserGPU, answer, aUnitNum, 1e-4F);
 
     /* destroy variables */
     delete a;
@@ -196,9 +196,9 @@ bool TestSumDim2()
     cUser = SumDim(*a, *b, 1);
 
     /* check results */
-    cpuTest = _CheckData(c, answer, aUnitNum) &&
-              _CheckData(cMe, answer, aUnitNum) &&
-              _CheckData(&cUser, answer, aUnitNum);
+    cpuTest = _CheckData(c, answer, aUnitNum, 1e-4F) &&
+              _CheckData(cMe, answer, aUnitNum, 1e-4F) &&
+              _CheckData(&cUser, answer, aUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -223,9 +223,9 @@ bool TestSumDim2()
     cUserGPU = SumDim(*aGPU, *bGPU, 1);
 
     /* check results */
-    gpuTest = _CheckData(cGPU, answer, aUnitNum) &&
-              _CheckData(cMeGPU, answer, aUnitNum) &&
-              _CheckData(&cUserGPU, answer, aUnitNum);
+    gpuTest = _CheckData(cGPU, answer, aUnitNum, 1e-4F) &&
+              _CheckData(cMeGPU, answer, aUnitNum, 1e-4F) &&
+              _CheckData(&cUserGPU, answer, aUnitNum, 1e-4F);
 
     /* destroy variables */
     delete a;
@@ -414,9 +414,9 @@ bool TestSumDim4()
     cUser = SumDim(*a, *b, 1);
     
     /* check results */
-    cpuTest = _CheckData(c, answer->data, aUnitNum) &&
-              _CheckData(cMe, answer->data, aUnitNum) &&
-              _CheckData(&cUser, answer->data, aUnitNum);
+    cpuTest = _CheckData(c, answer->data, aUnitNum, 1e-4F) &&
+              _CheckData(cMe, answer->data, aUnitNum, 1e-4F) &&
+              _CheckData(&cUser, answer->data, aUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -440,9 +440,9 @@ bool TestSumDim4()
     cUserGPU = SumDim(*aGPU, *bGPU, 1);
 
     /* check results */
-    gpuTest = _CheckData(cGPU, answer->data, aUnitNum) &&
-              _CheckData(cMeGPU, answer->data, aUnitNum) &&
-              _CheckData(&cUserGPU, answer->data, aUnitNum);
+    gpuTest = _CheckData(cGPU, answer->data, aUnitNum, 1e-4F) &&
+              _CheckData(cMeGPU, answer->data, aUnitNum, 1e-4F) &&
+              _CheckData(&cUserGPU, answer->data, aUnitNum, 1e-4F);
 
     /* destroy variables */
     delete a;

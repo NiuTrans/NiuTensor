@@ -27,7 +27,7 @@ namespace nts { // namespace nts(NiuTrans.Tensor)
 /* 
 case 1: element-wise division of two tensors
 c(i) = a(i)/b(i) + \alpha * c(i)
-In this case, (2, 2) ¡¤ (2, 2) -> (2, 2), leadingDim=0, alpha=0.
+In this case, (2, 2) / (2, 2) -> (2, 2), leadingDim=0, alpha=0.
 */
 bool TestDiv1()
 {

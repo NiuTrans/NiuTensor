@@ -66,7 +66,9 @@ bool TestSign1()
     bUser = Sign(*a);
 
     /* check results */
-    cpuTest = _CheckData(b, answer, aUnitNum, 1e-4F) && _CheckData(aMe, answer, aUnitNum, 1e-4F) && _CheckData(&bUser, answer, aUnitNum, 1e-4F);
+    cpuTest = _CheckData(b, answer, aUnitNum, 1e-4F) &&
+              _CheckData(aMe, answer, aUnitNum, 1e-4F) &&
+              _CheckData(&bUser, answer, aUnitNum, 1e-4F);
     
 #ifdef USE_CUDA
     /* GPU test */
@@ -88,7 +90,9 @@ bool TestSign1()
     bUserGPU = Sign(*aGPU);
 
     /* check results */
-    gpuTest = _CheckData(bGPU, answer, aUnitNum, 1e-4F) && _CheckData(aMeGPU, answer, aUnitNum, 1e-4F) && _CheckData(&bUserGPU, answer, aUnitNum, 1e-4F);
+    gpuTest = _CheckData(bGPU, answer, aUnitNum, 1e-4F) &&
+              _CheckData(aMeGPU, answer, aUnitNum, 1e-4F) &&
+              _CheckData(&bUserGPU, answer, aUnitNum, 1e-4F);
     /* destroy variables */
     delete a;
     delete b;

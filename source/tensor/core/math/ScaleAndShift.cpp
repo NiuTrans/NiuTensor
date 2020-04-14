@@ -23,6 +23,7 @@
 #include "../../XName.h"
 #include "../../XUtility.h"
 #include "../shape/IsSameShaped.h"
+#include "../math/Binary.h"
 #include "ScaleAndShift.h"
 #include "ScaleAndShift.cuh"
 
@@ -35,7 +36,7 @@ b = a * scale + shift
 
 >> a - the input tensor
 >> b - the output tensor
->> scale - the scaler factor
+>> scale - the scale factor
 >> shift - the shift factor
 */
 void _ScaleAndShift(const XTensor * a, XTensor * b, DTYPE scale, DTYPE shift)
@@ -112,7 +113,7 @@ keep the result in the input tensor a and return nothing
 a = a * scale + shift
 
 >> a - the input/output tensor
->> scale - the scaler factor
+>> scale - the scale factor
 >> shift - the shift factor
 */
 void _ScaleAndShiftMe(XTensor * a, DTYPE scale, DTYPE shift)
@@ -127,12 +128,20 @@ keep the result in the input tensor a and return nothing
 a = a * scale + shift
 
 >> a - the input/output tensor
->> scale - the scaler factor
+>> scale - the scale factor
 >> shift - the shift factor
 */
 void ScaleAndShiftMe(XTensor& a, DTYPE scale, DTYPE shift)
 {
-    _ScaleAndShift(&a, &a, scale, shift);
+    if (scale == 1.0F)
+        /* call Shift function */
+        _Shift(&a, &a, shift);
+    else if (shift == 0.0F)
+        /* call Scale function */
+        _Scale(&a, &a, scale);
+    else
+        /* call _ScaleAndShift function */
+        _ScaleAndShift(&a, &a, scale, shift);
 }
 
 /* 
@@ -142,7 +151,7 @@ make a new tensor to keep the result and return it
 b = a * scale + shift
 
 >> a - the input tensor
->> scale - the scaler factor
+>> scale - the scale factor
 >> shift - the shift factor
 << return - the result of scaling and shifting all tensor entires
 */
@@ -150,15 +159,23 @@ XTensor ScaleAndShift(const XTensor &a, DTYPE scale, DTYPE shift)
 {
     XTensor b(&a);
     b.SetTMPFlag();
-    
-    /* call _ScaleAndShift function */
-    _ScaleAndShift(&a, &b, scale, shift);
-    
-    /* tensor connections */
-    if (a.enableGrad) {
-        XLink::MakeLink(&a, NULL, &b, MATH_SCALEANDSHIFT);
-        XLink::AddParamToHead(&b, scale);
-        XLink::AddParamToHead(&b, shift);
+
+    if (scale == 1.0F)
+        /* call Shift function */
+        Shift(a, b, shift);
+    else if (shift == 0.0F)
+        /* call Scale function */
+        Scale(a, b, scale);
+    else {
+        /* call _ScaleAndShift function */
+        _ScaleAndShift(&a, &b, scale, shift);
+
+        /* tensor connections */
+        if (a.enableGrad) {
+            XLink::MakeLink(&a, NULL, &b, MATH_SCALEANDSHIFT);
+            XLink::AddParamToHead(&b, scale);
+            XLink::AddParamToHead(&b, shift);
+        }
     }
     
     return b;
@@ -171,7 +188,7 @@ b = a * scale + shift
 
 >> a - the input tensor
 >> b - the output tensor
->> scale - the scaler factor
+>> scale - the scale factor
 >> shift - the shift factor
 */
 void ScaleAndShift(const XTensor & a, XTensor & b, DTYPE scale, DTYPE shift)
@@ -180,14 +197,22 @@ void ScaleAndShift(const XTensor & a, XTensor & b, DTYPE scale, DTYPE shift)
         InitTensorV2(&b, &a);
     }
 
-    /* call _ScaleAndShift function */
-    _ScaleAndShift(&a, &b, scale, shift);
+    if (scale == 1.0F)
+        /* call Shift function */
+        Shift(a, b, shift);
+    else if (shift == 0.0F)
+        /* call Scale function */
+        Scale(a, b, scale);
+    else {
+        /* call _ScaleAndShift function */
+        _ScaleAndShift(&a, &b, scale, shift);
 
-    if (a.enableGrad) {
-        /* tensor connections */
-        XLink::MakeLink(&a, NULL, &b, MATH_SCALEANDSHIFT);
-        XLink::AddParamToHead(&b, scale);
-        XLink::AddParamToHead(&b, shift);
+        if (a.enableGrad) {
+            /* tensor connections */
+            XLink::MakeLink(&a, NULL, &b, MATH_SCALEANDSHIFT);
+            XLink::AddParamToHead(&b, scale);
+            XLink::AddParamToHead(&b, shift);
+        }
     }
 }
 

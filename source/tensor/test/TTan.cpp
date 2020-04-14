@@ -67,7 +67,9 @@ bool TestTan1()
     bUser = Tan(*a);
 
     /* check results */
-    cpuTest = _CheckData(b, answer, unitNum, 1e-4F) && _CheckData(aMe, answer, unitNum, 1e-4F) && _CheckData(&bUser, answer, unitNum, 1e-4F);
+    cpuTest = _CheckData(b, answer, unitNum, 1e-4F) &&
+              _CheckData(aMe, answer, unitNum, 1e-4F) &&
+              _CheckData(&bUser, answer, unitNum, 1e-4F);
     
 #ifdef USE_CUDA
     /* GPU test */
@@ -89,7 +91,9 @@ bool TestTan1()
     bUserGPU = Tan(*aGPU);
 
     /* check results */
-    gpuTest = _CheckData(bGPU, answer, unitNum, 1e-4F) && _CheckData(aMeGPU, answer, unitNum, 1e-4F) && _CheckData(&bUserGPU, answer, unitNum, 1e-4F);
+    gpuTest = _CheckData(bGPU, answer, unitNum, 1e-4F) &&
+              _CheckData(aMeGPU, answer, unitNum, 1e-4F) &&
+              _CheckData(&bUserGPU, answer, unitNum, 1e-4F);
 
     /* destroy variables */
     delete a;

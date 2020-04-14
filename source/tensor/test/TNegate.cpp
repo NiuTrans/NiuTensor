@@ -63,7 +63,9 @@ bool TestNegate1()
     bUser = Negate(*a);
 
     /* check results */
-    cpuTest = _CheckData(b, answer, aUnitNum, 1e-4F) && _CheckData(aMe, answer, aUnitNum, 1e-4F) && _CheckData(&bUser, answer, aUnitNum, 1e-4F);
+    cpuTest = _CheckData(b, answer, aUnitNum, 1e-4F) &&
+              _CheckData(aMe, answer, aUnitNum, 1e-4F) &&
+              _CheckData(&bUser, answer, aUnitNum, 1e-4F);
     
 #ifdef USE_CUDA
     /* GPU test */
@@ -85,7 +87,9 @@ bool TestNegate1()
     bUserGPU = Negate(*aGPU);
 
     /* check results */
-    gpuTest = _CheckData(bGPU, answer, aUnitNum, 1e-4F) && _CheckData(aMeGPU, answer, aUnitNum, 1e-4F) && _CheckData(&bUserGPU, answer, aUnitNum, 1e-4F);
+    gpuTest = _CheckData(bGPU, answer, aUnitNum, 1e-4F) &&
+              _CheckData(aMeGPU, answer, aUnitNum, 1e-4F) &&
+              _CheckData(&bUserGPU, answer, aUnitNum, 1e-4F);
 
     /* destroy variables */
     delete a;
@@ -147,7 +151,9 @@ bool TestNegate2()
     bUser = Negate(*a);
 
     /* check results */
-    cpuTest = _CheckData(b, answer, aUnitNum, 1e-4F) && _CheckData(aMe, answer, aUnitNum, 1e-4F) && _CheckData(&bUser, answer, aUnitNum, 1e-4F);
+    cpuTest = _CheckData(b, answer, aUnitNum, 1e-4F) &&
+              _CheckData(aMe, answer, aUnitNum, 1e-4F) &&
+              _CheckData(&bUser, answer, aUnitNum, 1e-4F);
     
 #ifdef USE_CUDA
     /* GPU test */
@@ -169,7 +175,9 @@ bool TestNegate2()
     bUserGPU = Negate(*aGPU);
 
     /* check results */
-    gpuTest = _CheckData(bGPU, answer, aUnitNum, 1e-4F) && _CheckData(aMeGPU, answer, aUnitNum, 1e-4F) && _CheckData(&bUserGPU, answer, aUnitNum, 1e-4F);
+    gpuTest = _CheckData(bGPU, answer, aUnitNum, 1e-4F) &&
+              _CheckData(aMeGPU, answer, aUnitNum, 1e-4F) &&
+              _CheckData(&bUserGPU, answer, aUnitNum, 1e-4F);
 
     /* destroy variables */
     delete a;

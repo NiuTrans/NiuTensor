@@ -72,7 +72,8 @@ bool TestMerge1()
     tUser = Merge(*s, 1, 0);
 
     /* check results */
-    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUser, answer, tUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -92,7 +93,8 @@ bool TestMerge1()
     tUserGPU = Merge(*sGPU, 1, 0);
 
     /* check results */
-    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUserGPU, answer, tUnitNum, 1e-4F);
 
     /* destroy variables */
     delete s;
@@ -186,8 +188,10 @@ bool TestMerge2()
     tUser2 = Merge(*s, 2, 0);
 
     /* check results */
-    cpuTest = _CheckData(t1, answer1, tUnitNum1) && _CheckData(&tUser1, answer1, tUnitNum1)
-        && _CheckData(t2, answer2, tUnitNum2) && _CheckData(&tUser2, answer2, tUnitNum2);
+    cpuTest = _CheckData(t1, answer1, tUnitNum1, 1e-4F) &&
+              _CheckData(&tUser1, answer1, tUnitNum1, 1e-4F) &&
+              _CheckData(t2, answer2, tUnitNum2, 1e-4F) &&
+              _CheckData(&tUser2, answer2, tUnitNum2, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -212,8 +216,10 @@ bool TestMerge2()
     tUserGPU2 = Merge(*sGPU, 2, 0);
 
     /* check results */
-    gpuTest = _CheckData(tGPU1, answer1, tUnitNum1) && _CheckData(&tUserGPU1, answer1, tUnitNum1)
-        && _CheckData(tGPU2, answer2, tUnitNum2) && _CheckData(&tUserGPU2, answer2, tUnitNum2);
+    gpuTest = _CheckData(tGPU1, answer1, tUnitNum1, 1e-4F) &&
+              _CheckData(&tUserGPU1, answer1, tUnitNum1, 1e-4F) &&
+              _CheckData(tGPU2, answer2, tUnitNum2, 1e-4F) &&
+              _CheckData(&tUserGPU2, answer2, tUnitNum2, 1e-4F);
 
     /* destroy variables */
     delete s;
@@ -302,7 +308,8 @@ bool TestMerge3()
     tUser = Merge(*smallList, 0);
 
     /* check results */
-    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUser, answer, tUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -331,7 +338,8 @@ bool TestMerge3()
     tUserGPU = Merge(*smallList, 0);
 
     /* check results */
-    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUserGPU, answer, tUnitNum, 1e-4F);
 
     /* destroy variables */
     delete s1;
@@ -418,7 +426,8 @@ bool TestMerge4()
     tUser = Merge(*smallList, 1);
 
     /* check results */
-    cpuTest = _CheckData(t, answer, tUnitNum) && _CheckData(&tUser, answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUser, answer, tUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -447,7 +456,8 @@ bool TestMerge4()
     tUserGPU = Merge(*smallList, 1);
 
     /* check results */
-    gpuTest = _CheckData(tGPU, answer, tUnitNum) && _CheckData(&tUserGPU, answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum, 1e-4F) &&
+              _CheckData(&tUserGPU, answer, tUnitNum, 1e-4F);
 
     /* destroy variables */
     delete s1;

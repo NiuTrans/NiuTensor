@@ -181,9 +181,24 @@ keep the result in the tensor a and return nothing
 >> b - another tensor
 >> beta - the scaling factor
 */
-void SumMe(XTensor& a, const XTensor& b, DTYPE beta)
+void SumMe(XTensor & a, const XTensor & b, DTYPE beta)
 {
-    _Sum(&a, &b, &a, beta);
+    if (b.order == 0){
+        DTYPE shift = b.Get0D() * beta;
+        _ScaleAndShift(&a, &a, 1.0F, shift);
+    }
+    else {
+        int n = GetBroadcastDimIndex(a, b);
+
+        if (n == -1)
+            /* call _Sum function */
+            _Sum(&a, &b, &a, beta);
+        else if (n >= 0 && n < a.order)
+            /* call _SumDim function */
+            _SumDim(&a, &b, &a, n, beta);
+        else
+            ShowNTErrors("Something is wrong!");
+    }
 }
 
 /* 
@@ -229,7 +244,7 @@ make a new tensor c to keep the result and return it
 >> beta - the scaling factor
 << return - the result of tensor summation
 */
-XTensor Sum(const XTensor &a, const XTensor &b, DTYPE beta)
+XTensor Sum(const XTensor & a, const XTensor & b, DTYPE beta)
 {
     XTensor c(&a);
     c.SetTMPFlag();
@@ -276,7 +291,7 @@ tensor summation c = a + b * \beta
 >> b - another tensor
 >> beta - the scaling factor
 */
-void Sum(const XTensor &a, const XTensor &b, XTensor &c, DTYPE beta)
+void Sum(const XTensor & a, const XTensor & b, XTensor & c, DTYPE beta)
 {
     if (!c.isInit || !IsSameShaped(a, c)) {
         InitTensorV2(&c, &a);

@@ -73,8 +73,8 @@ bool TestTranspose1()
     bUser = Transpose(*a, 0, 1);
 
     /* check results */
-    cpuTest = _CheckData(b, answer, aUnitNum, 1e-4F)
-              && _CheckData(&bUser, answer, aUnitNum, 1e-4F);
+    cpuTest = _CheckData(b, answer, aUnitNum, 1e-4F) &&
+              _CheckData(&bUser, answer, aUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -93,8 +93,8 @@ bool TestTranspose1()
     bUserGPU = Transpose(*aGPU, 0, 1);
 
     /* check results */
-    gpuTest = _CheckData(bGPU, answer, aUnitNum, 1e-4F)
-              && _CheckData(&bUserGPU, answer, aUnitNum, 1e-4F);
+    gpuTest = _CheckData(bGPU, answer, aUnitNum, 1e-4F) &&
+              _CheckData(&bUserGPU, answer, aUnitNum, 1e-4F);
 
     /* destroy variables */
     delete a;
@@ -179,8 +179,8 @@ bool TestTranspose2()
     bUser = Transpose(*a, 0, 2);
 
     /* check results */
-    cpuTest = _CheckData(b, answer, aUnitNum, 1e-4F)
-              && _CheckData(&bUser, answer, aUnitNum, 1e-4F);
+    cpuTest = _CheckData(b, answer, aUnitNum, 1e-4F) &&
+              _CheckData(&bUser, answer, aUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -199,8 +199,8 @@ bool TestTranspose2()
     bUserGPU = Transpose(*aGPU, 0, 2);
 
     /* check results */
-    gpuTest = _CheckData(bGPU, answer, aUnitNum, 1e-4F)
-              && _CheckData(&bUserGPU, answer, aUnitNum, 1e-4F);
+    gpuTest = _CheckData(bGPU, answer, aUnitNum, 1e-4F) &&
+              _CheckData(&bUserGPU, answer, aUnitNum, 1e-4F);
 
     /* destroy variables */
     delete a;

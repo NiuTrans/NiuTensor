@@ -1400,17 +1400,38 @@ MTYPE XMem::GetMemSize(const char * size)
     bool ok = false;
     float num = 0;
 
-    if(s[len-2] == 'm' && s[len-1] == 'b'){
-        s[len-2] = 0;
+    if (s[len-1] == 'b') {
+        if (s[len-2] == 'k') {
+            s[len-2] = 0;
+            num = (float)atof(s);
+            num /= 1024.0F;
+            ok = true;
+        }
+        else if (s[len-2] == 'm') {
+            s[len-2] = 0;
+            num = (float)atof(s);
+            ok = true;
+        }
+        else if (s[len-2] == 'g') {
+            s[len-2] = 0;
+            num = (float)atof(s);
+            num *= 1024.0F;
+            ok = true;
+        }
+        else if (s[len-2] >= '0' && s[len-2] <= '9') {
+            s[len-1] = 0;
+            num = (float)atof(s);
+            ok = true;
+        }
+        else
+            ShowNTErrors("Cannot transform the size into a number (in million)!");
+    }
+    else if (s[len-1] >= '0' && s[len-1] <= '9') {
         num = (float)atof(s);
         ok = true;
     }
-    if(s[len-2] == 'g' && s[len-1] == 'b'){
-        s[len-2] = 0;
-        num = (float)atof(s);
-        num *= 1000.0F;
-        ok = true;
-    }
+    else
+        ShowNTErrors("Cannot transform the size into a number (in million)!");
 
     delete[] s;
 
@@ -1433,18 +1454,25 @@ MTYPE XMem::GetMemSizeInBytes(const char * size)
     bool ok = false;
     float num = 0;
 
-    if(s[len-2] == 'm' && s[len-1] == 'b'){
-        num = (float)GetMemSize(size) * 1000000;
-        ok = true;
+    if (s[len-1] == 'b') {
+        if (s[len-2] == 'k' || s[len-2] == 'm' || s[len-2] == 'g') {
+            num = (float)GetMemSize(size) * 1024 * 1024;
+            ok = true;
+        }
+        else if (s[len-2] >= '0' && s[len-2] <= '9') {
+            s[len-1] = 0;
+            num = (float)atof(s);
+            ok = true;
+        }
+        else
+            ShowNTErrors("Cannot transform the size into a number (in Bytes)!");
     }
-    else if(s[len-2] == 'g' && s[len-1] == 'b'){
-        num = (float)GetMemSize(size) * 1000000;
-        ok = true;
-    }
-    else{
+    else if (s[len-1] >= '0' && s[len-1] <= '9') {
         num = (float)atof(s);
         ok = true;
     }
+    else
+        ShowNTErrors("Cannot transform the size into a number (in Bytes)!");
 
     delete[] s;
 
@@ -1632,7 +1660,8 @@ XMem * XMemManager::GetMem(const int devID)
             mem = GPUMems + devID;
         }
         else{
-            XPRINT1(0, stderr, "Cannot get the memory (%d). Please check your device id!", devID);
+            XPRINT1(0, stderr, "Please check your device id (%d)!", devID);
+            ShowNTErrors("Cannot get the memory!");
         }
     }
     

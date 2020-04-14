@@ -39,7 +39,7 @@ where a and b are the scalar and bias respectively, and \epsilon is the adjustme
 >> dim - dimension alone which we generate the mean and variance
 >> mean - the mean of the input
 >> var - the variance of the input
->> a - the scalar
+>> a - the scale
 >> b - the bias
 >> epsilon - a parameter
 */
@@ -107,7 +107,7 @@ where a and b are the scalar and bias respectively, and \epsilon is the adjustme
 >> dim - dimension alone which we generate the mean and variance
 >> mean - the mean of the input
 >> var - the variance of the input
->> a - the scalar
+>> a - the scale
 >> b - the bias
 >> epsilon - a parameter
 */
@@ -129,7 +129,7 @@ where a and b are the scalar and bias respectively, and \epsilon is the adjustme
 >> dim - dimension alone which we generate the mean and variance
 >> mean - the mean of the input
 >> var - the variance of the input
->> a - the scalar
+>> a - the scale
 >> b - the bias
 >> epsilon - a parameter
 */
@@ -151,7 +151,7 @@ where a and b are the scalar and bias respectively, and \epsilon is the adjustme
 >> dim - dimension alone which we generate the mean and variance
 >> mean - the mean of the input
 >> var - the variance of the input
->> a - the scalar
+>> a - the scale
 >> b - the bias
 >> epsilon - a parameter
 << return - the result of normalized the data with normal distribution
@@ -194,7 +194,7 @@ where a and b are the scalar and bias respectively, and \epsilon is the adjustme
 >> dim - dimension alone which we generate the mean and variance
 >> mean - the mean of the input
 >> var - the variance of the input
->> a - the scalar
+>> a - the scale
 >> b - the bias
 >> epsilon - a parameter
 << return - the result of normalized the data with normal distribution

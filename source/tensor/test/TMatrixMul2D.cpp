@@ -86,7 +86,7 @@ bool TestMatrixMul2D1()
     _MatrixMul2D(s1, X_NOTRANS, s2, X_NOTRANS, t);
 
     /* check results */
-    cpuTest = _CheckData(t, answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -106,7 +106,7 @@ bool TestMatrixMul2D1()
     _MatrixMul2D(sGPU1, X_NOTRANS, sGPU2, X_NOTRANS, tGPU);
 
     /* check results */
-    gpuTest = _CheckData(tGPU, answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum, 1e-4F);
 
     /* destroy variables */
     delete s1;
@@ -196,7 +196,7 @@ bool TestMatrixMul2D2()
     _MatrixMul2D(s1, X_TRANS, s2, X_NOTRANS, t);
 
     /* check results */
-    cpuTest = _CheckData(t, answer, tUnitNum);
+    cpuTest = _CheckData(t, answer, tUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -216,7 +216,7 @@ bool TestMatrixMul2D2()
     _MatrixMul2D(sGPU1, X_TRANS, sGPU2, X_NOTRANS, tGPU);
 
     /* check results */
-    gpuTest = _CheckData(tGPU, answer, tUnitNum);
+    gpuTest = _CheckData(tGPU, answer, tUnitNum, 1e-4F);
 
     /* destroy variables */
     delete s1;

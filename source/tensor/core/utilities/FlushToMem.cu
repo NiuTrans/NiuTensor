@@ -78,6 +78,8 @@ void CudaCPUToGPUFlush(TensorList * mList, int devID, XMem * GPUMem)
 
         if(m->mem == NULL)
             delete[] (char*)m->data;
+        else
+            m->mem->Release(m->data, m->GetDataSizeInChar(), m->signature);
 
         m->dataHost = NULL;
         m->data = GPUData + p;
@@ -94,7 +96,36 @@ void CudaCPUToGPUFlush(TensorList * mList, int devID, XMem * GPUMem)
 #endif
 }
 
-/* copy the data from GPU memory to CPU memory */
+/* copy the data from GPU memory to CPU memory (memory pool) */
+void CudaGPUToCPUFlush(XTensor * tensor, int devID, XMem * CPUMem)
+{
+#ifdef USE_CUDA
+    CheckNTErrors((tensor->devID >= 0), "Cannot do cpu-flush on matrices that are already on CPU.");
+
+    /* compute the requried memory size */
+    int size = 0;
+    if (tensor->isSparse)
+        size = sizeof(int) + (sizeof(int) + tensor->unitSize) * tensor->unitNumNonZero;
+    else
+        size = tensor->unitSize * tensor->unitNum;
+
+    char * CPUData = CPUMem != NULL ? (char*)CPUMem->Alloc(CPUMem->devID, size):
+                                      (char*)XMemAlloc(devID, size);
+
+    /* copy from CPU memory to GPU memory */
+    cudaMemcpy(CPUData, tensor->data, size, cudaMemcpyDeviceToHost);
+
+    if (tensor->dataHost != NULL)
+        delete[](char*)tensor->dataHost;
+    tensor->dataHost = NULL;
+    tensor->mem->Release(tensor->data, tensor->GetDataSizeInChar(), tensor->signature);
+    tensor->data = CPUData;
+    tensor->devID = CPUMem != NULL ? CPUMem->devID : devID;
+    tensor->mem = CPUMem;
+#endif
+}
+
+/* copy the data from GPU memory to CPU memory ((dataHost)) and do not delete the data */
 void CudaGPUToCPUFlush(XTensor * tensor)
 {
     CheckNTErrors((sizeof(DTYPE) == tensor->unitSize), "Unsupported data type.");

@@ -67,8 +67,9 @@ bool TestScaleAndShift1()
     tUser = ScaleAndShift(*s, scaleFactor, shiftFactor);
 
     /* check results */
-    cpuTest = _CheckData(t, answer, sUnitNum) &&
-              _CheckData(tMe, answer, sUnitNum) && _CheckData(&tUser, answer, sUnitNum);
+    cpuTest = _CheckData(t, answer, sUnitNum, 1e-4F) &&
+              _CheckData(tMe, answer, sUnitNum, 1e-4F) &&
+              _CheckData(&tUser, answer, sUnitNum, 1e-4F);
 
 #ifdef USE_CUDA
     /* GPU test */
@@ -90,8 +91,193 @@ bool TestScaleAndShift1()
     tUserGPU = ScaleAndShift(*sGPU, scaleFactor, shiftFactor);
 
     /* check results */
-    gpuTest = _CheckData(tGPU, answer, sUnitNum) &&
-              _CheckData(tMeGPU, answer, sUnitNum) && _CheckData(&tUserGPU, answer, sUnitNum);
+    gpuTest = _CheckData(tGPU, answer, sUnitNum, 1e-4F) &&
+              _CheckData(tMeGPU, answer, sUnitNum, 1e-4F) &&
+              _CheckData(&tUserGPU, answer, sUnitNum, 1e-4F);
+
+    /* destroy variables */
+    delete s;
+    delete t;
+    delete tMe;
+    delete sGPU;
+    delete tGPU;
+    delete tMeGPU;
+    delete[] sDimSize;
+
+    return cpuTest && gpuTest;
+#else
+    /* destroy variables */
+    delete s;
+    delete t;
+    delete tMe;
+    delete[] sDimSize;
+
+    return cpuTest;
+#endif // USE_CUDA
+}
+
+/*
+case 2: scale all tensor entires.
+p = p * scale + 0
+*/
+bool TestScaleAndShift2()
+{
+    /* a input tensor of size (2, 4) */
+    int sOrder = 2;
+    int * sDimSize = new int[sOrder];
+    sDimSize[0] = 2;
+    sDimSize[1] = 4;
+
+    int sUnitNum = 1;
+    for (int i = 0; i < sOrder; i++)
+        sUnitNum *= sDimSize[i];
+
+    DTYPE sData[2][4] = { {0.0F, 1.0F, 2.0F, 3.0F},
+                          {4.0F, 5.0F, 6.0F, 7.0F} };
+    DTYPE answer[2][4] = { {0.0F, 2.0F, 4.0F, 6.0F},
+                           {8.0F, 10.0F, 12.0F, 14.0F} };
+
+    DTYPE scaleFactor = 2.0F;
+    DTYPE shiftFactor = 0.0F;
+
+    /* CPU test */
+    bool cpuTest = true;
+
+    /* create tensors */
+    XTensor * s = NewTensorV2(sOrder, sDimSize);
+    XTensor * t = NewTensorV2(sOrder, sDimSize);
+    XTensor * tMe = NewTensorV2(sOrder, sDimSize);
+    XTensor tUser;
+
+    /* initialize variables */
+    s->SetData(sData, sUnitNum);
+    tMe->SetData(sData, sUnitNum);
+
+    /* call ScaleAndShift function */
+    _ScaleAndShift(s, t, scaleFactor, shiftFactor);
+    _ScaleAndShiftMe(tMe, scaleFactor, shiftFactor);
+    tUser = ScaleAndShift(*s, scaleFactor, shiftFactor);
+
+    /* check results */
+    cpuTest = _CheckData(t, answer, sUnitNum, 1e-4F) &&
+              _CheckData(tMe, answer, sUnitNum, 1e-4F) &&
+              _CheckData(&tUser, answer, sUnitNum, 1e-4F);
+
+#ifdef USE_CUDA
+    /* GPU test */
+    bool gpuTest = true;
+
+    /* create tensors */
+    XTensor * sGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tMeGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor tUserGPU;
+
+    /* initialize variables */
+    sGPU->SetData(sData, sUnitNum);
+    tMeGPU->SetData(sData, sUnitNum);
+
+    /* call ScaleAndShift function */
+    _ScaleAndShift(sGPU, tGPU, scaleFactor, shiftFactor);
+    _ScaleAndShiftMe(tMeGPU, scaleFactor, shiftFactor);
+    tUserGPU = ScaleAndShift(*sGPU, scaleFactor, shiftFactor);
+
+    /* check results */
+    gpuTest = _CheckData(tGPU, answer, sUnitNum, 1e-4F) &&
+              _CheckData(tMeGPU, answer, sUnitNum, 1e-4F) &&
+              _CheckData(&tUserGPU, answer, sUnitNum, 1e-4F);
+
+    /* destroy variables */
+    delete s;
+    delete t;
+    delete tMe;
+    delete sGPU;
+    delete tGPU;
+    delete tMeGPU;
+    delete[] sDimSize;
+
+    return cpuTest && gpuTest;
+#else
+    /* destroy variables */
+    delete s;
+    delete t;
+    delete tMe;
+    delete[] sDimSize;
+
+    return cpuTest;
+#endif // USE_CUDA
+}
+
+/*
+case 3: shift all tensor entires.
+p = p * 1.0 + shift
+*/
+bool TestScaleAndShift3()
+{
+    /* a input tensor of size (2, 4) */
+    int sOrder = 2;
+    int * sDimSize = new int[sOrder];
+    sDimSize[0] = 2;
+    sDimSize[1] = 4;
+
+    int sUnitNum = 1;
+    for (int i = 0; i < sOrder; i++)
+        sUnitNum *= sDimSize[i];
+
+    DTYPE sData[2][4] = { {0.0F, 1.0F, 2.0F, 3.0F},
+                          {4.0F, 5.0F, 6.0F, 7.0F} };
+    DTYPE answer[2][4] = { {0.5F, 1.5F, 2.5F, 3.5F},
+                           {4.5F, 5.5F, 6.5F, 7.5F} };
+
+    DTYPE scaleFactor = 1.0F;
+    DTYPE shiftFactor = 0.5F;
+
+    /* CPU test */
+    bool cpuTest = true;
+
+    /* create tensors */
+    XTensor * s = NewTensorV2(sOrder, sDimSize);
+    XTensor * t = NewTensorV2(sOrder, sDimSize);
+    XTensor * tMe = NewTensorV2(sOrder, sDimSize);
+    XTensor tUser;
+
+    /* initialize variables */
+    s->SetData(sData, sUnitNum);
+    tMe->SetData(sData, sUnitNum);
+
+    /* call ScaleAndShift function */
+    _ScaleAndShift(s, t, scaleFactor, shiftFactor);
+    _ScaleAndShiftMe(tMe, scaleFactor, shiftFactor);
+    tUser = ScaleAndShift(*s, scaleFactor, shiftFactor);
+
+    /* check results */
+    cpuTest = _CheckData(t, answer, sUnitNum, 1e-4F) &&
+              _CheckData(tMe, answer, sUnitNum, 1e-4F) &&
+              _CheckData(&tUser, answer, sUnitNum, 1e-4F);
+
+#ifdef USE_CUDA
+    /* GPU test */
+    bool gpuTest = true;
+
+    /* create tensors */
+    XTensor * sGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor * tMeGPU = NewTensorV2(sOrder, sDimSize, X_FLOAT, 1.0F, 0);
+    XTensor tUserGPU;
+
+    /* initialize variables */
+    sGPU->SetData(sData, sUnitNum);
+    tMeGPU->SetData(sData, sUnitNum);
+
+    /* call ScaleAndShift function */
+    _ScaleAndShift(sGPU, tGPU, scaleFactor, shiftFactor);
+    _ScaleAndShiftMe(tMeGPU, scaleFactor, shiftFactor);
+    tUserGPU = ScaleAndShift(*sGPU, scaleFactor, shiftFactor);
+
+    /* check results */
+    gpuTest = _CheckData(tGPU, answer, sUnitNum, 1e-4F) &&
+              _CheckData(tMeGPU, answer, sUnitNum, 1e-4F) &&
+              _CheckData(&tUserGPU, answer, sUnitNum, 1e-4F);
 
     /* destroy variables */
     delete s;
@@ -133,6 +319,24 @@ bool TestScaleAndShift()
     }
     else
         XPRINT(0, stdout, ">> case 1 passed!\n");
+
+    /* case 2 test */
+    caseFlag = TestScaleAndShift2();
+    if (!caseFlag) {
+        returnFlag = false;
+        XPRINT(0, stdout, ">> case 2 failed!\n");
+    }
+    else
+    XPRINT(0, stdout, ">> case 2 passed!\n");
+
+    /* case 3 test */
+    caseFlag = TestScaleAndShift3();
+    if (!caseFlag) {
+        returnFlag = false;
+        XPRINT(0, stdout, ">> case 3 failed!\n");
+    }
+    else
+    XPRINT(0, stdout, ">> case 3 passed!\n");
 
     /* other cases test */
     /*
