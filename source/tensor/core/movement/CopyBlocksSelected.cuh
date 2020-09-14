@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
-* Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+* Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
 * All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,12 +28,8 @@ namespace nts { // namespace nts(NiuTrans.Tensor)
 
 #ifdef USE_CUDA
 
-/* copy a number of blocks form source positions to target positions */
-__global__
-void KernelCopyBlocksSelected(DTYPE * source, int blockSize, int * sourceBlocks, int blockNum, DTYPE * target, int * targetBlocks);
-
 /* copy a number of blocks form source positions to target positions (cuda version) */
-void _CudaCopyBlocksSelected(void * source, int blockSize, int * sourceBlocks, int blockNum, void * target, int * targetBlocks, XMem * myMem, int devID);
+void _CudaCopyBlocksSelected(void * source, int unitSize, int blockSize, int * sourceBlocks, int blockNum, void * target, int * targetBlocks, XMem * myMem, int devID);
 
 #endif // USE_CUDA
 

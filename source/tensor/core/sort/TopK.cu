@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
-* Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+* Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
 * All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -862,6 +862,15 @@ void _CudaTopK(const XTensor * a, XTensor * b, XTensor * index, int dim, int k, 
             KernelTopK3<DTYPE> <<<dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1]) >>>
                                  ((DTYPE*)a->data, stride, strideNumA, blockNum, k, DTYPE_MIN,
                                  (DTYPE*)b->data, (int*)index->data, isSorted);
+        }
+        else if (a->dataType == X_FLOAT16) {
+#ifdef HALF_PRECISION
+            KernelTopK3<__half> <<<dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1]) >>>
+                                 ((__half*)a->data, stride, strideNumA, blockNum, k, DTYPE_MIN,
+                                 (__half*)b->data, (int*)index->data, isSorted);
+#else
+            ShowNTErrors("Recompile the code with HALF_PRECISION!");
+#endif
         }
         else {
             ShowNTErrors("TODO!");

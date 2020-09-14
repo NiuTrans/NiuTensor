@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2018, Natural Language Processing Lab, Northestern University.
+ * Copyright (C) 2018, Natural Language Processing Lab, Northeastern University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -125,6 +125,18 @@ private:
     /* gradient for power */
     static
     void GradPower(XTensor * node, bool isEfficient);
+
+    /* gradient for power */
+    static
+    void GradReciprocal(XTensor* node, bool isEfficient);
+
+    /* gradient for sqrt */
+    static
+    void GradSqrt(XTensor* node, bool isEfficient);
+    
+    /* gradient for square */
+    static
+    void GradSquare(XTensor* node, bool isEfficient);
 
     /* gradient for ScaleAndShift */
     static

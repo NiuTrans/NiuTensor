@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
-* Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+* Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
 * All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -60,13 +60,13 @@ copy a number of blocks to target positions
 NOTE that this version makes more use of the 2d threads in cuda
 >> source - data array (head of the blocks) to copy from
 >> blockSize - size of block
->> blockNum - number of blocks
+>> totalSize - size of all the blocks
 >> target - target data array
 >> targetBlocks - target positions of the copy
 */
 template<class T>
 __global__
-void KernelCopyBlocksV2(T * source, int blockSize, int blockNum, int totalSize, T * target, int * targetBlocks)
+void KernelCopyBlocksV2(T * source, int blockSize, int totalSize, T * target, int * targetBlocks)
 {
     /* entry index in the block */
     int i = blockDim.x * blockIdx.x + threadIdx.x;
@@ -83,33 +83,34 @@ void KernelCopyBlocksV2(T * source, int blockSize, int blockNum, int totalSize, 
 /*
 copy a number of blocks to target positions (cuda version)
 >> source - data array (head of the blocks) to copy from
+>> unitSize - size of unit
 >> blockSize - size of block
 >> blockNum - number of blocks
 >> target - target data array
 >> targetBlocks - target positions of the copy (on the device)
 >> devID - device id
 */
-void _CudaCopyBlocks(void * source, int blockSize, int blockNum, void * target, int * targetBlocks, int devID)
+void _CudaCopyBlocks(void * source, int unitSize, int blockSize, int blockNum, void * target, int * targetBlocks, int devID)
 {
     CheckNTErrors(devID >= 0, "Wrong device to run!");
+    CheckNTErrors(blockSize % unitSize == 0,
+                  "Unsupported block size!");
     int cudaGrids[3];
     int cudaBlocks[3];
 
     int devIDBackup;
     ProtectCudaDev(devID, devIDBackup);
 
-    if(blockSize % sizeof(float) == 0){
-        int bSize = blockSize / sizeof(float);
-        GDevs.GetCudaThread(devID, bSize * blockNum, cudaGrids, cudaBlocks);
+    int bSize = blockSize / unitSize;
+    GDevs.GetCudaThread(devID, bSize * blockNum, cudaGrids, cudaBlocks);
+    if (unitSize == 4)
         KernelCopyBlocksV2<float> <<<dim3(cudaGrids[0]), dim3(cudaBlocks[0]) >>>
-                                   ((float*)source, bSize, blockNum, bSize * blockNum, (float*)target, targetBlocks);
-        //GDevs.GetCudaThread2D(devID, bSize, blockNum, MAX_INT, cudaGrids, cudaBlocks);
-        //KernelCopyBlocks<float> <<<dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1]) >>>
-        //                         ((float*)source, bSize, blockNum, (float*)target, targetBlocks);
-    }
-    else{
-        ShowNTErrors("Unsupported block size!");
-    }
+                                   ((float*)source, bSize, bSize * blockNum, (float*)target, targetBlocks);
+    else if (unitSize == 2)
+        KernelCopyBlocksV2<half> <<<dim3(cudaGrids[0]), dim3(cudaBlocks[0])>>>
+                                  ((half*)source, bSize, bSize * blockNum, (half*)target, targetBlocks);
+    else
+        ShowNTErrors("Unsupported unit size!");
 
     BacktoCudaDev(devID, devIDBackup);
 }

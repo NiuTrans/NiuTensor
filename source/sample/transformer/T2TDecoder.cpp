@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2018, Natural Language Processing Lab, Northestern University. 
+ * Copyright (C) 2020, Natural Language Processing Lab, Northeastern University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,12 +17,15 @@
 
 /*
  * $Created by: XIAO Tong (xiaotong@mail.neu.edu.cn) 2018-10-09
+ * $Modified by: HU Chi (huchinlp@gmail.com) 2020-04
  */
 
-#include <math.h>
+#include <cmath>
+
 #include "T2TDecoder.h"
-#include "T2TUtility.h"
-#include "T2TLayerNormal.h"
+#include "module/T2TUtility.h"
+#include "module/T2TLayerNormal.h"
+#include "module/T2TCommonModules.h"
 #include "../../tensor/core/CHeader.h"
 
 namespace transformer
@@ -31,145 +34,162 @@ namespace transformer
 /* constructor */
 AttDecoder::AttDecoder()
 {
-    attentions = NULL;
+    selfAtt = NULL;
     fnns = NULL;
-    attLayerNorms = NULL;
+    selfAttLayerNorms = NULL;
     fnnLayerNorms = NULL;
-    attentionsEnde = NULL;
-    attEndeLayerNorms = NULL;
+    enDeAtt = NULL;
+    enDeAttLayerNorms = NULL;
+    decoderLayerNorm = NULL;
+    selfAttCache = NULL;
+    enDeAttCache = NULL;
 }
 
 /* de-constructor */
 AttDecoder::~AttDecoder()
 {
-    delete[] attentions;
+    delete[] selfAttCache;
+    delete[] enDeAttCache;
+    delete[] selfAtt;
     delete[] fnns;
-    delete[] attLayerNorms;
+    delete[] selfAttLayerNorms;
     delete[] fnnLayerNorms;
-    delete[] attentionsEnde;
-    delete[] attEndeLayerNorms;
+    delete[] enDeAtt;
+    delete[] enDeAttLayerNorms;
+    if (preNorm)
+        delete decoderLayerNorm;
 }
 
-/* 
-initialize the model 
->> argc - number of arguments
->> argv - list of pointers to the arguments
->> myIsMasked - indicates whether the masked attention is employed
->> myIgnored - number of positions ignored in attention (from the start)
->> myDevID - device id
+/*
+initialize the model
+>> config - configurations of the model
 */
-void AttDecoder::InitModel(int argc, char ** argv, 
-                           bool myIsMasked, int myIgnored, 
-                           int myDevID)
+void AttDecoder::InitModel(T2TConfig& config)
 {
-    //AttEncoder::InitModel(argc, argv, myIsMasked, myIgnored, myDevID);
-
-    devID = myDevID;
-    ignored = myIgnored;
-
-    LoadParamInt(argc, argv, "nlayer", &nlayer, 6);
-    LoadParamInt(argc, argv, "hsize", &hSize, DEFAULT_EMBEDDING_SIZE);
-    LoadParamInt(argc, argv, "esize", &eSize, DEFAULT_EMBEDDING_SIZE);
-    LoadParamInt(argc, argv, "vsizetgt", &vSize, -1);
-    LoadParamFloat(argc, argv, "dropout", &dropoutP, 0);
+    devID = config.devID;
+    nlayer = config.nDecLayer;
+    hSize = config.modelSize;
+    eSize = config.embSize;
+    vSize = config.tgtVocabSize;
+    dropoutP = config.dropout;
+    preNorm = config.preNorm;
 
     CheckNTErrors(nlayer >= 1, "We have one encoding layer at least!");
     CheckNTErrors(vSize > 1, "set vocabulary size by \"-vsizetgt\"");
 
     /* embedding model */
-    embedder.InitModel(argc, argv, devID, false);
+    embedder.InitModel(config, false);
 
-    attentions = new T2TAttention[nlayer];
+    selfAtt = new T2TAttention[nlayer];
     fnns = new T2TFNN[nlayer];
-    attLayerNorms = new T2TLN[nlayer];
+    selfAttLayerNorms = new T2TLN[nlayer];
+    enDeAtt = new T2TAttention[nlayer];
+    enDeAttLayerNorms = new T2TLN[nlayer];
     fnnLayerNorms = new T2TLN[nlayer];
-    attentionsEnde = new T2TAttention[nlayer];
-    attEndeLayerNorms = new T2TLN[nlayer];
+    selfAttCache = new Cache[nlayer];
+    enDeAttCache = new Cache[nlayer];
+    if (preNorm)
+        decoderLayerNorm = new T2TLN;
 
     /* initialize the stacked layers */
     for (int i = 0; i < nlayer; i++) {
-        attentions[i].InitModel(argc, argv, myIsMasked, myIgnored, myDevID);
-        fnns[i].InitModel(argc, argv, myDevID);
-        attLayerNorms[i].InitModel(argc, argv, myDevID);
-        fnnLayerNorms[i].InitModel(argc, argv, myDevID);
-        attentionsEnde[i].InitModel(argc, argv, true, myIgnored, myDevID);
-        attEndeLayerNorms[i].InitModel(argc, argv, myDevID);
+        selfAtt[i].InitModel(config);
+        fnns[i].InitModel(config);
+        selfAttLayerNorms[i].InitModel(config);
+        fnnLayerNorms[i].InitModel(config);
+        enDeAtt[i].InitModel(config);
+        enDeAttLayerNorms[i].InitModel(config);
     }
+    if (preNorm)
+        decoderLayerNorm->InitModel(config);
 }
 
-/* 
+/*
 make the decoding network
 >> inputDec - the input tensor of the decoder
 >> outputEnc - the output tensor of the encoder
 >> mask - mask that indicates which position is valid
 >> maskEncDec - mask for the encoder-decoder attention
+>> nstep - the current length of the decoder input
 >> isTraining - indicates whether the model is used for training
-<< return - the output tensor of the encoder
+<< return - the output tensor of the decoder
 */
-XTensor AttDecoder::Make(XTensor &inputDec, XTensor &outputEnc, XTensor &mask, XTensor &maskEncDec, bool isTraining)
+XTensor AttDecoder::Make(XTensor& inputDec, XTensor& outputEnc, XTensor* mask,
+    XTensor* maskEncDec, int nstep, bool isTraining)
 {
     XTensor x;
-
-    x = embedder.Make(inputDec);
+    x = embedder.Make(inputDec, true, isTraining, nstep);
 
     /* dropout */
-    if(isTraining && dropoutP > 0)
+    if (isTraining && dropoutP > 0)
         x = Dropout(x, dropoutP);
 
-    for(int i = 0; i < nlayer; i++){
+    for (int i = 0; i < nlayer; i++) {
         XTensor att;
         XTensor ende;
-        XTensor ln;
         XTensor fnn;
         XTensor res;
+        XTensor selfAttnBefore;
+        XTensor selfAttnAfter;
+        XTensor endeAttnBefore;
+        XTensor endeAttnAfter;
+        XTensor fnnBefore;
+
+        /* layer normalization with pre-norm for self-attn */
+        selfAttnBefore = LayerNorm(x, selfAttLayerNorms[i], preNorm, true, false);
 
         /******************/
         /* self attention */
-        att = attentions[i].MakeBig(x, mask, isTraining);
+        att = selfAtt[i].Make(selfAttnBefore, selfAttnBefore, selfAttnBefore, 
+                              mask, isTraining, &selfAttCache[i], SELF_ATT);
 
         /* dropout */
-        if(isTraining && dropoutP > 0)
+        if (isTraining && dropoutP > 0)
             att = Dropout(att, dropoutP);
 
         /* residual connection */
         res = Sum(att, x);
 
-        /* layer normalization */
-        x = attLayerNorms[i].Make(res);
+        /* layer normalization with post-norm for self-attention */
+        selfAttnAfter = LayerNorm(res, selfAttLayerNorms[i], preNorm, false, true);
 
-        /*****************************/
+        /* layer normalization with pre-norm for encoder-decoder attention */
+        endeAttnBefore = LayerNorm(selfAttnAfter, enDeAttLayerNorms[i], preNorm, true, false);
+
         /* encoder-decoder attention */
-        ende = attentionsEnde[i].Make(outputEnc, x, outputEnc, maskEncDec, isTraining);
+        ende = enDeAtt[i].Make(outputEnc, endeAttnBefore, outputEnc, maskEncDec, 
+                               isTraining, &enDeAttCache[i], EN_DE_ATT);
 
         /* dropout */
-        if(isTraining && dropoutP > 0)
+        if (isTraining && dropoutP > 0)
             ende = Dropout(ende, dropoutP);
 
         /* residual connection */
-        res = Sum(ende, x);
+        res = Sum(ende, selfAttnAfter);
 
-        /* layer normalization */
-        x = attEndeLayerNorms[i].Make(res);
+        /* layer normalization with post-norm for encoder-decoder attention */
+        endeAttnAfter = LayerNorm(res, enDeAttLayerNorms[i], preNorm, false, true);
 
-        /*******/
+        /* layer normalization with pre-norm for fnn */
+        fnnBefore = LayerNorm(endeAttnAfter, fnnLayerNorms[i], preNorm, true, false);
+
         /* fnn */
-        fnn = fnns[i].Make(x, isTraining);
+        fnn = fnns[i].Make(fnnBefore, isTraining);
 
         /* dropout */
-        if(isTraining && dropoutP > 0)
+        if (isTraining && dropoutP > 0)
             fnn = Dropout(fnn, dropoutP);
 
         /* residual connection */
-        res = Sum(fnn, x);
+        res = Sum(fnn, endeAttnAfter);
 
-        /* layer normalization */
-        x = fnnLayerNorms[i].Make(res);
+        /* layer normalization with post-norm for fnn */
+        x = LayerNorm(res, fnnLayerNorms[i], preNorm, false, true);
     }
-    
-    x.SetName(DECODING_NAME);
+
+    if (preNorm)
+        x = decoderLayerNorm->Make(x);
 
     return x;
 }
-
-
 }

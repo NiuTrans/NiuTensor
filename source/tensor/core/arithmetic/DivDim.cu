@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2018, Natural Language Processing Lab, Northestern University.
+ * Copyright (C) 2018, Natural Language Processing Lab, Northeastern University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,7 @@
 
 /*
  * $Created by: Xu Chen (email: hello_master1954@163.com) 2018-08-15
+ * $Update by: Lin Ye (email: linye2015@outlook.com) 2019-07-15 float16 added
  */
 
 #include "DivDim.cuh"
@@ -167,6 +168,38 @@ void _CudaDivDim(const XTensor * a, const XTensor * b, XTensor * c, int n, DTYPE
         else{
             ShowNTErrors("Something is wrong!");
         }
+    }
+    else if (a->dataType == X_FLOAT16) {
+#ifdef HALF_PRECISION
+        half alpha1 = __float2half(alpha);
+        if (stride > 1){
+            GDevs.GetCudaThread2D(a->devID, stride * blockNum, blockSize, MAX_INT, cudaGrids, cudaBlocks);
+            if (alpha == (DTYPE)0.0F)
+                KernelDivWithCol<__half, false> <<<dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1])>>>
+                                                 ((__half*)a->data, (__half*)b->data, (__half*)c->data,
+                                                   blockSize, stride, blockSize * stride, blockNum, alpha1);
+            else
+                KernelDivWithCol<__half, true>  <<<dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1])>>>
+                                                 ((__half*)a->data, (__half*)b->data, (__half*)c->data,
+                                                   blockSize, stride, blockSize * stride, blockNum, alpha1);
+        }
+        else if (stride == 1){
+            GDevs.GetCudaThread2D(a->devID, blockSize, blockNum, MAX_INT, cudaGrids, cudaBlocks);
+            if (alpha == (DTYPE)0.0F)
+                KernelDivWithRow<__half, false> <<<dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1])>>>
+                                                 ((__half*)a->data, (__half*)b->data, (__half*)c->data,
+                                                   blockNum, blockSize, alpha1);
+            else
+                KernelDivWithRow<__half, true>  <<<dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1])>>>
+                                                 ((__half*)a->data, (__half*)b->data, (__half*)c->data,
+                                                   blockNum, blockSize, alpha1);
+        }
+        else {
+            ShowNTErrors("Something is wrong!");
+        }
+#else
+        ShowNTErrors("Recompile the code with HALF_PRECISION!");
+#endif
     }
     else {
         ShowNTErrors("TODO!");

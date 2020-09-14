@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
-* Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+* Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
 * All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,6 +26,8 @@
 #include "../shape/IsSameShaped.h"
 #include "Binary.h"
 #include "Binary.cuh"
+#include "cuda_fp16.h"
+#include "cublas_api.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
@@ -41,21 +43,21 @@ template<class T1, class T2>
 __device__
 T1 BinaryCudaDescale(T1 x, T2 num)
 {
-    return x / num;
+    return x / T1(num);
 }
 
 template<class T1, class T2>
 __device__
 T1 BinaryCudaPower(T1 x, T2 num)
 {
-    if (num == 0)
+    if (T1(num) == T1(0))
         return (T1)1.0;
-    else if (num == 0.5)
+    else if (T1(num) == T1(0.5))
         return (T1)sqrt((float)x);
-    else if (num == 2)
+    else if (T1(num) == T1(2))
         return (T1)(x * x);
     else {
-        if (x == 0 && num < 0)
+        if (x == T1(0) && T1(num) < T1(0))
             return (T1)1e9F;
         else
             return (T1)pow((float)x, (float)num);
@@ -66,16 +68,17 @@ template<class T1, class T2>
 __device__
 T1 BinaryCudaScale(T1 x, T2 num)
 {
-    return x * num;
+    return x * T1(num);
 }
 
 template<class T1, class T2>
 __device__
 T1 BinaryCudaShift(T1 x, T2 num)
 {
-    return x + num;
+    return x + T1(num);
 }
 
+#ifdef HALF_PRECISION
 #define SIMPLE_BINARY_FUNCTION_GPU(funcName, origFunc)                              \
 template<class T1, class T2>                                                        \
 __global__                                                                          \
@@ -90,7 +93,7 @@ void Kernel##funcName(T1 * a, T1 * b, int size, T2 num)                         
 template<class T>                                                                   \
 void _Cuda##funcName(const XTensor * a, XTensor * b, T num)                         \
 {                                                                                   \
-    CheckNTErrors((_IsSameShaped(a, b)),                                    \
+    CheckNTErrors((_IsSameShaped(a, b)),                                            \
                   "Input tensors should have the same type!");                      \
     CheckNTErrors((a->isSparse == false), "TODO!");                                 \
                                                                                     \
@@ -117,6 +120,10 @@ void _Cuda##funcName(const XTensor * a, XTensor * b, T num)                     
         Kernel##funcName<<<blocks, threads>>>                                       \
                          ((int*)a->data, (int*)b->data, a->unitNum, (T)num);        \
     }                                                                               \
+    else if (a->dataType == X_FLOAT16) {                                            \
+        Kernel##funcName<<<blocks, threads>>>                                       \
+                         ((__half*)a->data, (__half*)b->data, a->unitNum, (T)num);  \
+    }                                                                               \
     else {                                                                          \
         ShowNTErrors("TODO!");                                                      \
     }                                                                               \
@@ -125,7 +132,64 @@ void _Cuda##funcName(const XTensor * a, XTensor * b, T num)                     
 }                                                                                   \
 template void _Cuda##funcName<int>(const XTensor*, XTensor*, int);                  \
 template void _Cuda##funcName<float>(const XTensor*, XTensor*, float);              \
+template void _Cuda##funcName<__half>(const XTensor*, XTensor*, __half);            \
 template void _Cuda##funcName<double>(const XTensor*, XTensor*, double);            
+#else
+#define SIMPLE_BINARY_FUNCTION_GPU(funcName, origFunc)                              \
+template<class T1, class T2>                                                        \
+__global__                                                                          \
+void Kernel##funcName(T1 * a, T1 * b, int size, T2 num)                             \
+{                                                                                   \
+    int i = blockDim.x * blockIdx.x + threadIdx.x;                                  \
+                                                                                    \
+    if (i < size)                                                                   \
+        b[i] = (T1)origFunc((T1)a[i], (T2)num);                                     \
+}                                                                                   \
+                                                                                    \
+template<class T>                                                                   \
+void _Cuda##funcName(const XTensor * a, XTensor * b, T num)                         \
+{                                                                                   \
+    CheckNTErrors((_IsSameShaped(a, b)),                                            \
+                  "Input tensors should have the same type!");                      \
+    CheckNTErrors((a->isSparse == false), "TODO!");                                 \
+                                                                                    \
+    int gridSize[3];                                                                \
+    int blockSize[3];                                                               \
+                                                                                    \
+    GDevs.GetCudaThread(a->devID, a->unitNum, gridSize, blockSize);                 \
+                                                                                    \
+    dim3 blocks(gridSize[0]);                                                       \
+    dim3 threads(blockSize[0]);                                                     \
+                                                                                    \
+    int devIDBackup;                                                                \
+    ProtectCudaDev(a->devID, devIDBackup);                                          \
+                                                                                    \
+    if (a->dataType == X_FLOAT) {                                                   \
+        Kernel##funcName<<<blocks, threads>>>                                       \
+                         ((float*)a->data, (float*)b->data, a->unitNum, (T)num);    \
+    }                                                                               \
+    else if (a->dataType == X_DOUBLE) {                                             \
+        Kernel##funcName<<<blocks, threads>>>                                       \
+                         ((double*)a->data, (double*)b->data, a->unitNum, (T)num);  \
+    }                                                                               \
+    else if (a->dataType == X_INT) {                                                \
+        Kernel##funcName<<<blocks, threads>>>                                       \
+                         ((int*)a->data, (int*)b->data, a->unitNum, (T)num);        \
+    }                                                                               \
+    else if (a->dataType == X_FLOAT16) {                                            \
+        ShowNTErrors("Recompile the code with HALF_PRECISION!");            \
+    }                                                                               \
+    else {                                                                          \
+        ShowNTErrors("TODO!");                                                      \
+    }                                                                               \
+                                                                                    \
+    BacktoCudaDev(a->devID, devIDBackup);                                           \
+}                                                                                   \
+template void _Cuda##funcName<int>(const XTensor*, XTensor*, int);                  \
+template void _Cuda##funcName<float>(const XTensor*, XTensor*, float);              \
+template void _Cuda##funcName<__half>(const XTensor*, XTensor*, __half);            \
+template void _Cuda##funcName<double>(const XTensor*, XTensor*, double);
+#endif
 
 SIMPLE_BINARY_FUNCTION_GPU(Descale, BinaryCudaDescale)
 SIMPLE_BINARY_FUNCTION_GPU(Mod, BinaryCudaMod)

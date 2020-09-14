@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
-* Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+* Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
 * All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -131,7 +131,7 @@ void _Merge(const XTensor * s, XTensor * t, int whereToMerge, int leadingDim)
 
         _MakeMergeBlockIndex(blockIndex, blockNum, blockNumInMerge, splitSizeInGrid, gridSize, gridNum, s->devID);
 
-        _CopyBlocksOnSite(s->data, realBlockSize, blockNum * gridNum, dataTMP, blockIndex, s->devID);
+        _CopyBlocksOnSite(s->data, s->unitSize, realBlockSize, blockNum * gridNum, dataTMP, blockIndex, s->devID);
 
         if (mem != NULL)
             mem->ReleaseBuf(mem->devID, blockNum * gridNum * sizeof(int));

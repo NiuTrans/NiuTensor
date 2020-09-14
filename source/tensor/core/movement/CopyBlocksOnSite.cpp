@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
-* Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+* Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
 * All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,11 +36,11 @@ all the data has been on the device (CPU/GPU) already.
 >> targetBlocks - target positions of the copy
 >> devID - device id
 */
-void _CopyBlocksOnSite(void * source, int blockSize, int blockNum, void * target, int * targetBlocks, int devID)
+void _CopyBlocksOnSite(void * source, int unitSize, int blockSize, int blockNum, void * target, int * targetBlocks, int devID)
 {
     if (devID >= 0) {
 #ifdef USE_CUDA
-        _CudaCopyBlocks(source, blockSize, blockNum, target, targetBlocks, devID);
+        _CudaCopyBlocks(source, unitSize, blockSize, blockNum, target, targetBlocks, devID);
 #else
         ShowNTErrors("Plesae specify USE_CUDA and recompile the code!");
 #endif

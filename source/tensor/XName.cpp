@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2018, Natural Language Processing Lab, Northestern University.
+ * Copyright (C) 2018, Natural Language Processing Lab, Northeastern University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -53,6 +53,12 @@ const char * GetOPName(int type)
             return "M_TAN";
         else if (type == MATH_ROUND)
             return "M_ROUND";
+        else if (type == MATH_RECIPROCAL)
+            return "M_RECIPROCAL";
+        else if (type == MATH_EQUAL)
+            return "M_EQUAL";
+        else if (type == MATH_NOTEQUAL)
+            return "M_NOTEQUAL";
         else if (type == MATH_CLIP)
             return "M_CLIP";
         else if (type == MATH_DIV)
@@ -65,6 +71,10 @@ const char * GetOPName(int type)
             return "M_MATRIXMUL";
         else if (type == MATH_MATRIXMULBATCHED)
             return "M_MATRIXMULBATCHED";
+        else if (type == MATH_MAX)
+            return "M_MAX";
+        else if (type == MATH_MIN)
+            return "M_MIN";
         else if (type == MATH_MULTIPLY)
             return "M_MULTIPLY";
         else if (type == MATH_MULTIPLYDIM)

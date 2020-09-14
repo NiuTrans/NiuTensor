@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+ * Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,6 +40,20 @@ XTensor Equal(const XTensor & a, DTYPE value);
 
 /* check whether every entry is equal to the given value */
 void Equal(const XTensor & a, XTensor & b, DTYPE value);
+/* check whether every entry is equal to the given value */
+void _Equal(const XTensor * a, const XTensor * b, XTensor * c);
+
+/* check whether every entry is equal to the given value (do it on site) */
+void _EqualMe(XTensor * a, XTensor * b);
+
+/* check whether every entry is equal to the given value (do it on site) */
+void EqualMe(XTensor & a, XTensor & b);
+
+/* check whether every entry is equal to the given value (return an XTensor structure) */
+XTensor Equal(const XTensor & a, const XTensor & b);
+
+/* check whether every entry is equal to the given value */
+void Equal(const XTensor & a, const XTensor & b, XTensor & c);
 
 /* check whether every entry is not equal to the given value */
 void _NotEqual(const XTensor * a, XTensor * b, DTYPE value);
@@ -55,6 +69,22 @@ XTensor NotEqual(const XTensor & a, DTYPE value);
 
 /* check whether every entry is not equal to the given value */
 void NotEqual(const XTensor & a, XTensor & b, DTYPE value);
+
+/* check whether every entry is not equal to the given value */
+void _NotEqual(const XTensor * a, const XTensor * b, XTensor * c);
+
+/* check whether every entry is not equal to the given value (do it on site) */
+void _NotEqualMe(XTensor * a, XTensor * b);
+
+/* check whether every entry is not equal to the given value (do it on site) */
+void NotEqualMe(XTensor & a, XTensor * b);
+
+/* check whether every entry is not equal to the given value (return an XTensor structure) */
+XTensor NotEqual(const XTensor & a, const XTensor & b);
+
+/* check whether every entry is not equal to the given value */
+void NotEqual(const XTensor & a, const XTensor & b, XTensor & c);
+
 
 /* return maximum of two tensor for each items */
 void _Max(const XTensor * a, const XTensor * b, XTensor * c);

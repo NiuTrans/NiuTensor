@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
-* Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+* Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
 * All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -128,16 +128,14 @@ void CudaGPUToCPUFlush(XTensor * tensor, int devID, XMem * CPUMem)
 /* copy the data from GPU memory to CPU memory ((dataHost)) and do not delete the data */
 void CudaGPUToCPUFlush(XTensor * tensor)
 {
-    CheckNTErrors((sizeof(DTYPE) == tensor->unitSize), "Unsupported data type.");
-
     if (tensor->dataHost != NULL)
         delete[](char*)tensor->dataHost;
 
     if (tensor->isSparse) {
         int num = int(tensor->unitNum * tensor->denseRatio + 1);
-        cudaMemcpy(&num, (DTYPE*)tensor->data, sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&num, tensor->data, sizeof(int), cudaMemcpyDeviceToHost);
 
-        int tupleSize = sizeof(int) + sizeof(DTYPE);
+        int tupleSize = sizeof(int) + tensor->unitSize;
         int size = sizeof(int) + tupleSize*(num);
 
         CheckNTErrors((size >= 0), "Illegal data size in the sparse matrix!");

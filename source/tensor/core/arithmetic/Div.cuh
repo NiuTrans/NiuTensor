@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
-* Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+* Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
 * All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,16 +29,16 @@ namespace nts { // namespace nts(NiuTrans.Tensor)
 #ifdef USE_CUDA
 
 /* division of two tensors in a element-wise manner c(i) = a(i)/b(i) */
-__global__
-void KernelDivElementWise(DTYPE * a, DTYPE * b, DTYPE * c, int size);
+template<class T> __global__
+void KernelDivElementWise(T * a, T * b, T * c, int size);
 
 /* division of two tensors in a element-wise manner c(i) = a(i)/b(i) + \alpha*c(i) */
-__global__
-void KernelDivElementWiseV2(DTYPE * a, DTYPE * b, DTYPE * c, int size, DTYPE alpha);
+template<class T> __global__
+void KernelDivElementWiseV2(T * a, T * b, T * c, int size, T alpha);
 
 /* division of two tensors in a element-wise manner c(i) = a(i)/b(i)+ \alpha*c(i)  */
-template<int nonZeroAlpha>__global__
-void KernelDivElementWiseTensorDynamic(DTYPE * a, DTYPE * b, DTYPE * c, DTYPE alpha, int stride, int ldSizeA, int ldSizeB, int ldSizeC, int blockNum);
+template<class T, int nonZeroAlpha>__global__
+void KernelDivElementWiseTensorDynamic(T * a, T * b, T * c, T alpha, int stride, int ldSizeA, int ldSizeB, int ldSizeC, int blockNum);
 
 /* element-wise division of two tensors */
 void _CudaDiv(const XTensor * a, const XTensor * b, XTensor * c, DTYPE alpha = 0, int leadingDim = 0);

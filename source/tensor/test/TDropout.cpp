@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
-* Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+* Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
 * All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -108,7 +108,7 @@ bool TestDropout1()
         if(tmp2 == 0.0F)
             zeroNum2 += 1;
     }
-    printf("CPU Test:\n");
+    printf("GPU Test:\n");
     printf("In tensor y, there are %d units.\n", unitNum);
     printf("There are %d zero units by Dropout layer with probability %.2f.\n", zeroNum1, dropProb);
     printf("In tensor yUser, there are %d units.\n", unitNum);

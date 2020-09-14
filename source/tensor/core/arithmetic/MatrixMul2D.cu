@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
-* Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+* Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
 * All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -159,7 +159,8 @@ void _CudaMatrixMul2D(const XTensor * a, MATRIX_TRANS_TYPE transposedA,
         if (beta == 0)
             c->SetZeroAll();
 
-        if (a->dataType == X_FLOAT && b->dataType == X_FLOAT && c->dataType == X_FLOAT) {
+        if ((a->dataType == X_FLOAT && b->dataType == X_FLOAT && c->dataType == X_FLOAT) ||
+            (a->dataType == X_FLOAT16 && b->dataType == X_FLOAT16 && c->dataType == X_FLOAT16)) {
             _CudaBLASMatrixMUL(handle, a->data, transposedA, a->dataType, 
                                b->data, transposedB, a->dataType, c->data, c->dataType,
                                a->dimSize[0], a->dimSize[1], 

@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2018, Natural Language Processing Lab, Northestern University.
+ * Copyright (C) 2018, Natural Language Processing Lab, Northeastern University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,7 +44,9 @@ void XShapeGrad::MakeGrad(XTensor * node, bool isEfficient)
     XLink &income = node->income;
     int operID = income.typeID;
 
-    if (operID == MOVEMENT_COPYINDEXED)
+    if (operID == GETANDSET_CONVERTDATATYPE)
+        GradConvertDataType(node, isEfficient);
+    else if (operID == MOVEMENT_COPYINDEXED)
         GradCopyIndexed(node, isEfficient);
     else if (operID == MOVEMENT_GATHER)
         GradGather(node, isEfficient);
@@ -65,7 +67,7 @@ void XShapeGrad::MakeGrad(XTensor * node, bool isEfficient)
     else if (operID == SHAPE_UNSQUEEZE)
         GradUnsqueeze(node, isEfficient);
     else{
-        ShowNTErrors("TODO!");
+        ShowNTErrors("Unsupported backward computation! TODO!");
     }
 }
 
@@ -81,6 +83,34 @@ void XShapeGrad::PostProcessing(XTensor * node, int typeID, bool isEfficient)
 {
     if (typeID == SHAPE_SPLIT_LIST)
         GradSplitListPost(node, isEfficient);
+}
+
+/*
+gradient computation for convertdatatype
+for
+b = convertdatatype(a)
+we have
+dE/da = convertdatatype(dE/db)
+>> node - the node (c) for backward computation
+>> isEfficient - indicates whether the computation is in
+                 an efficient manner
+*/
+void XShapeGrad::GradConvertDataType(XTensor* node, bool isEfficient)
+{
+    XLink& income = node->income;
+    CheckNTErrors(income.tailNum == 1, "Wrong input tensor number for CopyIndexed!");
+
+    XTensor* a = income.tails[0];
+
+    if (!isEfficient || a->isGrad) {
+        XNoder::MakeGrad(a);
+
+        XTensor* tmp = NewTensorBufV2(a, a->devID, a->mem);
+        _ConvertDataType(node->grad, tmp);
+        _SumMe(a->grad, tmp);
+
+        DelTensorBuf(tmp);
+    }
 }
 
 /* 
@@ -138,6 +168,7 @@ void XShapeGrad::GradGather(XTensor * node, bool isEfficient)
         XNoder::MakeGrad(input);
 
         XTensor * tmp = NewTensorBufV2(input, input->devID, input->mem);
+        tmp->SetZeroAll();
         _SpreadForGather(tmp, node->grad, index);
         _SumMe(input->grad, tmp);
 
@@ -567,7 +598,7 @@ void XShapeGrad::GradUnsqueeze(XTensor * node, bool isEfficient)
     int dSize = income.GetParamInt(1);
 
     CheckNTErrors(dSize == output->GetDim(dim), "Wrong dim size for UNSQUEEZE!");
-    CheckNTErrors(output->unitNum = input->unitNum * dSize, "Wrong tensor size!");
+    CheckNTErrors(output->unitNum == input->unitNum * dSize, "Wrong tensor size!");
     
     if (!isEfficient || input->isGrad) {
         XNoder::MakeGrad(input);

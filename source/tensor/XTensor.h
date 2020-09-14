@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2017, Natural Language Processing Lab, Northestern University. 
+ * Copyright (C) 2017, Natural Language Processing Lab, Northeastern University. 
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -175,7 +175,7 @@ public:
     XLink outgo;
 
     /********************
-     XTensor untilities
+     XTensor utilities
     ********************/
     
     /* constructor */
@@ -275,6 +275,18 @@ public:
 
     /* return a tensor that datatype is same as the special tensor */
     XTensor TypeAs(const XTensor input);
+
+    /* return a tensor that datatype is integer */
+    XTensor Int();
+
+    /* return a tensor that datatype is float */
+    XTensor Float();
+
+    /* return a tensor that datatype is float16 */
+    XTensor Float16();
+
+    /* return a tensor that datatype is double */
+    XTensor Double();
 
     /* get the number of items in the data array */
     int GetSize() const;
@@ -440,7 +452,7 @@ public:
     void Read(FILE * file, const char * label = NULL);
 
     /* read data from a binary file */
-    void BinaryRead(FILE * file, size_t offset);
+    void BinaryRead(FILE * file, size_t offset = 0);
 
     /* flush the data to the target device */
     void FlushToMem(XMem * targetMem);

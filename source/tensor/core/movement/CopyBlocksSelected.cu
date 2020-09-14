@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
-* Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+* Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
 * All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,8 +37,9 @@ copy a number of blocks from source positions to target positions
 >> target - target data array
 >> targetBlocks - target positions of the copy
 */
+template <class T>
 __global__
-void KernelCopyBlocksSelected(DTYPE * source, int blockSize, int * sourceBlocks, int blockNum, DTYPE * target, int * targetBlocks)
+void KernelCopyBlocksSelected(T * source, int blockSize, int * sourceBlocks, int blockNum, T * target, int * targetBlocks)
 {
     /* block index */
     int i = blockDim.x * blockIdx.x + threadIdx.x;
@@ -53,8 +54,8 @@ void KernelCopyBlocksSelected(DTYPE * source, int blockSize, int * sourceBlocks,
     int srcIndex = sourceBlocks[j];
     int tgtIndex = targetBlocks[j];
 
-    DTYPE * s = source + blockSize * srcIndex;
-    DTYPE * t = target + blockSize * tgtIndex;
+    T * s = source + blockSize * srcIndex;
+    T * t = target + blockSize * tgtIndex;
 
     if (i < blockSize)
         t[i] = s[i];
@@ -70,10 +71,10 @@ copy a number of blocks from source positions to target positions (cuda version)
 >> targetBlocks - target positions of the copy
 >> myMem - memory pool
 */
-void _CudaCopyBlocksSelected(void * source, int blockSize, int * sourceBlocks, int blockNum, void * target, int * targetBlocks, XMem * myMem, int devID)
+void _CudaCopyBlocksSelected(void * source, int unitSize, int blockSize, int * sourceBlocks, int blockNum, void * target, int * targetBlocks, XMem * myMem, int devID)
 {
     CheckNTErrors(devID >= 0, "Wrong device to run!");
-    CheckNTErrors((blockSize % sizeof(DTYPE) == 0), "Unsupported block size!");
+    CheckNTErrors((blockSize % unitSize == 0), "Unsupported block size!");
 
     int devIDBackup;
     ProtectCudaDev(devID, devIDBackup);
@@ -92,11 +93,17 @@ void _CudaCopyBlocksSelected(void * source, int blockSize, int * sourceBlocks, i
     int cudaGrids[3];
     int cudaBlocks[3];
 
-    GDevs.GetCudaThread2D(devID, blockSize / sizeof(DTYPE), blockNum, MAX_INT, cudaGrids, cudaBlocks);
+    int bSize = blockSize / unitSize;
+    GDevs.GetCudaThread2D(devID, bSize, blockNum, MAX_INT, cudaGrids, cudaBlocks);
+    if (unitSize == 4)
+        KernelCopyBlocksSelected <<<dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1])>>>
+                                  ((float*)source, bSize, sourceBlocksTMP, blockNum, (float*)target, targetBlocksTMP);
+    else if (unitSize == 2)
+        KernelCopyBlocksSelected <<<dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1])>>>
+                                  ((half*)source, bSize, sourceBlocksTMP, blockNum, (half*)target, targetBlocksTMP);
+    else
+        ShowNTErrors("Unsupported unit size!");
 
-    KernelCopyBlocksSelected << <dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1]) >> >
-                               ((DTYPE*)source, blockSize / sizeof(DTYPE), sourceBlocksTMP, blockNum, (DTYPE*)target, targetBlocksTMP);
-    
     if (myMem != NULL) {
         myMem->ReleaseBuf(myMem->devID, blockNum * sizeof(int));
         myMem->ReleaseBuf(myMem->devID, blockNum * sizeof(int));

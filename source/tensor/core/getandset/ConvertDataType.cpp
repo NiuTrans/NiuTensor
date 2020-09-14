@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2017, Natural Language Processing Lab, Northestern University. 
+ * Copyright (C) 2017, Natural Language Processing Lab, Northeastern University. 
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,6 +24,7 @@
 #include "ConvertDataType.h"
 #include "ConvertDataType.cuh"
 #include "../movement/CopyValues.h"
+#include "../utilities/Float16.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
@@ -48,12 +49,12 @@ void ConvertDataType(int devID,
 
     if(typeS == X_FLOAT && typeT == X_FLOAT16){
         for(int i = 0; i < size; i++){
-            ((unsigned short*)t)[i] = FloatToFloat16(((float*)s)[i]);
+            ((float16*)t)[i] = float16(((float*)s)[i]);
         }
     }
     else if(typeS == X_FLOAT16 && typeT == X_FLOAT){
         for(int i = 0; i < size; i++){
-            ((float*)t)[i] = Float16ToFloat(((unsigned short*)s)[i]);
+            ((float*)t)[i] = ((float16*)s)[i].Float();
         }
     }
     else{
@@ -91,6 +92,18 @@ void _ConvertDataType(const XTensor * input, XTensor * output)
         float * outputData = (float*)output->data;
         for (int i = 0; i < input->unitNum; i++) 
             outputData[i] = (float)inputData[i];
+    }
+    else if (input->dataType == X_FLOAT && output->dataType == X_FLOAT16) {
+        float* inputData = (float*)input->data;
+        float16* outputData = (float16*)output->data;
+        for (int i = 0; i < input->unitNum; i++)
+            outputData[i] = (float16)inputData[i];
+    }
+    else if (input->dataType == X_FLOAT16 && output->dataType == X_FLOAT) {
+        float16* inputData = (float16*)input->data;
+        float* outputData = (float*)output->data;
+        for (int i = 0; i < input->unitNum; i++)
+            outputData[i] = inputData[i].Float();
     }
     else
         ShowNTErrors("Unsupported data types for conversion!");

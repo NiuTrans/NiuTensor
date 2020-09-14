@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
-* Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+* Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
 * All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,7 +27,7 @@
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
 /* copy a number of blocks to target positions (on site) */
-void _CopyBlocksOnSite(void * source, int blockSize, int blockNum, void * target, int * targetBlocks, int devID);
+void _CopyBlocksOnSite(void * source, int unitSize, int blockSize, int blockNum, void * target, int * targetBlocks, int devID);
 
 } // namespace nts(NiuTrans.Tensor)
 

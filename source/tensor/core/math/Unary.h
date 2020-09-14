@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+ * Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -235,6 +235,20 @@ make a new tensor to keep the result and return it */
 XTensor Tan(const XTensor & a);
 /* set every entry to its tangent value */
 void Tan(const XTensor & a, XTensor & b);
+
+/* set every entry to its reciprocal value */
+void _Reciprocal(const XTensor * a, XTensor * b);
+/* set every entry to its reciprocal value (do it on site)
+keep the result in the input tensor a and return nothing */
+void _ReciprocalMe(XTensor * a);
+/* set every entry to its reciprocal value (do it on site)
+keep the result in the input tensor a and return nothing */
+void ReciprocalMe(XTensor & a);
+/* set every entry to its reciprocal value (return an XTensor structure)
+make a new tensor to keep the result and return it */
+XTensor Reciprocal(const XTensor & a);
+/* set every entry to its reciprocal value */
+void Reciprocal(const XTensor & a, XTensor & b);
 
 } // namespace nts(NiuTrans.Tensor)
 

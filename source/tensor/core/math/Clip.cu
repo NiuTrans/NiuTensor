@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
-* Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+* Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
 * All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,7 @@
 
 /*
 * $Created by: Lin Ye (email: linye2015@outlook.com) 2018-08-03
+* $Update by: Lin Ye (email: linye2015@outlook.com) 2019-07-06 float16/int added
 */
 
 #include "../../XDevice.h"
@@ -53,21 +54,6 @@ void KernelClip(T * a, T * b, T lower, T upper, int size)
 }
 
 /*
-set each entry to its clip value with float16 data type value (CUDA Kernel)
-This is for float16 computation
->> a - pointer to input data array
->> b - pointer to output data array
->> lower - the lower border
->> upper - the upper border
->> size - size of the data array
-*/
-__global__
-void KernelClip(__half * a, __half * b, DTYPE lower, DTYPE upper, int size)
-{
-    return;
-}
-
-/*
 set each entry to its clip value
 >> a - input tensor we are processing
 >> b - output tensor we are processing
@@ -91,15 +77,24 @@ void _CudaClip(const XTensor * a, XTensor * b, DTYPE lower, DTYPE upper)
     ProtectCudaDev(a->devID, devIDBackup);
 
     if (a->dataType == DEFAULT_DTYPE) {
-        KernelClip<DTYPE> << <blocks, threads >> >((DTYPE *)a->data, (DTYPE *)b->data, lower, upper, a->unitNum);
-    }
-    else if (a->dataType == X_INT) {
-        int lower1 = (int)lower;
-        int upper1 = (int)upper;
-
-        KernelClip<int> << <blocks, threads >> >((int *)a->data, (int *)b->data, lower1, upper1, a->unitNum);
+        KernelClip << <blocks, threads >> >((DTYPE*)a->data, (DTYPE*)b->data, lower, upper, a->unitNum);
     }
     else if (a->dataType == X_FLOAT16) {
+#ifdef HALF_PRECISION
+        half lower2 = __float2half(lower);
+        half upper2 = __float2half(upper);
+        KernelClip << <blocks, threads >> >((__half*)a->data, (__half*)b->data, lower2, upper2, a->unitNum);
+#else
+        ShowNTErrors("Recompile the code with HALF_PRECISION!");
+#endif
+    }
+    else if (a->dataType == X_INT) {
+        int lower2 = (int)lower;
+        int upper2 = (int)upper;
+
+        KernelClip << <blocks, threads >> >((int *)a->data, (int *)b->data, lower2, upper2, a->unitNum);
+    }
+    else if (a->dataType == X_INT8) {
         ShowNTErrors("TODO!");
     }
     else {

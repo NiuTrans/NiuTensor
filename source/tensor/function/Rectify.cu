@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2017, Natural Language Processing Lab, Northestern University. 
+ * Copyright (C) 2017, Natural Language Processing Lab, Northeastern University. 
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,15 +34,16 @@ rectify   : y =  x    if x >= 0
 >> output - output tensor
 >> size - size of input/output
 */
+template<class T>
 __global__ 
-void KernelRectify(DTYPE * x, DTYPE * y, int size)
+void KernelRectify(T * x, T * y, int size)
 {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
 
     if (i < size){
-        DTYPE p = x[i];
-        if(p < 0)
-            p = 0;
+        T p = x[i];
+        if(p < (T)0.0)
+            p = (T)0.0;
         y[i] = p;
     }
 }
@@ -61,8 +62,22 @@ void _CudaRectify(const XTensor * x, XTensor * y)
     int devIDBackup;
     ProtectCudaDev(x->devID, devIDBackup);
 
-    KernelRectify<<<dim3(gridSize[0]), dim3(blockSize[0])>>>
-                  ((DTYPE*)x->data, (DTYPE*)y->data, x->unitNum);
+    if (x->dataType == DEFAULT_DTYPE) {  
+        KernelRectify<<<dim3(gridSize[0]), dim3(blockSize[0])>>>
+                        ((DTYPE*)x->data, (DTYPE*)y->data, x->unitNum);
+    }
+    else if (x->dataType == X_FLOAT16) {
+#ifdef HALF_PRECISION
+        KernelRectify<<<dim3(gridSize[0]), dim3(blockSize[0]) >> >
+                        ((__half*)x->data, (__half*)y->data, x->unitNum);
+#else
+        ShowNTErrors("Recompile the code with HALF_PRECISION!");
+#endif
+    }
+    else {
+        // TODO!!
+        ShowNTErrors("TODO!");
+    }
 
     BacktoCudaDev(x->devID, devIDBackup);
 }
@@ -78,17 +93,18 @@ dy/dx =  1    if x >= 0
 >> x - input of the function
 >> size - size of output/input
 */
+template<class T>
 __global__ 
-void KernelRectifyBackward(DTYPE * dedy, DTYPE * dedx, DTYPE * x, int size)
+void KernelRectifyBackward(T * dedy, T * dedx, T * x, int size)
 {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
 
     if (i < size){
-        DTYPE s = x[i];
-        if(s >= 0)
+        T s = x[i];
+        if(s >= (T)0.0)
             dedx[i] = dedy[i];
         else
-            dedx[i] = 0;
+            dedx[i] = (T)0.0;
     }
 }
 
@@ -119,11 +135,28 @@ void _CudaRectifyBackward(XTensor * y, XTensor * x,
     ProtectCudaDev(x->devID, devIDBackup);
 
     /* dE/ds = dE/dy * dy/ds */
-    KernelRectifyBackward<<<dim3(gridSize[0]),dim3(blockSize[0])>>>
-                          ((DTYPE*)dedy->data, 
-                           (DTYPE*)dedx->data,
-                           (DTYPE*)x->data, 
-                            x->unitNum);
+    if (x->dataType == DEFAULT_DTYPE && y->dataType == DEFAULT_DTYPE) {   
+        KernelRectifyBackward<<<dim3(gridSize[0]),dim3(blockSize[0])>>>
+                              ((DTYPE*)dedy->data, 
+                               (DTYPE*)dedx->data,
+                               (DTYPE*)x->data, 
+                                x->unitNum);
+    }
+    else if (x->dataType == X_FLOAT16 && y->dataType == X_FLOAT16) {
+#ifdef HALF_PRECISION
+        KernelRectifyBackward<<<dim3(gridSize[0]), dim3(blockSize[0]) >> >
+                              ((__half*)dedy->data,
+                               (__half*)dedx->data,
+                               (__half*)x->data,
+                                x->unitNum);
+#else
+        ShowNTErrors("Recompile the code with HALF_PRECISION!");
+#endif
+    }
+    else {
+        // TODO!!
+        ShowNTErrors("TODO!");
+    }
 
     BacktoCudaDev(x->devID, devIDBackup);
 }

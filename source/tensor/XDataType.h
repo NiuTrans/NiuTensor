@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2018, Natural Language Processing Lab, Northestern University. 
+ * Copyright (C) 2018, Natural Language Processing Lab, Northeastern University. 
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,10 +45,6 @@ enum MATRIX_TRANS_TYPE{X_TRANS, X_NOTRANS};
 /* get data type name */
 extern const char * GetDataTypeName(TENSOR_DATA_TYPE type);
 extern TENSOR_DATA_TYPE GetDataType(const char * typeName);
-
-/* data conversion (for lower precision computation) */
-unsigned short FloatToFloat16(float f);
-float Float16ToFloat(unsigned short h);
 
 #define CheckDataType(a, b) \
 { \

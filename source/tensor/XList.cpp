@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2019, Natural Language Processing Lab, Northestern University.
+ * Copyright (C) 2019, Natural Language Processing Lab, Northeastern University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,7 +24,6 @@
   */
 
 #include "time.h"
-#include "XMem.h"
 #include "XList.h"
 #include "XGlobal.h"
 
@@ -35,47 +34,73 @@ namespace nts {
 template <typename T>
 TensorListBase<T>::TensorListBase()
 {
-    mem = NULL;
-    maxNum = 0;
+    maxNum = 1;
     count = 0;
-    items = NULL;
+    items = (T*)malloc(sizeof(T) * 1);
 }
 
 /* 
 constructor 
 >> myMaxNum - maximum number of items to keep
->> isIntListOrNot - specify if the list keeps int items
 */
 template <typename T>
 TensorListBase<T>::TensorListBase(int myMaxNum)
 {
-    mem = NULL;
+    CheckNTErrors(myMaxNum > 0, "check if the input number > 0");
     maxNum = myMaxNum;
     count = 0;
-    items = new T[myMaxNum];
+    items = (T*)malloc(sizeof(T) * myMaxNum);
 }
 
-/* 
-constructor 
->> myMaxNum - maximum number of items to keep
->> myMem - the memory pool used for data allocation
->> isIntListOrNot - specify if the list keeps int items
-*/
-template <typename T>
-TensorListBase<T>::TensorListBase(int myMaxNum, XMem* myMem)
+/* copy-constructor */
+template<typename T>
+TensorListBase<T>::TensorListBase(const TensorListBase<T>& l)
 {
-    mem = myMem;
-    maxNum = myMaxNum;
-    count = 0;
-    items = (T*)mem->Alloc(mem->devID, sizeof(T) * maxNum);
+    maxNum = l.maxNum;
+    count = l.count;
+    items = (T*)malloc(sizeof(T) * maxNum);
+    memcpy(items, l.items, l.count * sizeof(T));
+}
+
+/* move-constructor */
+template<typename T>
+TensorListBase<T>::TensorListBase(TensorListBase<T>&& l)
+{
+    maxNum = l.maxNum;
+    count = l.count;
+    items = (T*)malloc(sizeof(T) * maxNum);
+    memcpy(items, l.items, l.count * sizeof(T));
+}
+
+/* assignment operator for a constant reference */
+template<typename T>
+TensorListBase<T> TensorListBase<T>::operator=(const TensorListBase<T>& l)
+{
+    maxNum = l.maxNum;
+    count = l.count;
+    items = (T*)malloc(sizeof(T) * maxNum);
+    memcpy(items, l.items, l.count * sizeof(T));
+    return *this;
+}
+
+/* assignment operator for a rvalue */
+template<typename T>
+TensorListBase<T> TensorListBase<T>::operator=(TensorListBase<T>&& l)
+{
+    maxNum = l.maxNum;
+    count = l.count;
+    items = (T*)malloc(sizeof(T) * maxNum);
+    memcpy(items, l.items, l.count * sizeof(T));
+    return *this;
 }
 
 /* de-constructor */
 template <typename T>
 TensorListBase<T>::~TensorListBase()
 {
-    if(items && mem)
-        delete[] items;
+    if(items != NULL)
+        free(items);
+    items = NULL;
 }
 
 
@@ -89,13 +114,19 @@ void TensorListBase<T>::Add(T&& item)
     if (count == maxNum) {
         
         T* newItems;
-        if (mem == NULL)
-            newItems = new T[maxNum * 2 + 1];
-        else
-            newItems = (T*)mem->Alloc(mem->devID, sizeof(T) * (maxNum * 2 + 1));
-        memcpy(newItems, items, sizeof(T) * maxNum);
-        items = newItems;
-        maxNum = maxNum * 2 + 1;
+        
+        newItems = (T*)realloc(items, sizeof(T) * (count * 2 + 1));
+        if (newItems != NULL)
+            items = newItems;
+        else {
+            newItems = (T*)malloc(sizeof(T) * (count * 2 + 1));
+            memcpy(newItems, items, count * sizeof(T));
+            free(items);
+            items = newItems;
+        }
+            
+
+        maxNum = count * 2 + 1;
     }
     items[count++] = item;
 }
@@ -116,13 +147,18 @@ void TensorListBase<T>::Add(const T& item)
 {
     if (count == maxNum) {
         T* newItems;
-        if (mem == NULL)
-            newItems = new T[maxNum * 2 + 1];
-        else
-            newItems = (T*)mem->Alloc(mem->devID, sizeof(T) * (maxNum * 2 + 1));
-        memcpy(newItems, items, sizeof(T) * maxNum);
-        items = newItems;
-        maxNum = maxNum * 2 + 1;
+
+        newItems = (T*)realloc(items, sizeof(T) * (count * 2 + 1));
+        if (newItems != NULL)
+            items = newItems;
+        else {
+            newItems = (T*)malloc(sizeof(T) * (count * 2 + 1));
+            memcpy(newItems, items, count * sizeof(T));
+            free(items);
+            items = newItems;
+        }
+
+        maxNum = count * 2 + 1;
     }
 
     items[count++] = item;
@@ -137,15 +173,19 @@ template <typename T>
 void TensorListBase<T>::Add(const T* inputItems, int inputItemCount)
 {
     if (count + inputItemCount >= maxNum) {
-        int newMaxNum = (count + inputItemCount) * 2 + 1;
         T* newItems;
-        if (mem == NULL)
-            newItems = new T[newMaxNum];
-        else
-            newItems = (T*)mem->Alloc(mem->devID, sizeof(T) * newMaxNum);
-        memcpy(newItems, items, sizeof(T) * maxNum);
-        items = newItems;
-        maxNum = newMaxNum;
+
+        newItems = (T*)realloc(items, sizeof(T) * (count + inputItemCount + 1));
+        if (newItems != NULL)
+            items = newItems;
+        else {
+            newItems = (T*)malloc(sizeof(T) * (maxNum + count + inputItemCount + 1));
+            memcpy(newItems, items, count * sizeof(T));
+            free(items);
+            items = newItems;
+        }
+
+        maxNum += (count + inputItemCount + 1);
     }
     memcpy(items + count, inputItems, sizeof(T) * inputItemCount);
     count += inputItemCount;
@@ -171,13 +211,18 @@ void TensorListBase<T>::Insert(int pos, const T& item)
 {
     if (count == maxNum) {
         T* newItems;
-        if (mem == NULL)
-            newItems = new T[maxNum * 2 + 1];
-        else
-            newItems = (T*)mem->Alloc(mem->devID, sizeof(T) * (maxNum * 2 + 1));
-        memcpy(newItems, items, sizeof(T) * maxNum);
-        items = newItems;
-        maxNum = maxNum * 2 + 1;
+
+        newItems = (T*)realloc(items, sizeof(T) * (count * 2 + 1));
+        if (newItems != NULL)
+            items = newItems;
+        else {
+            newItems = (T*)malloc(sizeof(T) * (count * 2 + 1));
+            memcpy(newItems, items, count * sizeof(T));
+            free(items);
+            items = newItems;
+        }
+
+        maxNum = count * 2 + 1;
     }
 
     for (int i = count - 1; i >= pos; i--)
@@ -191,13 +236,18 @@ void TensorListBase<T>::Insert(int pos, T&& item)
 {
     if (count == maxNum) {
         T* newItems;
-        if (mem == NULL)
-            newItems = new T[maxNum * 2 + 1];
-        else
-            newItems = (T*)mem->Alloc(mem->devID, sizeof(T) * (maxNum * 2 + 1));
-        memcpy(newItems, items, sizeof(T) * maxNum);
-        items = newItems;
-        maxNum = maxNum * 2 + 1;
+
+        newItems = (T*)realloc(items, sizeof(T) * (count * 2 + 1));
+        if (newItems != NULL)
+            items = newItems;
+        else {
+            newItems = (T*)malloc(sizeof(T) * (count * 2 + 1));
+            memcpy(newItems, items, count * sizeof(T));
+            free(items);
+            items = newItems;
+        }
+
+        maxNum = count * 2 + 1;
     }
 
     for (int i = count - 1; i >= pos; i--)
@@ -254,6 +304,10 @@ template <typename T>
 void TensorListBase<T>::Clear()
 {
     count = 0;
+    maxNum = 0;
+    if(items != NULL)
+        free(items);
+    items = NULL;
 }
 
 /*
@@ -288,12 +342,13 @@ inline void TensorListBase<T>::Reverse()
 
 /* remove the item at position i */
 template <typename T>
-void TensorListBase<T>::Remove(int i)
+void TensorListBase<T>::Remove(int idx)
 {
-    if (i >= count || i < 0)
-        return;
+    CheckNTErrors(idx < count && idx > -1, "invalid index");
 
-    memcpy(items + i, items + i + 1, sizeof(T*) * (count - i - 1));
+    for (int i = idx; i < count - 1; i++) {
+        items[i] = items[i + 1];
+    }
 
     count--;
 }
@@ -306,22 +361,7 @@ void TensorListBase<T>::Reserve(int n)
         return;
     }
 
-    items = new T[n];
-}
-
-/* 
-copy the list 
->> myMem - memory pool used for allocating the data in the new list
-<< hard copy of the list
-*/
-template <typename T>
-TensorListBase<T>* TensorListBase<T>::Copy(XMem* myMem)
-{
-    TensorListBase<T>* newList = new TensorListBase<T>(maxNum, myMem);
-    for (int i = 0; i < count; i++) {
-        newList->Add(GetItem(i));
-    }
-    return newList;
+    items = (T*)malloc(sizeof(T) * n);
 }
 
 /* 
@@ -355,6 +395,27 @@ void TensorListBase<T>::Shuffle(int nround, int beg, int len)
     }
 }
 
+/* 
+read data from a file 
+>> fp - pointer to a file
+>> num - number of items to be read
+*/
+template<typename T>
+void TensorListBase<T>::ReadFromFile(FILE* fp, int num)
+{
+    if (maxNum < num) {
+        if(!items)
+            Reserve(num - maxNum);
+        else {
+            free(items);
+            items = (T*)malloc(sizeof(T) * num);
+        }
+    }
+    fread(items, sizeof(T), num, fp);
+    maxNum = num;
+    count += num;
+}
+
 /* specializations and typedef of list */
 template struct TensorListBase<int>;
 template struct TensorListBase<char>;
@@ -365,5 +426,8 @@ template struct TensorListBase<short>;
 template struct TensorListBase<XTensor*>;
 template struct TensorListBase<uint64_t>;
 template struct TensorListBase<void*>;
+template struct TensorListBase<Example*>;
+template struct TensorListBase<TrainExample*>;
+template struct TensorListBase<Result*>;
 
 } /* end of the nts (NiuTrans.Tensor) namespace */

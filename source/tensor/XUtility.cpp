@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2017, Natural Language Processing Lab, Northestern University. 
+ * Copyright (C) 2017, Natural Language Processing Lab, Northeastern University. 
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -849,6 +849,56 @@ void ResetGPUDevices()
     ShowNTErrors("TODO!");
 #endif
 #endif
+}
+
+/*
+split a string
+>> inputString - a line of string
+>> separator - separate by what
+>> items - splitting result
+<< return - how many items are there
+*/
+int SplitALine(char* inputString, const char* seperator, StrList* items)
+{
+    items->Clear();
+
+    if (inputString == NULL || seperator == NULL)
+        return 0;
+
+    int inputLen = (int)strlen(inputString);
+    int sepLen = (int)strlen(seperator);
+
+    if (inputLen == 0)
+        return 0;
+
+    if (sepLen == 0) {
+
+        char* item = new char[inputLen + 1];
+        strcpy(item, inputString);
+        items->Add(item);
+    }
+    else {
+        char* p = inputString;
+        char* item = NULL;
+        while (p != NULL) {
+            char* q = strstr(p, seperator);
+            if (q == NULL) {
+                item = new char[inputLen - (p - inputString) + 1];
+                memcpy(item, p, inputLen - (p - inputString) + 1);
+                item[inputLen - (p - inputString)] = '\0'; // no use?
+                p = NULL;
+            }
+            else {
+                item = new char[q - p + 1];
+                memcpy(item, p, q - p);
+                item[q - p] = '\0';
+                p = q + sepLen;
+            }
+            items->Add(item);
+        }
+    }
+
+    return items->count;
 }
 
 } // namespace nts(NiuTrans.Tensor)

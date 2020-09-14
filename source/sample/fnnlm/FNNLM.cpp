@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2018, Natural Language Processing Lab, Northestern University. 
+ * Copyright (C) 2018, Natural Language Processing Lab, Northeastern University. 
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -128,8 +128,10 @@ int FNNLMMain(int argc, const char ** argv)
     Init(model);
 
     /* learn model parameters */
-    if(strcmp(trainFN, ""))
+    if(strcmp(trainFN, "")) {
+        ENABLE_GRAD;
         Train(trainFN, shuffled, model);
+    }
 
     /* save the final model */
     if(strcmp(modelFN, "") && strcmp(trainFN, ""))

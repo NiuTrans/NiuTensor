@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+ * Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -74,6 +74,9 @@ void _CudaCos(const XTensor * a, XTensor * b);
 
 /* set each entry to its tangent value */
 void _CudaTan(const XTensor * a, XTensor * b);
+
+/* set each entry to its reciprocal value */
+void _CudaReciprocal(const XTensor * a, XTensor * b);
 
 #endif // USE_CUDA
 

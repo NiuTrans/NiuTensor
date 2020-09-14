@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
-* Copyright (C) 2018, Natural Language Processing Lab, Northestern University.
+* Copyright (C) 2018, Natural Language Processing Lab, Northeastern University.
 * All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +19,7 @@
 * $Created by: XIAO Tong (email: xiaotong@mail.neu.edu.cn) 2018-07-29
 * &Updated by: XIAO Tong (email: xiaotong@mail.neu.edu.cn) 2018-12-26
 * Add summation by broadcasting.
+* $Update by: Lin Ye (email: linye2015@outlook.com) 2019-07-24 float16 added
 */
 
 #include "SumDim.cuh"
@@ -169,6 +170,38 @@ void _CudaSumDim(const XTensor * a, const XTensor * b, XTensor * c, int n, DTYPE
         else{
             ShowNTErrors("Something is wrong!");
         }
+    }
+    else if (a->dataType == X_FLOAT16) {
+#ifdef HALF_PRECISION
+        half beta1 = __float2half(beta);
+        if (stride > 1) {
+            GDevs.GetCudaThread2D(a->devID, stride * blockNum, blockSize, MAX_INT, cudaGrids, cudaBlocks);
+            if (beta == (DTYPE)1.0F)
+                KernelAddWithCol<__half, false> <<<dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1])>>>
+                                                 ((__half*)a->data, (__half*)b->data, (__half*)c->data,
+                                                   blockSize, stride, blockSize * stride, blockNum, beta1);
+            else
+                KernelAddWithCol<__half, true> <<<dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1])>>>
+                                                ((__half*)a->data, (__half*)b->data, (__half*)c->data,
+                                                  blockSize, stride, blockSize * stride, blockNum, beta1);
+        }
+        else if (stride == 1) {
+            GDevs.GetCudaThread2D(a->devID, blockSize, blockNum, MAX_INT, cudaGrids, cudaBlocks);
+            if (beta == (DTYPE)1.0F)
+                KernelAddWithRow<__half, false> <<<dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1])>>>
+                                                 ((__half*)a->data, (__half*)b->data, (__half*)c->data,
+                                                   blockNum, blockSize, beta1);
+            else
+                KernelAddWithRow<__half, true> <<<dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1])>>>
+                                                ((__half*)a->data, (__half*)b->data, (__half*)c->data,
+                                                  blockNum, blockSize, beta1);
+        }
+        else {
+            ShowNTErrors("Something is wrong!");
+        }
+#else
+        ShowNTErrors("Recompile the code with HALF_PRECISION!");
+#endif
     }
     else {
         ShowNTErrors("TODO!");

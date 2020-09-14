@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2018, Natural Language Processing Lab, Northestern University. 
+ * Copyright (C) 2018, Natural Language Processing Lab, Northeastern University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,97 +17,53 @@
 
 /*
  * $Created by: XIAO Tong (xiaotong@mail.neu.edu.cn) 2018-07-31
+ * $Modified by: HU Chi (huchinlp@gmail.com) 2020-06
  */
 
-#include <math.h>
-#include <time.h>
+#include <cmath>
+#include <ctime>
+
 #include "Transformer.h"
-#include "T2TModel.h"
-#include "T2TUtility.h"
-#include "T2TTrainer.h"
-#include "T2TPredictor.h"
-#include "T2TTester.h"
+#include "train/T2TTrainer.h"
+#include "module/T2TUtility.h"
+#include "translate/T2TTranslator.h"
 #include "../../tensor/XDevice.h"
-#include "../../tensor/XUtility.h"
 #include "../../tensor/XGlobal.h"
+#include "../../tensor/XUtility.h"
 
 namespace transformer
 {
 
-int TransformerMain(int argc, const char ** argv)
+int TransformerMain(int argc, const char** argv)
 {
-    if(argc == 0)
+    if (argc == 0)
         return 1;
 
-    char ** args = new char*[argc];
-    for(int i = 0; i < argc; i++){
-        args[i] = new char[strlen(argv[i]) + 1];
-        strcpy(args[i], argv[i]);
-    }
-
-    tmpFILE = fopen("tmp.txt", "wb");
-
-    ShowParams(argc, args);
-
-    bool isBeamSearch = false;
-    char * trainFN = new char[MAX_LINE_LENGTH];
-    char * modelFN = new char[MAX_LINE_LENGTH];
-    char * testFN = new char[MAX_LINE_LENGTH];
-    char * outputFN = new char[MAX_LINE_LENGTH];
-
-    LoadParamString(argc, args, "train", trainFN, "");
-    LoadParamString(argc, args, "model", modelFN, "");
-    LoadParamString(argc, args, "test", testFN, "");
-    LoadParamString(argc, args, "output", outputFN, "");
-    LoadParamBool(argc, args, "beamsearch", &isBeamSearch, false);
+    /* load configurations */
+    T2TConfig config(argc, argv);
 
     srand((unsigned int)time(NULL));
 
-    T2TTrainer trainer;
-    trainer.Init(argc, args);
-
-    T2TModel model;
-    model.InitModel(argc, args);
-    
-    /* learn model parameters */
-    if(strcmp(trainFN, ""))
-        trainer.Train(trainFN, testFN, strcmp(modelFN, "") ? modelFN : "checkpoint.model", &model);
-    
-    /* save the final model */
-    if(strcmp(modelFN, "") && strcmp(trainFN, ""))
-        model.Dump(modelFN);
-    
-    /* load the model if neccessary */
-    if(strcmp(modelFN, ""))
-        model.Read(modelFN);
-
-    /* test the model on the new data */
-    if(strcmp(testFN, "") && strcmp(outputFN, "")){
-        /* beam search */
-        if(isBeamSearch){
-            T2TTester searcher;
-            searcher.Init(argc, args);
-            searcher.Test(testFN, outputFN, &model);
-        }
-
-        /* forced decoding */
-        else{
-            T2TTrainer tester;
-            tester.Init(argc, args);
-            tester.Validate(testFN, outputFN, &model);
-        }
+    /* train the model */
+    if (strcmp(config.trainFN, "") != 0) {
+        ENABLE_GRAD;
+        T2TModel model;
+        model.InitModel(config);
+        T2TTrainer trainer;
+        trainer.Init(config);
+        trainer.Train(config.trainFN, config.validFN, config.modelFN, &model);
     }
 
-    delete[] trainFN;
-    delete[] modelFN;
-    delete[] testFN;
-    delete[] outputFN;
-
-    for(int i = 0; i < argc; i++)
-        delete[] args[i];
-    delete[] args;
-
-    fclose(tmpFILE);
+    /* translate the test file */
+    if (strcmp(config.testFN, "") != 0 && strcmp(config.outputFN, "") != 0) {
+        DISABLE_GRAD;
+        T2TModel model;
+        model.InitModel(config);
+        T2TTranslator translator;
+        translator.Init(config);
+        translator.Translate(config.testFN, config.srcVocabFN, 
+                             config.tgtVocabFN, config.outputFN, &model);
+    }
 
     return 0;
 }

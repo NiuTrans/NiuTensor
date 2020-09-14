@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2019, Natural Language Processing Lab, Northestern University.
+ * Copyright (C) 2019, Natural Language Processing Lab, Northeastern University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,6 +27,7 @@
 #include "XGlobal.h"
 
 #include <cstdint>
+#include <string>
 
 #ifndef __TensorList_H__
 #define __TensorList_H__
@@ -49,9 +50,6 @@ public:
     /* maximum number of items can be kept */
     int maxNum;
 
-    /* the memory pool for data array allocation */
-    XMem* mem;
-
 public:
     /* constructor */
     TensorListBase();
@@ -59,8 +57,17 @@ public:
     /* constructor */
     TensorListBase(int myMaxNum);
 
-    /* constructor */
-    TensorListBase(int myMaxNum, XMem* myMem);
+    /* copy-constructor */
+    TensorListBase(const TensorListBase<T>& l);
+
+    /* move-constructor */
+    TensorListBase(TensorListBase<T>&& l);
+
+    /* assignment operator for a constant reference */
+    TensorListBase<T> operator=(const TensorListBase<T>& l);
+
+    /* assignment operator for a rvalue */
+    TensorListBase<T> operator=(TensorListBase<T>&& l);
 
     /* de-constructor */
     ~TensorListBase();
@@ -113,26 +120,22 @@ public:
     /* reserve space for data entry */
     void Reserve(int n);
 
-    /* copy the list */
-    TensorListBase* Copy(XMem* myMem);
-
     /* shuffle the list */
     void Shuffle(int nround = 10, int beg = -1, int len = 0);
 
+    /* read data from a file */
+    void ReadFromFile(FILE* fp, int num);
+
     /* short */
-    T& operator[] (int i) { 
-        CheckNTErrors(i >= -count && i < count, "Index of a list item is out of scope!");
-        CheckNTErrors(count > 0, "Cannt index the item in an empty list!");
-        if (i < 0)
-            return items[count + i];
-        else
-            return items[i];
-    };
-    T& Get(int i) { return GetItem(i); };
+    T& operator[] (int i) const { return GetItem(i); };
+    T& Get(int i) const { return GetItem(i); };
     void Set(int i, T item) { SetItem(i, item); };
 };
 
 struct XTensor;
+struct Example;
+struct TrainExample;
+struct Result;
 
 typedef TensorListBase<void*> XList;
 typedef TensorListBase<int> IntList;
@@ -143,6 +146,9 @@ typedef TensorListBase<float> FloatList;
 typedef TensorListBase<short> ShortList;
 typedef TensorListBase<uint64_t> UInt64List;
 typedef TensorListBase<XTensor*> TensorList;
+typedef TensorListBase<Example*> InputBufferType;
+typedef TensorListBase<TrainExample*> TrainBufferType;
+typedef TensorListBase<Result*> OutputBufferType;
 
 } /* end of the nts (NiuTrans.Tensor) namespace */
 

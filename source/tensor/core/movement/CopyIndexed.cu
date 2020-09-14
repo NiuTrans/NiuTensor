@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+ * Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,13 +41,15 @@ copy selected sub-tensors where indeces are kept in tensors (kenerl version)
              e.g., for srcIndex = [1,4] and copyNum = 2,
              we actually copy the source sub-tensors 1, 2, 4, 5
 */
+template <class T>
 __global__
-void KernelCopyIndexed(DTYPE * sData, DTYPE * tData, int * sIndex, int * tIndex, 
+void KernelCopyIndexed(T * sData, T * tData, int * sIndex, int * tIndex,
+ 
                        int blockNum, int blockSizeSrc, int blockSizeTgt, 
                        int stride, int indexSize, int copyNum)
 {
-    __shared__ DTYPE * sp[MAX_CUDA_THREAD_NUM_PER_BLOCK];
-    __shared__ DTYPE * tp[MAX_CUDA_THREAD_NUM_PER_BLOCK];
+    __shared__ T * sp[MAX_CUDA_THREAD_NUM_PER_BLOCK];
+    __shared__ T * tp[MAX_CUDA_THREAD_NUM_PER_BLOCK];
 
     /* block id */
     int i = blockDim.x * blockIdx.x + threadIdx.x;
@@ -73,8 +75,8 @@ void KernelCopyIndexed(DTYPE * sData, DTYPE * tData, int * sIndex, int * tIndex,
 
     __syncthreads();
 
-    DTYPE * s = sp[threadIdx.x];
-    DTYPE * t = tp[threadIdx.x];
+    T * s = sp[threadIdx.x];
+    T * t = tp[threadIdx.x];
 
     t[offset] = s[offset];
 }
@@ -126,16 +128,30 @@ void _CudaCopyIndexed(const XTensor * s, XTensor * t, int dim,
     dim3 blocks(cudaGrids[0], cudaGrids[1]);
     dim3 threads(cudaBlocks[0], cudaBlocks[1]);
 
-    DTYPE * sData = (DTYPE*)s->data;
-    DTYPE * tData = (DTYPE*)t->data;
+    if (s->dataType == DEFAULT_DTYPE && t->dataType == DEFAULT_DTYPE) {
+        DTYPE * sData = (DTYPE*)s->data;
+        DTYPE * tData = (DTYPE*)t->data;
 
-    int * sIndex = (int *)srcIndex->data;
-    int * tIndex = (int *)tgtIndex->data;
+        int * sIndex = (int*)srcIndex->data;
+        int * tIndex = (int*)tgtIndex->data;
 
-    KernelCopyIndexed<<<blocks, threads >>>(sData, tData, sIndex, tIndex, 
-                                            blockNum, blockSizeSrc, blockSizeTgt,
-                                            stride, indexSize, copyNum);
+        KernelCopyIndexed<<<blocks, threads >>>(sData, tData, sIndex, tIndex,
+                                                blockNum, blockSizeSrc, blockSizeTgt,
+                                                stride, indexSize, copyNum);
+    }
+    else if (s->dataType == X_FLOAT16 && t->dataType == X_FLOAT16) {
+        half * sData = (half*)s->data;
+        half * tData = (half*)t->data;
 
+        int * sIndex = (int*)srcIndex->data;
+        int * tIndex = (int*)tgtIndex->data;
+        KernelCopyIndexed<<<blocks, threads>>>(sData, tData, sIndex, tIndex,
+                                               blockNum, blockSizeSrc, blockSizeTgt,
+                                               stride, indexSize, copyNum);
+    }
+    else {
+        ShowNTErrors("Unsupported dataType!");
+    }
     BacktoCudaDev(devID, devIDBackup);
 
 }

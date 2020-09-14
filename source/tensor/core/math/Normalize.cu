@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
-* Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+* Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
 * All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,13 +42,14 @@ where a and b are the scalar and bias respectively, and \epsilon is the adjustme
 >> strideNum - how many strides we need to go over for next block
 >> blockNum - how many blocks we have
 */
+template<class T, TENSOR_DATA_TYPE datatype>
 __global__
-void KernelNormalize(DTYPE * input, DTYPE * output, DTYPE * mean, DTYPE * var,
-                     DTYPE * a, DTYPE * b, DTYPE epsilon,
+void KernelNormalize(T * input, T * output, T * mean, T * var,
+                     T * a, T * b, T epsilon,
                      int stride, int strideNum, int blockNum)
 {
-    __shared__ DTYPE iMean[MAX_CUDA_THREAD_NUM_PER_BLOCK];
-    __shared__ DTYPE iVar[MAX_CUDA_THREAD_NUM_PER_BLOCK];
+    __shared__ T iMean[MAX_CUDA_THREAD_NUM_PER_BLOCK];
+    __shared__ T iVar[MAX_CUDA_THREAD_NUM_PER_BLOCK];
     __shared__ int iBlock[MAX_CUDA_THREAD_NUM_PER_BLOCK];
     __shared__ int iOffset[MAX_CUDA_THREAD_NUM_PER_BLOCK];
     __shared__ int blockSize;
@@ -72,7 +73,16 @@ void KernelNormalize(DTYPE * input, DTYPE * output, DTYPE * mean, DTYPE * var,
     int inBlockOffset = j * stride + iOffset[threadIdx.x];
     int offset = iBlock[threadIdx.x] * blockSize + inBlockOffset;
 
-    output[offset] = a[inBlockOffset] * (input[offset] - iMean[threadIdx.x]) / sqrt(iVar[threadIdx.x] + epsilon) + b[inBlockOffset];
+    if (datatype == DEFAULT_DTYPE) {
+        output[offset] = (DTYPE)(a[inBlockOffset] * (input[offset] - iMean[threadIdx.x])) / 
+                         sqrt((DTYPE)(iVar[threadIdx.x] + epsilon)) + (DTYPE)b[inBlockOffset];
+    }
+    else if (datatype == X_FLOAT16) {
+#if __CUDA_ARCH__ >= 600
+        output[offset] = __hadd(__hdiv(__hmul(a[inBlockOffset], __hsub(input[offset], iMean[threadIdx.x])),
+                         hsqrt(iVar[threadIdx.x] + epsilon)), __float2half(b[inBlockOffset]));
+#endif
+    }
 }
 
 /*
@@ -117,10 +127,21 @@ void _CudaNormalize(const XTensor * input, XTensor * output, int dim,
     int devIDBackup;
     ProtectCudaDev(a->devID, devIDBackup);
 
-    KernelNormalize << <blocks, threads >> >((DTYPE*)input->data, (DTYPE*)output->data,
+    if (input->dataType == DEFAULT_DTYPE) {
+        KernelNormalize <DTYPE, DEFAULT_DTYPE><< <blocks, threads >> >((DTYPE*)input->data, (DTYPE*)output->data,
                                              (DTYPE*)mean->data, (DTYPE*)var->data,
                                              (DTYPE*)a->data, (DTYPE*)b->data, epsilon,
-                                              stride, strideNum, blockNum);
+                                             stride, strideNum, blockNum);
+    }
+    else if (input->dataType == X_FLOAT16) {
+#ifdef HALF_PRECISION
+        __half epsilon1 = __float2half(epsilon);
+        KernelNormalize <__half, X_FLOAT16> <<<blocks, threads>>> ((__half*)input->data, (__half*)output->data,
+                                             (__half*)mean->data, (__half*)var->data,
+                                             (__half*)a->data, (__half*)b->data, epsilon1, 
+                                             stride, strideNum, blockNum);
+#endif
+    }
 
     BacktoCudaDev(a->devID, devIDBackup);
 }

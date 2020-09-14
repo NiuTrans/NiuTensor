@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2017, Natural Language Processing Lab, Northestern University. 
+ * Copyright (C) 2017, Natural Language Processing Lab, Northeastern University. 
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,6 +28,7 @@
 #include "XDevice.h"
 #include "XGlobal.h"
 #include "XThread.h"
+#include "XUtility.h"
 #include "XList.h"
 
 /* the nts (NiuTrans.Tensor) namespace */
@@ -48,25 +49,35 @@ XDevice::XDevice()
 #ifdef USE_CUDA
     MUTEX_INIT(cublasMutex);
     isHandleReady = false;
+    isGenReady = false;
 #endif
 }
 
 /* de-constructor */
 XDevice::~XDevice()
 {
+    if (!isInitialized)
+        return;
+
 #ifdef USE_CUDA
     MUTEX_DELE(cublasMutex);
-    if(isHandleReady)
+    if (isHandleReady) {
         cublasDestroy(cublasHandle);
-    if(stream != NULL)
-        delete stream;
-    curandDestroyGenerator(gen);
+        isHandleReady = false;
+    }
+    if (isGenReady) {
+        curandDestroyGenerator(gen);
+        isGenReady = false;
+    }
 #endif
 }
 
 /* initialize it and get the device information */
 void XDevice::Init(int myDevID)
 {
+    if (isInitialized)
+        return;
+
     Clear();
 
     devID = myDevID;
@@ -86,6 +97,7 @@ void XDevice::Init(int myDevID)
 
         curandCreateGenerator(&gen, CURAND_RNG_PSEUDO_DEFAULT);
         curandSetPseudoRandomGeneratorSeed(gen, seed);
+        isGenReady = true;
 
         if(cudaGetDeviceProperties(&prop, devID) != cudaSuccess){
             XPRINT1(0, stderr, "cannot get GPU(%d) information.", devID);
@@ -142,6 +154,13 @@ void XDevice::Clear()
 {
     devID = -100;
     memSize = 0;
+
+    name[0] = 0;
+    name2[0] = 0;
+
+    isUVASupported = false;
+    // TODO: cublasDestroy(cublasHandle);
+#ifdef USE_CUDA
     GPUWarpSize = 0;
 
     memset(GPUMaxGridSize, 0, sizeof(int) * 3);
@@ -149,11 +168,42 @@ void XDevice::Clear()
 
     GPUMaxThreadNum = 0;
 
-    name[0] = 0;
-    name2[0] = 0;
+    MUTEX_DELE(cublasMutex);
+    if (isHandleReady) {
+        cublasDestroy(cublasHandle);
+        isHandleReady = false;
+    }
+    if (isGenReady) {
+        curandDestroyGenerator(gen);
+        isGenReady = false;
+    }
+    if (stream != NULL) {
+        delete stream;
+        stream = NULL;
+    }
+#endif
+    isInitialized = false;
+}
 
-    isUVASupported = false;
-    // TODO: cublasDestroy(cublasHandle);
+void XDevice::Reset()
+{
+    XMem * mem = GMems.GetMem(devID);
+    mem->Free();
+
+    int devIDReset = devID;
+    Clear();
+
+#ifdef USE_CUDA
+    if (devIDReset >= 0) {
+        int devIDBackup = -1;
+        cudaGetDevice(&devIDBackup);
+        cudaSetDevice(devIDReset);
+
+        cudaDeviceReset();
+
+        cudaSetDevice(devIDBackup);
+    }
+#endif
 }
 
 #ifdef USE_CUDA
@@ -263,9 +313,17 @@ void XDevice::SetFastFlagsAllDevices()
 #endif
 }
 
+/* delete the default stream for the device */
+void XDevice::DelDeviceStream()
+{
+    if(stream != NULL)
+        delete stream;
+}
+
 /* constructor */
 XDevManager::XDevManager()
 {
+    isInitialized = false;
     Clear();
     Init();
 }
@@ -279,6 +337,9 @@ XDevManager::~XDevManager()
 /* initialization */
 void XDevManager::Init()
 {
+    if (isInitialized)
+        return;
+
     srand((unsigned int)time(NULL));
 
     Clear();
@@ -287,7 +348,7 @@ void XDevManager::Init()
     nCPU = 1;
 
     for(int i = 0; i < nCPU; i++)
-        CPUs[0].Init(-1);
+        CPUs[i].Init(-1);
 
     /* GPUs */
     int GPUCount = 0;
@@ -306,6 +367,7 @@ void XDevManager::Init()
 #endif
 
     nGPU = GPUCount;
+    isInitialized = true;
 }
 
 /* clear it */
@@ -316,6 +378,8 @@ void XDevManager::Clear()
 
     for(int i = 0; i < MAX_GPU_NUM; i++)
         GPUs[i].Clear();
+
+    isInitialized = false;
 }
 
 #ifdef USE_CUDA
@@ -469,55 +533,6 @@ int XDevManager::GetCudaThread2D(const int devID, const int n, const int m, int 
     return 0;
 }
 
-/* 
-split a string 
->> inputString - a line of string
->> separator - separate by what
->> items - splitting result
-<< return - how many items are there
-*/
-int SplitALine(char * inputString, const char * seperator, StrList* items)
-{
-    items->Clear();
-
-    if(inputString == NULL || seperator == NULL)
-        return 0;
-
-    int inputLen = (int)strlen(inputString);
-    int sepLen = (int)strlen(seperator);
-
-    if(inputLen == 0)
-        return 0;
-
-    if(sepLen == 0){
-
-        char * item = new char[inputLen + 1];
-        strcpy(item, inputString);
-        items->Add(item);
-    }
-    else{
-        char * p = inputString;
-        char * item = NULL;
-        while(p != NULL){
-            char * q = strstr(p, seperator);
-            if(q == NULL){
-                item = new char[inputLen - (p - inputString) + 1];
-                memcpy(item, p, inputLen - (p - inputString) + 1);
-                item[inputLen - (p - inputString)] = '\0'; // no use?
-                p = NULL;
-            }
-            else{
-                item = new char[q - p + 1];
-                memcpy(item, p, q - p);
-                item[q - p] = '\0';
-                p = q + sepLen;
-            }
-            items->Add(item);
-        }
-    }
-
-    return items->count;
-}
 
 /* 
 get device ids for the given device information 
@@ -603,6 +618,17 @@ char * XDevManager::GetDevString(int devID)
     else{
         CheckNTErrors((devID < nGPU), "Illegal GPU id.");
         return GPUs[devID].name2;
+    }
+}
+
+/* delete the streams for all devices */
+void XDevManager::DelDeviceStream()
+{
+    for(int i = 0; i < GDevs.nCPU; i++) {
+        GDevs.CPUs[i].DelDeviceStream();
+    }
+    for(int i = 0; i < GDevs.nGPU; i++) {
+        GDevs.GPUs[i].DelDeviceStream();
     }
 }
 

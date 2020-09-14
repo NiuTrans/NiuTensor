@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2018, Natural Language Processing Lab, Northestern University. 
+ * Copyright (C) 2020, Natural Language Processing Lab, Northeastern University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,13 +17,13 @@
 
 /*
  *
- * An impelementation of the transformer system. See more details 
- * about FNNLM in 
+ * An implementation of the transformer system. See more details
+ * about FNNLM in
  * "Attention Is All You Need" by Vaswani et al.
  * https://arxiv.org/pdf/1706.03762.pdf
  *
  * $Created by: XIAO Tong (xiaotong@mail.neu.edu.cn) 2018-07-31
- * I start writing the code related to NMT - a long time since my last coding 
+ * I start writing the code related to NMT - a long time since my last coding
  * work on MT
  */
 
@@ -38,7 +38,7 @@ namespace transformer
 {
 
 /* entrance of the program */
-int TransformerMain(int argc, const char ** argv);
+int TransformerMain(int argc, const char** argv);
 
 }
 

@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2017, Natural Language Processing Lab, Northestern University. 
+ * Copyright (C) 2017, Natural Language Processing Lab, Northeastern University. 
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -55,6 +55,8 @@ namespace nts {
 #define DTYPE_MIN (DTYPE)-3.40E+38
 #endif
 
+#define MY_HALF_MIN 6.10E-5
+
 #define LOGPROB_MIN (DTYPE)-2E+1
 #define GRAD_MAX (DTYPE)1E+5
 
@@ -108,7 +110,7 @@ namespace nts {
 #define FIELD_SEP " ||| "
 #define FLOAT_MIN float(-1.0E38)
 #define FLOAT16_MIN float(-65504)
-#define MILLION 1024 * 1024
+#define MILLION 1000000
 #define LOG_E_10 2.302585
 #define LEADING_DIM 1
 
@@ -141,6 +143,11 @@ extern int verboseLevel;
     fflush(FILEH); \
 } \
 
+#define LOG(...) do {\
+    fprintf(stderr, "[INFO] ");\
+	fprintf(stderr, __VA_ARGS__);\
+	fprintf(stderr, "\n");\
+} while(0)
 #define XPRINT(VERBOSE,FILEH,STR) {if(VERBOSE<=verboseLevel) {fprintf(FILEH,STR);FFLUSH(FILEH);}}
 #define XPRINT1(VERBOSE,FILEH,STR,ARG) {if(VERBOSE<=verboseLevel) {fprintf(FILEH,STR,ARG);FFLUSH(FILEH);}}
 #define XPRINT2(VERBOSE,FILEH,STR,ARG,ARG2) {if(VERBOSE<=verboseLevel) {fprintf(FILEH,STR,ARG,ARG2);FFLUSH(FILEH);}}

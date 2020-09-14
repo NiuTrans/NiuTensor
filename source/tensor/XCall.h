@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
-* Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+* Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
 * All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,12 +26,14 @@
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
-/* default settings */
-#define X_ENABLE_GRAD true
-
 /*
 * we define the "new and delete" functions below
 */
+
+/* global flag for enabling gradient flows or not */
+extern bool X_ENABLE_GRAD;
+#define ENABLE_GRAD X_ENABLE_GRAD=true
+#define DISABLE_GRAD X_ENABLE_GRAD=false
 
 /* initialize a XTensor V2 */
 void InitTensorV2(XTensor * tensor,

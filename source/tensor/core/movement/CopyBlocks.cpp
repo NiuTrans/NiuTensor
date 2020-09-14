@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
-* Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+* Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
 * All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,7 +37,7 @@ copy a number of blocks to target positions
 >> myMem - the memory pool
 >> devID - device id
 */
-void _CopyBlocks(void * source, int blockSize, int blockNum, void * target, int * targetBlocks, XMem * myMem, int devID)
+void _CopyBlocks(void * source, int unitSize, int blockSize, int blockNum, void * target, int * targetBlocks, XMem * myMem, int devID)
 {
     if (myMem != NULL)
         devID = myMem->devID;
@@ -50,7 +50,7 @@ void _CopyBlocks(void * source, int blockSize, int blockNum, void * target, int 
                                (int*)XMemAlloc(devID, blockNum * sizeof(int));
         XMemCopy(targetBlocksTMP, devID, targetBlocks, -1, blockNum * sizeof(int));
 
-        _CopyBlocksOnSite(source, blockSize, blockNum, target, targetBlocksTMP, devID);
+        _CopyBlocksOnSite(source, unitSize, blockSize, blockNum, target, targetBlocksTMP, devID);
 
         if(myMem != NULL)
             myMem->ReleaseBuf(myMem->devID, blockNum * sizeof(int));
@@ -61,7 +61,7 @@ void _CopyBlocks(void * source, int blockSize, int blockNum, void * target, int 
 #endif
     }
     else {
-        _CopyBlocksOnSite(source, blockSize, blockNum, target, targetBlocks, devID);
+        _CopyBlocksOnSite(source, unitSize, blockSize, blockNum, target, targetBlocks, devID);
     }
 }
 
@@ -76,14 +76,14 @@ copy a number of blocks source source positions to target positions
 >> myMem - the memory pool
 >> devID - device id
 */
-void _CopyBlocks(void * source, int blockSize, int * sourceBlocks, int blockNum, void * target, int * targetBlocks, XMem * myMem, int devID)
+void _CopyBlocks(void * source, int unitSize, int blockSize, int * sourceBlocks, int blockNum, void * target, int * targetBlocks, XMem * myMem, int devID)
 {
     if (myMem != NULL)
         devID = myMem->devID;
 
     if (devID >= 0) {
 #ifdef USE_CUDA
-        _CudaCopyBlocksSelected(source, blockSize, sourceBlocks, blockNum, target, targetBlocks, myMem, devID);
+        _CudaCopyBlocksSelected(source, unitSize, blockSize, sourceBlocks, blockNum, target, targetBlocks, myMem, devID);
 #else
         ShowNTErrors("Plesae specify USE_CUDA and recompile the code!");
 #endif

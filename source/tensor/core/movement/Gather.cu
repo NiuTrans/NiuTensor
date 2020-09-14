@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+ * Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,11 +37,12 @@ gather indexed sub-tensors(cuda version)
 >> indexSize - the size of the srcIndex
 >> stride - stride of a data block
 */
+template <class T>
 __global__
-void KernelGather(DTYPE * sData, DTYPE * tData, int * sIndex, int indexSize, int stride)
+void KernelGather(T * sData, T * tData, int * sIndex, int indexSize, int stride)
 {
-    __shared__ DTYPE * sp[MAX_CUDA_THREAD_NUM_PER_BLOCK];
-    __shared__ DTYPE * tp[MAX_CUDA_THREAD_NUM_PER_BLOCK];
+    __shared__ T * sp[MAX_CUDA_THREAD_NUM_PER_BLOCK];
+    __shared__ T * tp[MAX_CUDA_THREAD_NUM_PER_BLOCK];
 
     /* block id */
     int i = blockDim.x * blockIdx.x + threadIdx.x;
@@ -59,8 +60,8 @@ void KernelGather(DTYPE * sData, DTYPE * tData, int * sIndex, int indexSize, int
 
     __syncthreads();
 
-    DTYPE * s = sp[threadIdx.x];
-    DTYPE * t = tp[threadIdx.x];
+    T * s = sp[threadIdx.x];
+    T * t = tp[threadIdx.x];
 
     t[offset] = s[offset];
 }
@@ -76,8 +77,9 @@ gather indexed sub-tensors(cuda version)
 >> strideNum - strideNum of a data block
 >> blockNum - block size of data
 */
+template <class T>
 __global__
-void KernelGather(DTYPE * sData, DTYPE * tData, int * sIndex, int stride, int strideNum, int blockNum, int srcStrideNum)
+void KernelGather(T * sData, T * tData, int * sIndex, int stride, int strideNum, int blockNum, int srcStrideNum)
 {
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
     int idy = blockDim.y * blockIdx.y + threadIdx.y;
@@ -120,9 +122,6 @@ void _CudaGather(const XTensor * s, XTensor * t, XTensor * srcIndex)
     dim3 blocks(cudaGrids[0], cudaGrids[1]);
     dim3 threads(cudaBlocks[0], cudaBlocks[1]);
 
-    DTYPE * sData = (DTYPE*)s->data;
-    DTYPE * tData = (DTYPE*)t->data;
-
     int * sIndex = NULL;
     
     if (srcIndex->devID < 0) {
@@ -150,7 +149,24 @@ void _CudaGather(const XTensor * s, XTensor * t, XTensor * srcIndex)
         delete[] sIndexData;
     }
 
-    KernelGather<<<blocks, threads >>>(sData, tData, sIndex, indexSize, stride);
+    if (s->dataType == X_FLOAT && t->dataType == X_FLOAT) {
+        DTYPE * sData = (float*)s->data;
+        DTYPE * tData = (float*)t->data;
+        KernelGather<<<blocks, threads>>>(sData, tData, sIndex, indexSize, stride);
+    }
+    else if (s->dataType == X_FLOAT16 && t->dataType == X_FLOAT16) {
+        half * sData = (half*)s->data;
+        half * tData = (half*)t->data;
+        KernelGather<<<blocks, threads>>>(sData, tData, sIndex, indexSize, stride);
+    }
+    else if (s->dataType == X_INT && t->dataType == X_INT) {
+        int * sData = (int*)s->data;
+        int * tData = (int*)t->data;
+        KernelGather<<<blocks, threads>>>(sData, tData, sIndex, indexSize, stride);
+    }
+    else {
+        ShowNTErrors("Unsupported dataType!");
+    }
 
     if (srcIndex->devID < 0) {
         if(mem != NULL)
@@ -213,7 +229,15 @@ void _CudaGather(const XTensor * s, XTensor * t, XTensor * srcIndex, int dim)
     int cudaGrids[3];
     int cudaBlocks[3];
     GDevs.GetCudaThread2D(devID, max(32, strideNum), stride*blockNum, MAX_INT, cudaGrids, cudaBlocks);
-    KernelGather << <dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1]) >> > ((DTYPE *)s->data, (DTYPE *)t->data, sIndex, stride, strideNum, blockNum, srcStrideNum);
+    if(s->dataType == X_FLOAT){
+        KernelGather << <dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1]) >> > ((float *)s->data, (float *)t->data, sIndex, stride, strideNum, blockNum, srcStrideNum);
+    }
+    else if(s->dataType == X_FLOAT16){
+        KernelGather << <dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1]) >> > ((half *)s->data, (half *)t->data, sIndex, stride, strideNum, blockNum, srcStrideNum);
+    }
+    else {
+        ShowNTErrors("Unsupported dataType!");
+    }
 }
 #endif // USE_CUDA
 

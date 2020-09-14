@@ -1,6 +1,6 @@
 /* 
  * NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2018, Natural Language Processing Lab, Northestern University.
+ * Copyright (C) 2018, Natural Language Processing Lab, Northeastern University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -51,6 +51,7 @@ void KernelSetDataFixed(T * d, T v, int size)
 template __global__ void KernelSetDataFixed<int>(int *, int, int);
 template __global__ void KernelSetDataFixed<float>(float *, float, int);
 template __global__ void KernelSetDataFixed<double>(double *, double, int);
+//template __global__ void KernelSetDataFixed<__half>(__half*, __half, int);
 
 /* 
 generate data items with a fixed value 
@@ -79,6 +80,8 @@ void _CudaSetDataFixed(XTensor * tensor, T value)
         KernelSetDataFixed << <blocks, threads >> > ((float*)tensor->data, (float)value, tensor->unitNum);
     else if (tensor->dataType == X_DOUBLE)
         KernelSetDataFixed << <blocks, threads >> > ((double*)tensor->data, (double)value, tensor->unitNum);
+    //else if (tensor->dataType == X_FLOAT16)
+    //    KernelSetDataFixed << <blocks, threads >> > ((__half*)tensor->data, (__half)value, tensor->unitNum);
     else
         ShowNTErrors("TODO! Unsupported datatype!")
 
@@ -108,6 +111,8 @@ void KernelSetDataFixedCond(T * d, T * c, T value, int size)
 template __global__ void KernelSetDataFixedCond<int>(int*, int*, int, int);
 template __global__ void KernelSetDataFixedCond<float>(float*, float*, float, int);
 template __global__ void KernelSetDataFixedCond<double>(double*, double*, double, int);
+//template __global__ void KernelSetDataFixedCond<__half>(__half*, __half*, __half, int);
+
 /* 
 generate data items with a fixed value p 
 only if the condition entry is non-zero 
@@ -141,6 +146,9 @@ void _CudaSetDataFixedCond(XTensor* tensor, XTensor* condition, T value)
     else if (tensor->dataType == X_DOUBLE)
         KernelSetDataFixedCond <<< blocks, threads >>> ((double*)tensor->data, (double*)condition->data,
                                                        (double)value, tensor->unitNum);
+    //else if (tensor->dataType == X_FLOAT16)
+    //    KernelSetDataFixedCond <<< blocks, threads >>> ((__half*)tensor->data, (__half*)condition->data,
+    //                                                   (__half)value, tensor->unitNum);
     else
         ShowNTErrors("TODO! Unsupported datatype!")
 

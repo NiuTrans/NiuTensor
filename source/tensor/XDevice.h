@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2017, Natural Language Processing Lab, Northestern University. 
+ * Copyright (C) 2017, Natural Language Processing Lab, Northeastern University. 
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -64,20 +64,20 @@ public:
     /* size of the memory */
     int memSize;
 
-    /* warp size of an (Navida) GPU */
+    /* warp size of an (Nvidia) GPU */
     int GPUWarpSize;
 
     /* indicates whether the device class has been initialized */
     bool isInitialized;
 
     /* 
-    max grid size (or number of blocks) of an (Navida) GPU 
+    max grid size (or number of blocks) of an (Nvidia) GPU
     NOTE: the grid size is alone with three dimensions (x, y, z)
     */
     int GPUMaxGridSize[3];
 
     /*
-    max block size (or number of threads per block) of an (Navida) GPU 
+    max block size (or number of threads per block) of an (Nvidia) GPU
     NOTE: the block size is alone with three dimensions (x, y, z)
     */
     int GPUMaxBlockSize[3];
@@ -112,6 +112,9 @@ public:
 
     /* specify if the handle is initialized */
     bool isHandleReady;
+    
+    /* specify if the generator is initialized */
+    bool isGenReady;
 
     /* generater of random numbers */
     curandGenerator_t gen;
@@ -130,6 +133,9 @@ public:
 
     /* clear it */
     void Clear();
+
+    /* reset it */
+    void Reset();
 
 #ifdef USE_CUDA
     /* get cublas handle */
@@ -158,6 +164,9 @@ public:
     /* reset cuda flag for more efficient cuda execution (all devices) */
     static
     void SetFastFlagsAllDevices();
+
+    /* delete the default stream for the device (call it before deleting the XDevice) */
+    void DelDeviceStream();
 };
 
 /*
@@ -177,6 +186,9 @@ public:
 
     /* number of GPUs */
     int nGPU;
+
+    /* indicates whether the the management of devices has been initialized */
+    bool isInitialized;
 
 public:
     /* constructor */
@@ -216,6 +228,10 @@ public:
 
     /* get the device information in string */
     char * GetDevString(int devID);
+
+    /* delete the streams for all devices */
+    static
+    void DelDeviceStream();
 };
 
 /* managing the devices */

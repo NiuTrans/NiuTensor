@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2018, Natural Language Processing Lab, Northestern University.
+ * Copyright (C) 2018, Natural Language Processing Lab, Northeastern University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -79,6 +79,12 @@ void XMathGrad::MakeGrad(XTensor * node, bool isEfficient)
         GradNormalize(node, isEfficient);
     else if (operID == MATH_POWER)
         GradPower(node, isEfficient);
+    else if (operID == MATH_RECIPROCAL)
+        GradReciprocal(node, isEfficient);
+    else if (operID == MATH_SQRT)
+        GradSqrt(node, isEfficient);
+    else if (operID == MATH_SQUARE)
+        GradSquare(node, isEfficient);
     else if (operID == MATH_SCALEANDSHIFT)
         GradScaleAndShift(node, isEfficient);
     else if (operID == MATH_SCALE)
@@ -110,7 +116,7 @@ void XMathGrad::MakeGrad(XTensor * node, bool isEfficient)
     else if (operID == MATH_MULANDSHIFT)
         GradMulAndShift(node, isEfficient);
     else{
-        ShowNTErrors("TODO!");
+        ShowNTErrors("Unsupported backward computation! TODO!");
     }
 }
 
@@ -970,6 +976,99 @@ void XMathGrad::GradPower(XTensor * node, bool isEfficient)
         XTensor * tmp = NewTensorBufV2(a, a->devID, a->mem);
         _Power(a, tmp, p - 1.0F);
         _ScaleAndShiftMe(tmp, p);
+        _Multiply(node->grad, tmp, a->grad, 1.0F);
+
+        DelTensorBuf(tmp);
+    }
+
+    node->visitMark = NODE_FINISHED;
+}
+
+
+/*
+gradient for reciprocal
+for
+c = reciprocal(a)
+we have
+dE/da = (dE/dc) * -a^(-2)
+>> node - the node (c) for backward computation
+>> isEfficient - indicates whether the computation is in an efficient manner
+*/
+void XMathGrad::GradReciprocal(XTensor* node, bool isEfficient)
+{
+    XLink& income = node->income;
+    CheckNTErrors(income.tailNum == 1, "Wrong input tensor number for RECIPROCAL!");
+
+    XTensor* a = income.tails[0];
+
+    /* dE/da = (dE/dc) * -a^(-2) */
+    if (!isEfficient || a->isGrad) {
+        XNoder::MakeGrad(a);
+
+        XTensor* tmp = NewTensorBufV2(a, a->devID, a->mem);
+        _Power(a, tmp, -2.0F);
+        _NegateMe(tmp);
+        _Multiply(node->grad, tmp, a->grad, 1.0F);
+
+        DelTensorBuf(tmp);
+    }
+
+    node->visitMark = NODE_FINISHED;
+}
+
+/*
+gradient for sqrt
+for
+c = sqrt(a)
+we have
+dE/da = (dE/dc) * 2 * a
+>> node - the node (c) for backward computation
+>> isEfficient - indicates whether the computation is in an efficient manner
+*/
+void XMathGrad::GradSqrt(XTensor * node, bool isEfficient)
+{
+    XLink &income = node->income;
+    CheckNTErrors(income.tailNum == 1, "Wrong input tensor number for SQRT!");
+
+    XTensor * a = income.tails[0];
+
+    /* dE/da = (dE/dc) * 2 * a */
+    if (!isEfficient || a->isGrad) {
+        XNoder::MakeGrad(a);
+
+        XTensor* tmp = NewTensorBufV2(a, a->devID, a->mem);
+        _ScaleMe(tmp, 2.0F);
+        _Multiply(node->grad, tmp, a->grad, 1.0F);
+
+        DelTensorBuf(tmp);
+    }
+
+    node->visitMark = NODE_FINISHED;
+}
+
+/*
+gradient for square
+for
+c = square(a)
+we have
+dE/da = (dE/dc) * (1/2) * a^(-1/2)
+>> node - the node (c) for backward computation
+>> isEfficient - indicates whether the computation is in an efficient manner
+*/
+void XMathGrad::GradSquare(XTensor * node, bool isEfficient)
+{
+    XLink &income = node->income;
+    CheckNTErrors(income.tailNum == 1, "Wrong input tensor number for SQUARE!");
+
+    XTensor * a = income.tails[0];
+
+    /* dE/da = (dE/dc) * (1/2) * a^(-1/2)*/
+    if (!isEfficient || a->isGrad) {
+        XNoder::MakeGrad(a);
+
+        XTensor* tmp = NewTensorBufV2(a, a->devID, a->mem);
+        _Power(a, tmp, -0.5F);
+        _ScaleMe(tmp, 0.5);
         _Multiply(node->grad, tmp, a->grad, 1.0F);
 
         DelTensorBuf(tmp);

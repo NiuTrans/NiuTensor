@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
-* Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+* Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
 * All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,7 @@
 
 /*
 * $Created by: XIAO Tong (email: xiaotong@mail.neu.edu.cn) 2018-04-24
+* $Update by: Lin Ye (email: linye2015@outlook.com) 2019-07-02 float16/int/int8 added
 */
 
 #include "../../XDevice.h"
@@ -36,8 +37,9 @@ c = a  + b * \beta
 >> size - the size of a/b/c
 >> beta - the coefficient
 */
+template <class T>
 __global__
-void KernelADD(DTYPE * a, DTYPE * b, DTYPE * c, int size, DTYPE beta)
+void KernelADD(T * a, T * b, T * c, int size, T beta)
 {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
 
@@ -45,14 +47,6 @@ void KernelADD(DTYPE * a, DTYPE * b, DTYPE * c, int size, DTYPE beta)
         c[i] = a[i] + b[i] * beta;
 }
 
-__global__
-void KernelADD(int * a, int * b, int * c, int size, int beta)
-{
-    int i = blockDim.x * blockIdx.x + threadIdx.x;
-
-    if (i < size)
-        c[i] = a[i] + b[i] * beta;
-}
 
 /*
 tensor summation c = a + b * \beta (cuda version)
@@ -70,6 +64,11 @@ void _CudaSum(const XTensor * a, const XTensor * b, XTensor * c, DTYPE beta)
                   "Unmatched tensors in addition!");
     CheckNTErrors((a->devID == b->devID && a->devID == c->devID),
                   "The tensors must be on the same!");
+    CheckNTErrors((a->dataType == DEFAULT_DTYPE && b->dataType == DEFAULT_DTYPE && c->dataType == DEFAULT_DTYPE) ||
+                  (a->dataType == X_FLOAT16 && b->dataType == X_FLOAT16 && c->dataType == X_FLOAT16) ||
+                  (a->dataType == X_INT && b->dataType == X_INT && c->dataType == X_INT) ||
+                  (a->dataType == X_INT8 && b->dataType == X_INT8 && c->dataType == X_INT8),
+                  "The sum function does not support this datatype.");
 
     int devIDBackup = XDevice::GetGPUDevice();
     XDevice::SetGPUDevice(a->devID);
@@ -108,6 +107,24 @@ void _CudaSum(const XTensor * a, const XTensor * b, XTensor * c, DTYPE beta)
 
                 KernelADD << <blocks, threads >> >((DTYPE*)a->data, (DTYPE*)b->data, (DTYPE*)c->data, a->unitNum, beta);
             }
+        }
+        else if (a->dataType == X_FLOAT16 &&
+                 b->dataType == X_FLOAT16 &&
+                 c->dataType == X_FLOAT16)
+        {
+#ifdef HALF_PRECISION
+            int gridSize[3], blockSize[3];
+
+            GDevs.GetCudaThread(a->devID, a->unitNum, gridSize, blockSize);
+            dim3 blocks(gridSize[0]);
+            dim3 threads(blockSize[0]);
+
+            half beta1 = __float2half(beta);
+
+            KernelADD << <blocks, threads >> >((__half *)a->data, (__half *)b->data, (__half *)c->data, a->unitNum, beta1);
+#else
+            ShowNTErrors("Recompile the code with HALF_PRECISION!");
+#endif
         }
         else if (a->dataType == X_INT &&
                  b->dataType == X_INT &&

@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2018, Natural Language Processing Lab, Northestern University.
+ * Copyright (C) 2018, Natural Language Processing Lab, Northeastern University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -46,6 +46,10 @@ public:
 
 private:
     
+    /* gradient computation for convertdatatype: b = convertdatatype(a) */
+    static
+    void GradConvertDataType(XTensor * node, bool isEfficient);
+            
     /* gradient computation for copying indexed sub-tensors: b = copyindexed(a, srcIndex, indexSize, tgtIndex, copyNum) */
     static
     void GradCopyIndexed(XTensor * node, bool isEfficient);

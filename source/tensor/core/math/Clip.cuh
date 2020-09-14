@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
-* Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+* Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
 * All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,10 +31,6 @@ namespace nts { // namespace nts(NiuTrans.Tensor)
 /* set each entry to its clip value (CUDA Kernel) */
 template <class T> __global__
 void KernelClip(T * a, T * b, T lower, T upper, int size);
-
-/* set each entry to its clip value (CUDA Kernel) with float16 data type*/
-__global__
-void KernelClip(__half * a, __half * b, DTYPE lower, DTYPE upper, int size);
 
 /* set each entry to its clip value */
 void _CudaClip(const XTensor * a, XTensor * b, DTYPE lower, DTYPE upper);

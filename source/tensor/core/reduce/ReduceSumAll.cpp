@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2017, Natural Language Processing Lab, Northestern University. 
+ * Copyright (C) 2017, Natural Language Processing Lab, Northeastern University. 
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -80,6 +80,7 @@ void _ReduceSumAll(const XTensor * source, DTYPE * value)
     _ReduceSumAll(source, target);
     *value = target->Get0D();
 
+    delete[] dimSize;
     DelTensorBuf(target);
 }
 

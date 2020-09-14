@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2017, Natural Language Processing Lab, Northestern University. 
+ * Copyright (C) 2017, Natural Language Processing Lab, Northeastern University. 
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -58,6 +58,8 @@ extern double GetClockSec();
 
 extern void XQSort(void * data, void * index, int num, int width, int stride, int (*comp)(const void *, const void *));
 extern int CompXFloat(const void * a, const void * b);
+
+int SplitALine(char* inputString, const char* seperator, StrList* items);
 
 #ifdef USE_CUDA
 extern void XMemCopyAsync(void * t, int devIDT, const void * s, int devIDS, size_t size, cudaStream_t stream, int streamDevID);

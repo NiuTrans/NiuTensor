@@ -1,6 +1,6 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2018, Natural Language Processing Lab, Northestern University.
- * All rights reserved.
+ * Copyright (C) 2018, Natural Language Processing Lab, Northeastern University.
+* All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,19 +32,12 @@
 //#include <stdlib.h>
 //#include <crtdbg.h>
 
-void BackwardTest();
-void TransposeTest();
-void SumDimTest();
-
 using namespace nts;
 using namespace fnnlm;
 using namespace transformer;
 
 int main( int argc, const char ** argv )
 {
-    //_CrtSetDbgFlag(_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG) | _CRTDBG_LEAK_CHECK_DF);
-    //_CrtSetBreakAlloc(2708);
-
     if(argc > 1 && !strcmp(argv[1], "-test"))
         Test();
     else if(argc > 1 && !strcmp(argv[1], "-fnnlm"))
@@ -52,14 +45,12 @@ int main( int argc, const char ** argv )
     else if(argc > 1 && !strcmp(argv[1], "-t2t"))
         TransformerMain(argc - 1, argv + 1);
     else{
-        fprintf(stderr, "Thanks for using NiuTrans.Network! This is a library for building\n");
+        fprintf(stderr, "Thanks for using NiuTensor! This is a library for building\n");
         fprintf(stderr, "neural networks in an easy way. \n\n");
         fprintf(stderr, "Run this program with \"-test\" for unit test!\n");
         fprintf(stderr, "Or run this program with \"-fnnlm\" for sample FNNLM!\n");
         fprintf(stderr, "Or run this program with \"-t2t\" for sample Transformer!\n");
     }
 
-    //_CrtDumpMemoryLeaks();
-    
     return 0;
 }

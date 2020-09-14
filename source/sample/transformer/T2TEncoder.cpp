@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2018, Natural Language Processing Lab, Northestern University. 
+ * Copyright (C) 2020, Natural Language Processing Lab, Northeastern University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,12 +17,15 @@
 
 /*
  * $Created by: XIAO Tong (xiaotong@mail.neu.edu.cn) 2018-07-31
+ * $Modified by: HU Chi (huchinlp@gmail.com) 2020-04
  */
 
-#include <math.h>
+#include <cmath>
+
 #include "T2TEncoder.h"
-#include "T2TLayerNormal.h"
-#include "T2TUtility.h"
+#include "module/T2TUtility.h"
+#include "module/T2TLayerNormal.h"
+#include "module/T2TCommonModules.h"
 #include "../../tensor/core/CHeader.h"
 
 namespace transformer
@@ -31,62 +34,65 @@ namespace transformer
 /* constructor */
 AttEncoder::AttEncoder()
 {
-    attentions = NULL;
+    selfAtt = NULL;
     fnns = NULL;
     attLayerNorms = NULL;
     fnnLayerNorms = NULL;
+    encoderLayerNorm = NULL;
 }
 
 /* de-constructor */
 AttEncoder::~AttEncoder()
 {
-    delete[] attentions;
+    delete[] selfAtt;
     delete[] fnns;
     delete[] attLayerNorms;
     delete[] fnnLayerNorms;
+    if (preNorm)
+        delete encoderLayerNorm;
 }
 
-/* 
-initialize the model 
->> argc - number of arguments
->> argv - list of pointers to the arguments
->> myIsMasked - indicates whether the masked attention is employed
->> myIgnored - number of positions ignored in attention (from the start)
->> myDevID - device id*/
-void AttEncoder::InitModel(int argc, char ** argv, 
-                           bool myIsMasked, int myIgnored, 
-                           int myDevID)
+/*
+initialize the model
+>> config - configurations for the model
+*/
+void AttEncoder::InitModel(T2TConfig& config)
 {
-    devID = myDevID;
-    ignored = myIgnored;
-    
-    LoadParamInt(argc, argv, "nlayer", &nlayer, 6);
-    LoadParamInt(argc, argv, "hsize", &hSize, DEFAULT_EMBEDDING_SIZE);
-    LoadParamInt(argc, argv, "esize", &eSize, DEFAULT_EMBEDDING_SIZE);
-    LoadParamInt(argc, argv, "vsize", &vSize, -1);
-    LoadParamFloat(argc, argv, "dropout", &dropoutP, 0);
+
+    devID = config.devID;
+    nlayer = config.nEncLayer;
+    eSize = config.embSize;
+    hSize = config.modelSize;
+    vSize = config.srcVocabSize;
+    preNorm = config.preNorm;
+    dropoutP = config.dropout;
 
     CheckNTErrors(nlayer >= 1, "We have one encoding layer at least!");
     CheckNTErrors(vSize > 1, "set vocabulary size by \"-vsize\"");
 
     /* embedding model */
-    embedder.InitModel(argc, argv, devID);
+    embedder.InitModel(config);
 
-    attentions = new T2TAttention[nlayer];
+    selfAtt = new T2TAttention[nlayer];
     fnns = new T2TFNN[nlayer];
     attLayerNorms = new T2TLN[nlayer];
     fnnLayerNorms = new T2TLN[nlayer];
 
+    if (preNorm)
+        encoderLayerNorm = new T2TLN;
+
     /* initialize the stacked layers */
-    for(int i = 0; i < nlayer; i++){
-        attentions[i].InitModel(argc, argv, myIsMasked, myIgnored, myDevID);
-        fnns[i].InitModel(argc, argv, myDevID);
-        attLayerNorms[i].InitModel(argc, argv, myDevID);
-        fnnLayerNorms[i].InitModel(argc, argv, myDevID);
+    for (int i = 0; i < nlayer; i++) {
+        selfAtt[i].InitModel(config);
+        fnns[i].InitModel(config);
+        attLayerNorms[i].InitModel(config);
+        fnnLayerNorms[i].InitModel(config);
     }
+    if (preNorm)
+        encoderLayerNorm->InitModel(config);
 }
 
-/* 
+/*
 make the encoding network
 >> input - the input tensor of the encoder
 >> mask - the mask that indicate each position is valid
@@ -94,63 +100,70 @@ make the encoding network
 >> isTraining - indicates whether the model is used for training
 << return - the output tensor of the encoder
 */
-XTensor AttEncoder::Make(XTensor &input, XTensor &mask, XTensor &maskEncDec, bool isTraining)
+XTensor AttEncoder::Make(XTensor& input, XTensor* mask, XTensor& maskEncDec, bool isTraining)
 {
     XTensor x;
 
-    x = embedder.Make(input);
+    x = embedder.Make(input, false, isTraining);
 
     /* dropout */
-    if(isTraining && dropoutP > 0)
+    if (isTraining && dropoutP > 0)
         x = Dropout(x, dropoutP);
 
-    for(int i = 0; i < nlayer; i++){
+    for (int i = 0; i < nlayer; i++) {
         XTensor att;
-        XTensor ln;
         XTensor fnn;
         XTensor res;
+        XTensor attnBefore;
+        XTensor attnAfter;
+        XTensor fnnBefore;
+
+        /* layer normalization with pre-norm for self-attn */
+        attnBefore = LayerNorm(x, attLayerNorms[i], preNorm, true, false);
 
         /* self attention */
-        att = attentions[i].MakeBig(x, mask, isTraining);
-        
+        att = selfAtt[i].Make(attnBefore, attnBefore, attnBefore, mask, isTraining, NULL, 0);
+
         /* dropout */
-        if(isTraining && dropoutP > 0)
+        if (isTraining && dropoutP > 0)
             att = Dropout(att, dropoutP);
 
         /* residual connection */
         res = Sum(att, x);
 
-        /* layer normalization */
-        x = attLayerNorms[i].Make(res);
+        /* layer normalization with post-norm for self-attn */
+        attnAfter = LayerNorm(res, attLayerNorms[i], preNorm, false, true);
+
+        /* layer normalization with pre-norm for fnn */
+        fnnBefore = LayerNorm(attnAfter, fnnLayerNorms[i], preNorm, true, false);
 
         /* fnn */
-        fnn = fnns[i].Make(x, isTraining);
+        fnn = fnns[i].Make(fnnBefore, isTraining);
 
         /* dropout */
-        if(isTraining && dropoutP > 0)
+        if (isTraining && dropoutP > 0)
             fnn = Dropout(fnn, dropoutP);
 
         /* residual connection */
-        res = Sum(fnn, x);
+        res = Sum(fnn, attnAfter);
 
-        /* layer normalization */
-        x = fnnLayerNorms[i].Make(res);
+        /* layer normalization with post-norm for fnn */
+        x = LayerNorm(res, fnnLayerNorms[i], preNorm, false, true);
     }
-    
-    x.SetName(ENCODING_NAME);
-    input.SetName(ENCODING_INPUT_NAME);
+    if (preNorm)
+        x = encoderLayerNorm->Make(x);
 
     return x;
 }
 
 /*
-make the encoding network (wrapper) 
+make the encoding network (wrapper)
 >> input - the input tensor of the encoder
 >> mask - the mask that indicate each position is valid
 >> isTraining - indicates whether the model is used for training
 << return - the output tensor of the encoder
 */
-XTensor AttEncoder::Make(XTensor &input, XTensor &mask, bool isTraining)
+XTensor AttEncoder::Make(XTensor& input, XTensor* mask, bool isTraining)
 {
     XTensor nothing;
 

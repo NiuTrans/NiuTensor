@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2017, Natural Language Processing Lab, Northestern University. 
+ * Copyright (C) 2017, Natural Language Processing Lab, Northeastern University. 
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,17 +36,18 @@ y =  1    if x > 1
 >> y - output data array
 >> size - size of input/output
 */
+template <class T>
 __global__ 
-void KernelHardtanhCompute(DTYPE * x, DTYPE * y, int size)
+void KernelHardtanhCompute(T * x, T * y, int size)
 {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
 
     if (i < size){
-        DTYPE p = x[i];
-        if(p > (DTYPE)1.0)
-            p = (DTYPE)1.0;
-        else if(p < (DTYPE)-1.0)
-            p = (DTYPE)-1.0;
+        T p = x[i];
+        if (p >(T)1.0)
+            p = (T)1.0;
+        else if (p < (T)-1.0)
+            p = (T)-1.0;
         y[i] = p;
     }
 }
@@ -71,7 +72,20 @@ void _CudaHardTanH(const XTensor * x, XTensor * y)
     int devIDBackup;
     ProtectCudaDev(x->devID, devIDBackup);
 
-    KernelHardtanhCompute<<<dim3(gridSize[0]), dim3(blockSize[0])>>>((DTYPE*)x->data, (DTYPE*)y->data, x->unitNum);
+    if(x->dataType == DEFAULT_DTYPE && y->dataType == DEFAULT_DTYPE){
+        KernelHardtanhCompute<<<dim3(gridSize[0]), dim3(blockSize[0])>>>((DTYPE*)x->data, (DTYPE*)y->data, x->unitNum);
+    }
+    else if (x->dataType == X_FLOAT16 && y->dataType == X_FLOAT16) {
+#ifdef HALF_PRECISION
+        KernelHardtanhCompute<<<dim3(gridSize[0]), dim3(blockSize[0])>>>((__half *)x->data, (__half *)y->data, x->unitNum);
+#else
+        ShowNTErrors("Recompile the code with HALF_PRECISION!");
+#endif
+    }
+    else {
+        //TODO!
+        ShowNTErrors("TODO!");
+    }
 
     BacktoCudaDev(x->devID, devIDBackup);
 }
@@ -84,18 +98,18 @@ dy/dx = 1     if -1 <= x <= 1
 
 >> dedy - dE/dy
 >> dedx - dE/dx
->> y - y of the function
 >> x - x of the function
 >> size - size of y/x
 */
+template <class T>
 __global__ 
-void KernelHardtanhBackward(DTYPE * dedy, DTYPE * dedx, DTYPE * x, int size)
+void KernelHardtanhBackward(T * dedy, T * dedx, T * x, int size)
 {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
 
     if (i < size){
-        DTYPE s = x[i];
-        if(s > (DTYPE)1.0 || s < (DTYPE)-1.0)
+        T s = x[i];
+        if(s > (T)1.0 || s < (T)-1.0)
             dedx[i] = 0;
         else
             dedx[i] = dedy[i];
@@ -129,12 +143,29 @@ void _CudaHardTanHBackward(XTensor * y, XTensor * x,
     int devIDBackup;
     ProtectCudaDev(x->devID, devIDBackup);
 
-    /* dE/dx = dE/dy * dy/dx */
-    KernelHardtanhBackward<<<dim3(gridSize[0]),dim3(blockSize[0])>>>
-                            ((DTYPE*)dedy->data, 
-                            (DTYPE*)dedx->data,
-                            (DTYPE*)x->data, 
-                             x->unitNum);
+    if(x->dataType == DEFAULT_DTYPE && y->dataType == DEFAULT_DTYPE){
+        /* dE/dx = dE/dy * dy/dx */
+        KernelHardtanhBackward<<<dim3(gridSize[0]),dim3(blockSize[0])>>>
+                                ((DTYPE*)dedy->data,
+                                (DTYPE*)dedx->data,
+                                (DTYPE*)x->data,
+                                 x->unitNum);
+    }
+    else if (x->dataType == X_FLOAT16 && y->dataType == X_FLOAT16) {
+#ifdef HALF_PRECISION
+        /* dE/dx = dE/dy * dy/dx */
+        KernelHardtanhBackward<<<dim3(gridSize[0]), dim3(blockSize[0])>>>
+                               ((half*)dedy->data,
+                                (half*)dedx->data,
+                                (half*)x->data,
+                                 x->unitNum);
+#else
+        ShowNTErrors("Recompile the code with HALF_PRECISION!");
+#endif
+    }
+    else {
+        ShowNTErrors("Unsupported dataType!");
+    }
 
     BacktoCudaDev(x->devID, devIDBackup);
 }

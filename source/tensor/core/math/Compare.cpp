@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+ * Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -199,12 +199,26 @@ void funcName(const XTensor &a, const XTensor &b, XTensor c)                    
 }
 
 #ifdef USE_CUDA
+_SIMPLE_MAX_MIN_FUNCTION(_Equal, _CudaEqual, myIsEqual)
+_SIMPLE_MAX_MIN_FUNCTION(_NotEqual, _CudaNotEqual, myIsNotEqual)
 _SIMPLE_MAX_MIN_FUNCTION(_Max, _CudaMax, MAX)
 _SIMPLE_MAX_MIN_FUNCTION(_Min, _CudaMin, MIN)
 #else
+_SIMPLE_MAX_MIN_FUNCTION(_Equal, myIsEqual)
+_SIMPLE_MAX_MIN_FUNCTION(_NotEqual, myIsNotEqual)
 _SIMPLE_MAX_MIN_FUNCTION(_Max, MAX)
 _SIMPLE_MAX_MIN_FUNCTION(_Min, MIN)
 #endif
+
+_SIMPLE_MAX_MIN_FUNCTION_ME(_EqualMe, _Equal)
+SIMPLE_MAX_MIN_FUNCTION_ME(EqualMe, _Equal)
+SIMPLE_MAX_MIN_FUNCTION(Equal, _Equal, MATH_EQUAL)
+SIMPLE_MAX_MIN_FUNCTION_VOID(Equal, _Equal, MATH_EQUAL)
+
+_SIMPLE_MAX_MIN_FUNCTION_ME(_NotEqualMe, _NotEqual)
+SIMPLE_MAX_MIN_FUNCTION_ME(NotEqualMe, _NotEqual)
+SIMPLE_MAX_MIN_FUNCTION(NotEqual, _NotEqual, MATH_NOTEQUAL)
+SIMPLE_MAX_MIN_FUNCTION_VOID(NotEqual, _NotEqual, MATH_NOTEQUAL)
 
 _SIMPLE_MAX_MIN_FUNCTION_ME(_MaxMe, _Max)
 SIMPLE_MAX_MIN_FUNCTION_ME(MaxMe, _Max)

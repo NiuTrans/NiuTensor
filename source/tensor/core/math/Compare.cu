@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+ * Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -133,6 +133,9 @@ void _Cuda##funcName(const XTensor * a, const XTensor * b, XTensor * c)     \
                                                                             \
     BacktoCudaDev(a->devID, devIDBackup);                                   \
 }    
+
+SIMPLE_MAX_MIN_FUNCTION_GPU(Equal, cudaIsEqual)
+SIMPLE_MAX_MIN_FUNCTION_GPU(NotEqual, cudaIsNotEqual)
 
 SIMPLE_MAX_MIN_FUNCTION_GPU(Max, max)
 SIMPLE_MAX_MIN_FUNCTION_GPU(Min, min)

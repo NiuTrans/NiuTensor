@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2018, Natural Language Processing Lab, Northestern University. 
+ * Copyright (C) 2018, Natural Language Processing Lab, Northeastern University. 
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,8 +44,12 @@ namespace nts { // namespace nts(NiuTrans.Tensor)
 #define MATH_COS                MATH_SIN + 1
 #define MATH_TAN                MATH_COS + 1
 #define MATH_ROUND              MATH_TAN + 1
+#define MATH_RECIPROCAL         MATH_ROUND + 1
 
-#define MATH_CLIP               MATH_ROUND + 1
+#define MATH_EQUAL              MATH_RECIPROCAL + 1
+#define MATH_NOTEQUAL           MATH_EQUAL + 1
+
+#define MATH_CLIP               MATH_NOTEQUAL + 1
 #define MATH_DIV                MATH_CLIP + 1
 #define MATH_DIVDIM             MATH_DIV + 1
 #define MATH_MASK               MATH_DIVDIM + 1

@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
-* Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+* Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
 * All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,7 @@
 
 /*
 * $Created by: XIAO Tong (email: xiaotong@mail.neu.edu.cn) 2018-04-24
+* $Update by: Lin Ye (email: linye2015@outlook.com) 2019-07-16 float16/int8 added
 */
 
 #include "../../XUtility.h"
@@ -24,6 +25,8 @@
 #include "../../XTensor.h"
 #include "../shape/IsSameShaped.h"
 #include "XTensorBLAS.h"
+#include "cuda_fp16.h"
+#include "cublas_api.h"
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
@@ -68,18 +71,32 @@ void _CudaBLASMatrixMUL(cublasHandle_t * handle,
             cublasSgemm(*handle, CUBLAS_OP_T, CUBLAS_OP_T, mc, nc, na, &alpha2, (const float*)b, mb, (const float*)a, ma, &beta2, (float*)c, mc);
     }
     else if (dataTypeA == X_FLOAT16 && dataTypeB == X_FLOAT16 && dataTypeC == X_FLOAT16) {
-        unsigned short alpha2 = FloatToFloat16(alpha);
-        unsigned short beta2 = FloatToFloat16(beta);
-        __half * alpha3 = (__half*)&alpha2;
-        __half * beta3 = (__half*)&beta2;
+        __half alpha2 = __float2half(alpha);
+        __half beta2 = __float2half(beta);
+        cublasSetMathMode(*handle, CUBLAS_TENSOR_OP_MATH);
         if (transposedA == X_NOTRANS && transposedB == X_NOTRANS)
-            cublasHgemm(*handle, CUBLAS_OP_N, CUBLAS_OP_N, mc, nc, ma, alpha3, (const __half*)b, mb, (const __half*)a, ma, beta3, (__half*)c, mc);
+            cublasGemmEx(*handle, CUBLAS_OP_N, CUBLAS_OP_N, mc, nc, ma, (void*)&alpha2, b, CUDA_R_16F, mb, a, CUDA_R_16F, ma, (void*)&beta2, c, CUDA_R_16F, mc, CUDA_R_16F, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
         else if (transposedA == X_TRANS && transposedB == X_NOTRANS)
-            cublasHgemm(*handle, CUBLAS_OP_N, CUBLAS_OP_T, mc, nc, na, alpha3, (const __half*)b, mb, (const __half*)a, ma, beta3, (__half*)c, mc);
+            cublasGemmEx(*handle, CUBLAS_OP_N, CUBLAS_OP_T, mc, nc, na, (void*)&alpha2, b, CUDA_R_16F, mb, a, CUDA_R_16F, ma, (void*)&beta2, c, CUDA_R_16F, mc, CUDA_R_16F, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
         else if (transposedA == X_NOTRANS && transposedB == X_TRANS)
-            cublasHgemm(*handle, CUBLAS_OP_T, CUBLAS_OP_N, mc, nc, ma, alpha3, (const __half*)b, mb, (const __half*)a, ma, beta3, (__half*)c, mc);
+            cublasGemmEx(*handle, CUBLAS_OP_T, CUBLAS_OP_N, mc, nc, ma, (void*)&alpha2, b, CUDA_R_16F, mb, a, CUDA_R_16F, ma, (void*)&beta2, c, CUDA_R_16F, mc, CUDA_R_16F, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
         else if (transposedA == X_TRANS && transposedB == X_TRANS)
-            cublasHgemm(*handle, CUBLAS_OP_T, CUBLAS_OP_T, mc, nc, na, alpha3, (const __half*)b, mb, (const __half*)a, ma, beta3, (__half*)c, mc);
+            cublasGemmEx(*handle, CUBLAS_OP_T, CUBLAS_OP_T, mc, nc, na, (void*)&alpha2, b, CUDA_R_16F, mb, a, CUDA_R_16F, ma, (void*)&beta2, c, CUDA_R_16F, mc, CUDA_R_16F, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
+        cublasSetMathMode(*handle, CUBLAS_DEFAULT_MATH);
+    }
+    else if (dataTypeA == X_FLOAT16 && dataTypeB == X_FLOAT16 && dataTypeC == X_FLOAT) {
+        float alpha2 = (float)alpha;
+        float beta2 = (float)beta;
+        cublasSetMathMode(*handle, CUBLAS_TENSOR_OP_MATH);
+        if (transposedA == X_NOTRANS && transposedB == X_NOTRANS)
+            cublasGemmEx(*handle, CUBLAS_OP_N, CUBLAS_OP_N, mc, nc, ma, (void*)&alpha2, b, CUDA_R_16F, mb, a, CUDA_R_16F, ma, (void*)&beta2, c, CUDA_R_32F, mc, CUDA_R_32F, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
+        else if (transposedA == X_TRANS && transposedB == X_NOTRANS)
+            cublasGemmEx(*handle, CUBLAS_OP_N, CUBLAS_OP_T, mc, nc, na, (void*)&alpha2, b, CUDA_R_16F, mb, a, CUDA_R_16F, ma, (void*)&beta2, c, CUDA_R_32F, mc, CUDA_R_32F, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
+        else if (transposedA == X_NOTRANS && transposedB == X_TRANS)
+            cublasGemmEx(*handle, CUBLAS_OP_T, CUBLAS_OP_N, mc, nc, ma, (void*)&alpha2, b, CUDA_R_16F, mb, a, CUDA_R_16F, ma, (void*)&beta2, c, CUDA_R_32F, mc, CUDA_R_32F, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
+        else if (transposedA == X_TRANS && transposedB == X_TRANS)
+            cublasGemmEx(*handle, CUBLAS_OP_T, CUBLAS_OP_T, mc, nc, na, (void*)&alpha2, b, CUDA_R_16F, mb, a, CUDA_R_16F, ma, (void*)&beta2, c, CUDA_R_32F, mc, CUDA_R_32F, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
+        cublasSetMathMode(*handle, CUBLAS_DEFAULT_MATH);
     }
     else {
         ShowNTErrors("Unsupported data type!");
@@ -125,18 +142,32 @@ void _CudaBLASMatrixMULBatched(cublasHandle_t * handle,
             cublasSgemmBatched(*handle, CUBLAS_OP_T, CUBLAS_OP_T, mc, nc, na, &alpha2, (const float**)b, mb, (const float**)a, ma, &beta2, (float**)c, mc, count);
     }
     else if (dataTypeA == X_FLOAT16 && dataTypeB == X_FLOAT16 && dataTypeC == X_FLOAT16) {
-        unsigned short alpha2 = FloatToFloat16(alpha);
-        unsigned short beta2 = FloatToFloat16(beta);
-        __half * alpha3 = (__half*)&alpha2;
-        __half * beta3 = (__half*)&beta2;
+        __half alpha2 = __float2half(alpha);
+        __half beta2 = __float2half(beta);
+        cublasSetMathMode(*handle, CUBLAS_TENSOR_OP_MATH);
         if (transposedA == X_NOTRANS && transposedB == X_NOTRANS)
-            cublasHgemmBatched(*handle, CUBLAS_OP_N, CUBLAS_OP_N, mc, nc, ma, alpha3, (const __half**)b, mb, (const __half**)a, ma, beta3, (__half**)c, mc, count);
+            cublasGemmBatchedEx(*handle, CUBLAS_OP_N, CUBLAS_OP_N, mc, nc, ma, (void*)&alpha2, b, CUDA_R_16F, mb, a, CUDA_R_16F, ma, (void*)&beta2, c, CUDA_R_16F, mc, count, CUDA_R_16F, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
         else if (transposedA == X_TRANS && transposedB == X_NOTRANS)
-            cublasHgemmBatched(*handle, CUBLAS_OP_N, CUBLAS_OP_T, mc, nc, na, alpha3, (const __half**)b, mb, (const __half**)a, ma, beta3, (__half**)c, mc, count);
+            cublasGemmBatchedEx(*handle, CUBLAS_OP_N, CUBLAS_OP_T, mc, nc, na, (void*)&alpha2, b, CUDA_R_16F, mb, a, CUDA_R_16F, ma, (void*)&beta2, c, CUDA_R_16F, mc, count, CUDA_R_16F, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
         else if (transposedA == X_NOTRANS && transposedB == X_TRANS)
-            cublasHgemmBatched(*handle, CUBLAS_OP_T, CUBLAS_OP_N, mc, nc, ma, alpha3, (const __half**)b, mb, (const __half**)a, ma, beta3, (__half**)c, mc, count);
+            cublasGemmBatchedEx(*handle, CUBLAS_OP_T, CUBLAS_OP_N, mc, nc, ma, (void*)&alpha2, b, CUDA_R_16F, mb, a, CUDA_R_16F, ma, (void*)&beta2, c, CUDA_R_16F, mc, count, CUDA_R_16F, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
         else if (transposedA == X_TRANS && transposedB == X_TRANS)
-            cublasHgemmBatched(*handle, CUBLAS_OP_T, CUBLAS_OP_T, mc, nc, na, alpha3, (const __half**)b, mb, (const __half**)a, ma, beta3, (__half**)c, mc, count);
+            cublasGemmBatchedEx(*handle, CUBLAS_OP_T, CUBLAS_OP_T, mc, nc, na, (void*)&alpha2, b, CUDA_R_16F, mb, a, CUDA_R_16F, ma, (void*)&beta2, c, CUDA_R_16F, mc, count, CUDA_R_16F, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
+        cublasSetMathMode(*handle, CUBLAS_DEFAULT_MATH);
+    }
+    else if (dataTypeA == X_FLOAT16 && dataTypeB == X_FLOAT16 && dataTypeC == X_FLOAT) {
+        float alpha2 = (float)alpha;
+        float beta2 = (float)beta;
+        cublasSetMathMode(*handle, CUBLAS_TENSOR_OP_MATH);
+        if (transposedA == X_NOTRANS && transposedB == X_NOTRANS)
+            cublasGemmBatchedEx(*handle, CUBLAS_OP_N, CUBLAS_OP_N, mc, nc, ma, (void*)&alpha2, b, CUDA_R_16F, mb, a, CUDA_R_16F, ma, (void*)&beta2, c, CUDA_R_32F, mc, count, CUDA_R_32F, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
+        else if (transposedA == X_TRANS && transposedB == X_NOTRANS)
+            cublasGemmBatchedEx(*handle, CUBLAS_OP_N, CUBLAS_OP_T, mc, nc, na, (void*)&alpha2, b, CUDA_R_16F, mb, a, CUDA_R_16F, ma, (void*)&beta2, c, CUDA_R_32F, mc, count, CUDA_R_32F, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
+        else if (transposedA == X_NOTRANS && transposedB == X_TRANS)
+            cublasGemmBatchedEx(*handle, CUBLAS_OP_T, CUBLAS_OP_N, mc, nc, ma, (void*)&alpha2, b, CUDA_R_16F, mb, a, CUDA_R_16F, ma, (void*)&beta2, c, CUDA_R_32F, mc, count, CUDA_R_32F, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
+        else if (transposedA == X_TRANS && transposedB == X_TRANS)
+            cublasGemmBatchedEx(*handle, CUBLAS_OP_T, CUBLAS_OP_T, mc, nc, na, (void*)&alpha2, b, CUDA_R_16F, mb, a, CUDA_R_16F, ma, (void*)&beta2, c, CUDA_R_32F, mc, count, CUDA_R_32F, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
+        cublasSetMathMode(*handle, CUBLAS_DEFAULT_MATH);
     }
     else {
         ShowNTErrors("Unsupported data type!");
@@ -180,18 +211,32 @@ void _CudaBLASMatrixMULBatchedStrided(cublasHandle_t * handle,
             cublasSgemmStridedBatched(*handle, CUBLAS_OP_T, CUBLAS_OP_T, mc, nc, na, &alpha2, (const float*)b, mb, strideB, (const float*)a, ma, strideA, &beta2, (float*)c, mc, strideC, count);
     }
     else if (dataTypeA == X_FLOAT16 && dataTypeB == X_FLOAT16 && dataTypeC == X_FLOAT16) {
-        unsigned short alpha2 = FloatToFloat16(alpha);
-        unsigned short beta2 = FloatToFloat16(beta);
-        __half * alpha3 = (__half*)&alpha2;
-        __half * beta3 = (__half*)&beta2;
+        __half alpha2 = __float2half(alpha);
+        __half beta2 = __float2half(beta);
+        cublasSetMathMode(*handle, CUBLAS_TENSOR_OP_MATH);
         if (transposedA == X_NOTRANS && transposedB == X_NOTRANS)
-            cublasHgemmStridedBatched(*handle, CUBLAS_OP_N, CUBLAS_OP_N, mc, nc, ma, (const __half*)alpha3, (const __half*)b, mb, strideB, (const __half*)a, ma, strideA, (const __half*)beta3, (__half*)c, mc, strideC, count);
+            cublasGemmStridedBatchedEx(*handle, CUBLAS_OP_N, CUBLAS_OP_N, mc, nc, ma, (void*)&alpha2, b, CUDA_R_16F, mb, strideB, a, CUDA_R_16F, ma, strideA, (void*)&beta2, c, CUDA_R_16F, mc, strideC, count, CUDA_R_16F, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
         else if (transposedA == X_TRANS && transposedB == X_NOTRANS)
-            cublasHgemmStridedBatched(*handle, CUBLAS_OP_N, CUBLAS_OP_N, mc, nc, ma, (const __half*)alpha3, (const __half*)b, mb, strideB, (const __half*)a, ma, strideA, (const __half*)beta3, (__half*)c, mc, strideC, count);
+            cublasGemmStridedBatchedEx(*handle, CUBLAS_OP_N, CUBLAS_OP_T, mc, nc, na, (void*)&alpha2, b, CUDA_R_16F, mb, strideB, a, CUDA_R_16F, ma, strideA, (void*)&beta2, c, CUDA_R_16F, mc, strideC, count, CUDA_R_16F, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
         else if (transposedA == X_NOTRANS && transposedB == X_TRANS)
-            cublasHgemmStridedBatched(*handle, CUBLAS_OP_N, CUBLAS_OP_N, mc, nc, ma, (const __half*)alpha3, (const __half*)b, mb, strideB, (const __half*)a, ma, strideA, (const __half*)beta3, (__half*)c, mc, strideC, count);
+            cublasGemmStridedBatchedEx(*handle, CUBLAS_OP_T, CUBLAS_OP_N, mc, nc, ma, (void*)&alpha2, b, CUDA_R_16F, mb, strideB, a, CUDA_R_16F, ma, strideA, (void*)&beta2, c, CUDA_R_16F, mc, strideC, count, CUDA_R_16F, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
         else if (transposedA == X_TRANS && transposedB == X_TRANS)
-            cublasHgemmStridedBatched(*handle, CUBLAS_OP_N, CUBLAS_OP_N, mc, nc, ma, (const __half*)alpha3, (const __half*)b, mb, strideB, (const __half*)a, ma, strideA, (const __half*)beta3, (__half*)c, mc, strideC, count);
+            cublasGemmStridedBatchedEx(*handle, CUBLAS_OP_T, CUBLAS_OP_T, mc, nc, na, (void*)&alpha2, b, CUDA_R_16F, mb, strideB, a, CUDA_R_16F, ma, strideA, (void*)&beta2, c, CUDA_R_16F, mc, strideC, count, CUDA_R_16F, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
+        cublasSetMathMode(*handle, CUBLAS_DEFAULT_MATH);
+    }
+    else if (dataTypeA == X_FLOAT16 && dataTypeB == X_FLOAT16 && dataTypeC == X_FLOAT) {
+        float alpha2 = (float)alpha;
+        float beta2 = (float)beta;
+        cublasSetMathMode(*handle, CUBLAS_TENSOR_OP_MATH);
+        if (transposedA == X_NOTRANS && transposedB == X_NOTRANS)
+            cublasGemmStridedBatchedEx(*handle, CUBLAS_OP_N, CUBLAS_OP_N, mc, nc, ma, (void*)&alpha2, b, CUDA_R_16F, mb, strideB, a, CUDA_R_16F, ma, strideA, (void*)&beta2, c, CUDA_R_32F, mc, strideC, count, CUDA_R_32F, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
+        else if (transposedA == X_TRANS && transposedB == X_NOTRANS)
+            cublasGemmStridedBatchedEx(*handle, CUBLAS_OP_N, CUBLAS_OP_T, mc, nc, na, (void*)&alpha2, b, CUDA_R_16F, mb, strideB, a, CUDA_R_16F, ma, strideA, (void*)&beta2, c, CUDA_R_32F, mc, strideC, count, CUDA_R_32F, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
+        else if (transposedA == X_NOTRANS && transposedB == X_TRANS)
+            cublasGemmStridedBatchedEx(*handle, CUBLAS_OP_T, CUBLAS_OP_N, mc, nc, ma, (void*)&alpha2, b, CUDA_R_16F, mb, strideB, a, CUDA_R_16F, ma, strideA, (void*)&beta2, c, CUDA_R_32F, mc, strideC, count, CUDA_R_32F, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
+        else if (transposedA == X_TRANS && transposedB == X_TRANS)
+            cublasGemmStridedBatchedEx(*handle, CUBLAS_OP_T, CUBLAS_OP_T, mc, nc, na, (void*)&alpha2, b, CUDA_R_16F, mb, strideB, a, CUDA_R_16F, ma, strideA, (void*)&beta2, c, CUDA_R_32F, mc, strideC, count, CUDA_R_32F, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
+        cublasSetMathMode(*handle, CUBLAS_DEFAULT_MATH);
     }
     else {
         ShowNTErrors("Unsupported data type!");

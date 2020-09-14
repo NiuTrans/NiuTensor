@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
-* Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+* Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
 * All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,7 +35,7 @@ bool Test()
     wrong = !TestConcatenate() || wrong;
     wrong = !TestConcatenateSolely() || wrong;
     wrong = !TestCos() || wrong;
-    //wrong = !TestConvertDataType() || wrong;
+    wrong = !TestConvertDataType() || wrong;
     wrong = !TestCopyIndexed() || wrong;
     wrong = !TestCopyValues() || wrong;
     wrong = !TestDiv() || wrong;

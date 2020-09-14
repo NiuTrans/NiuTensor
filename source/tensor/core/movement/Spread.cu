@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+ * Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -330,12 +330,13 @@ Care of the operator "+=" instead of "=".
 >> indexSize - the number of index
 >> stride - stride of a data block
 */
+template <class T>
 __global__
-void KernelSpreadForGather(DTYPE * sData, DTYPE * cData, int * srcIndex, 
+void KernelSpreadForGather(T * sData, T * cData, int * srcIndex,
                            int indexSize, int stride)
 {
-    __shared__ DTYPE * sp[MAX_CUDA_THREAD_NUM_PER_BLOCK];
-    __shared__ DTYPE * cp[MAX_CUDA_THREAD_NUM_PER_BLOCK];
+    __shared__ T * sp[MAX_CUDA_THREAD_NUM_PER_BLOCK];
+    __shared__ T * cp[MAX_CUDA_THREAD_NUM_PER_BLOCK];
 
     /* block id */
     int i = blockDim.x * blockIdx.x + threadIdx.x;
@@ -353,8 +354,8 @@ void KernelSpreadForGather(DTYPE * sData, DTYPE * cData, int * srcIndex,
 
     __syncthreads();
 
-    DTYPE * s = sp[threadIdx.x];
-    DTYPE * c = cp[threadIdx.x];
+    T * s = sp[threadIdx.x];
+    T * c = cp[threadIdx.x];
 
     //DTYPE * s = sData + srcIndex[i] * stride;
     //DTYPE * c = cData + i * stride;
@@ -384,8 +385,6 @@ void _CudaSpreadForGather(XTensor * source, XTensor * collection, XTensor * srcI
     int devIDBackup;
     ProtectCudaDev(source->devID, devIDBackup);
 
-    DTYPE * sData = (DTYPE*)source->data;
-    DTYPE * cData = (DTYPE*)collection->data;
     int * sIndex = NULL;
 
     GDevs.GetCudaThread2D(devID, indexSize, stride, MAX_INT, cudaGrids, cudaBlocks);
@@ -402,7 +401,25 @@ void _CudaSpreadForGather(XTensor * source, XTensor * collection, XTensor * srcI
     else
         sIndex = (int *)srcIndex->data;
 
-    KernelSpreadForGather<<<blocks, threads >>>(sData, cData, sIndex, indexSize, stride);
+    if (source->dataType == DEFAULT_DTYPE && collection->dataType == DEFAULT_DTYPE)
+    {
+        DTYPE * sData = (DTYPE*)source->data;
+        DTYPE * cData = (DTYPE*)collection->data;
+        KernelSpreadForGather<DTYPE> << <blocks, threads >> >(sData, cData, sIndex, indexSize, stride);
+    }
+    else if (source->dataType == X_FLOAT16 && collection->dataType == X_FLOAT16)
+    {
+#ifdef HALF_PRECISION
+        __half2 * sData = (__half2*)source->data;
+        __half2 * cData = (__half2*)collection->data;
+        KernelSpreadForGather<__half2> << <blocks, threads >> >(sData, cData, sIndex, indexSize, stride);
+#else
+        ShowNTErrors("Recompile the code with HALF_PRECISION!");
+#endif
+    }
+    else {
+        ShowNTErrors("Unsupported dataType!");
+    }
 
     if (srcIndex->devID < 0) {
         if(mem != NULL)

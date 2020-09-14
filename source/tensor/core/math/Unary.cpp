@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+ * Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -66,6 +66,14 @@ template<class T>
 T UnaryIsZero(T r)
 {
     return (r == 0.0) ? (T)1.0 : (T)0.0;
+}
+
+template<class T>
+T UnaryReciprocal(T r)
+{
+    if (r == 0)
+        ShowNTErrors("Zero does not have reciprocal value.");
+    return (T)(1 / r);
 }
 
 /* define three marco separately, specify the respective function names */
@@ -186,6 +194,7 @@ _SIMPLE_UNARY_FUNCTION(_Square, _CudaSquare, UnarySquare)
 _SIMPLE_UNARY_FUNCTION(_Sin, _CudaSin, sin)
 _SIMPLE_UNARY_FUNCTION(_Cos, _CudaCos, cos)
 _SIMPLE_UNARY_FUNCTION(_Tan, _CudaTan, tan)
+_SIMPLE_UNARY_FUNCTION(_Reciprocal, _CudaReciprocal, UnaryReciprocal)
 #else
 _SIMPLE_UNARY_FUNCTION(_Absolute, fabs)
 _SIMPLE_UNARY_FUNCTION(_Ceil, ceil)
@@ -202,6 +211,7 @@ _SIMPLE_UNARY_FUNCTION(_Square, UnarySquare)
 _SIMPLE_UNARY_FUNCTION(_Sin, sin)
 _SIMPLE_UNARY_FUNCTION(_Cos, cos)
 _SIMPLE_UNARY_FUNCTION(_Tan, tan)
+_SIMPLE_UNARY_FUNCTION(_Reciprocal, UnaryReciprocal)
 #endif
 
 _SIMPLE_UNARY_FUNCTION_ME(_AbsoluteMe, _Absolute)
@@ -278,5 +288,10 @@ _SIMPLE_UNARY_FUNCTION_ME(_TanMe, _Tan)
 SIMPLE_UNARY_FUNCTION_ME(TanMe, _Tan)
 SIMPLE_UNARY_FUNCTION(Tan, _Tan, MATH_TAN)
 SIMPLE_UNARY_FUNCTION_VOID(Tan, _Tan, MATH_TAN)
+
+_SIMPLE_UNARY_FUNCTION_ME(_ReciprocalMe, _Reciprocal)
+SIMPLE_UNARY_FUNCTION_ME(ReciprocalMe, _Reciprocal)
+SIMPLE_UNARY_FUNCTION(Reciprocal, _Reciprocal, MATH_RECIPROCAL)
+SIMPLE_UNARY_FUNCTION_VOID(Reciprocal, _Reciprocal, MATH_RECIPROCAL)
 
 } // namespace nts(NiuTrans.Tensor)

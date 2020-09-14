@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2017, Natural Language Processing Lab, Northestern University. 
+ * Copyright (C) 2017, Natural Language Processing Lab, Northeastern University. 
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,7 @@
 
 /*
 * $Created by: XIAO Tong (email: xiaotong@mail.neu.edu.cn) 2018-04-24
+* $Update by: Lin Ye (email: linye2015@outlook.com) 2019-07-06 float16/int added
 */
 
 #include "ScaleAndShift.cuh"
@@ -116,6 +117,23 @@ void _CudaScaleAndShift(const XTensor * a, XTensor * b, DTYPE scale, DTYPE shift
             else
                 KernelScaleAndShift<DTYPE, false, false> << <blocks, threads >> >((DTYPE*)a->data, (DTYPE*)b->data, a->unitNum, scale, shift);
         }
+        else if(a->dataType == X_FLOAT16){
+#ifdef HALF_PRECISION
+            half scale2 = __float2half(scale);
+            half shift2 = __float2half(shift);
+
+            if (scale == 1.0F && shift == 0)
+                KernelScaleAndShift<half, true, true><<<blocks, threads>>>((half*)a->data, (half*)b->data, a->unitNum, scale2, shift2);
+            else if (scale == 1.0F && shift != 0)
+                KernelScaleAndShift<half, true, false><<<blocks, threads>>>((half*)a->data, (half*)b->data, a->unitNum, scale2, shift2);
+            else if (scale != 1.0F && shift == 0)
+                KernelScaleAndShift<half, false, true><<<blocks, threads>>>((half*)a->data, (half*)b->data, a->unitNum, scale2, shift2);
+            else
+                KernelScaleAndShift<half, false, false><<<blocks, threads >>>((half*)a->data, (half*)b->data, a->unitNum, scale2, shift2);
+#else
+        ShowNTErrors("Recompile the code with HALF_PRECISION!");
+#endif
+        }
         else if (a->dataType == X_INT) {
             int scale2 = int(scale);
             int shift2 = int(shift);
@@ -128,13 +146,6 @@ void _CudaScaleAndShift(const XTensor * a, XTensor * b, DTYPE scale, DTYPE shift
                 KernelScaleAndShift<int, false, true><<<blocks, threads>>>((int *)a->data, (int *)b->data, a->unitNum, scale2, shift2);
             else
                 KernelScaleAndShift<int, false, false><<<blocks, threads>>>((int *)a->data, (int *)b->data, a->unitNum, scale2, shift2);
-        }
-        else if(a->dataType == X_FLOAT16){
-            unsigned short scale2 = FloatToFloat16(scale);
-            unsigned short shift2 = FloatToFloat16(shift);
-            __half * scaleft16p = (__half*)&scale2;
-            __half * shiftft16p = (__half*)&shift2;
-            KernelScaleAndShift<<<blocks, threads>>>((__half*)a->data, (__half*)b->data, a->unitNum, *scaleft16p, *shiftft16p);
         }
         else{
             ShowNTErrors("TODO!");

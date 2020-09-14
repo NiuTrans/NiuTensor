@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2017, Natural Language Processing Lab, Northestern University. 
+ * Copyright (C) 2017, Natural Language Processing Lab, Northeastern University. 
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -96,7 +96,7 @@ crossing of the i-th columne and the j-th row.
 >> power - power of the item in the array
 >> isExp - specify if we perform exp() on the input
 */
- __global__
+__global__
 void KernelReduceSum(DTYPE * input, DTYPE * output, 
                      int stride, int strideNum, int reducedStrideNum, 
                      int blockSize, int blockNum, 
@@ -152,7 +152,7 @@ void KernelReduceSum(DTYPE * input, DTYPE * output,
         output[(k * reducedStrideNum + blockIdx.x) * stride + iOffset] = iData[threadIdx.y * blockDim.x];
 }
 
- /* 
+/*
 reduce a tensor to another that keeps the sum along a dimension  - slow version
 This is for float16 reduction.
 Given a block of data, we go over each dimension i in the stride and we have
@@ -171,7 +171,7 @@ crossing of the i-th columne and the j-th row.
 >> power - power of the item in the array
 >> isExp - specify if we perform exp() on the input
 */
- __global__
+__global__
 void KernelReduceSum(__half * input, __half * output, 
                      int stride, int strideNum, int reducedStrideNum, 
                      int blockSize, int blockNum, 
@@ -726,7 +726,7 @@ void _CudaReduceSum(const XTensor * input, XTensor * output, int dim, const XTen
 
     DTYPE * sp = shift != NULL ? (DTYPE*)shift->data : NULL;
 
-    if (stride == 1 && blockNum >= 10) {
+    if (stride == 1 && blockNum >= 10 && input->dataType == DEFAULT_DTYPE) {
         dim3 grids;
         dim3 blocks;
         continuousStorageThreadAllocation(grids, blocks, (long long)blockNum, strideNum);
@@ -742,7 +742,7 @@ void _CudaReduceSum(const XTensor * input, XTensor * output, int dim, const XTen
                                                               strideNum, blockNum, sp, power, isExp);
         }
     }
-    else if (stride != 1 && stride * blockNum > 4096) {
+    else if (stride != 1 && stride * blockNum > 4096 && input->dataType == DEFAULT_DTYPE){
         //GDevs->GetGridAndBlockSize2D(devID, stride * blockNum, strideNum,MAX_INT, cudaGridSize, cudaBlockSize);
         //unsigned int* goutput = (unsigned int *)input->data;
         //convert2uintV2 << <dim3(cudaGridSize[0], cudaGridSize[1]), dim3(cudaBlockSize[0], cudaBlockSize[1]) >> > ((float*)input->data, goutput, stride, strideNum, blockNum, strideNum*blockNum*stride);
@@ -766,15 +766,15 @@ void _CudaReduceSum(const XTensor * input, XTensor * output, int dim, const XTen
                 DTYPE * oData = NULL;
                 if (iter == 0) {
                     iData = (DTYPE*)input->data;
-                    oData = buf1;
+                    oData = (DTYPE*)buf1;
                 }
                 else if (iter % 2 == 1) {
-                    iData = buf1;
-                    oData = buf2;
+                    iData = (DTYPE*)buf1;
+                    oData = (DTYPE*)buf2;
                 }
                 else {
-                    iData = buf2;
-                    oData = buf1;
+                    iData = (DTYPE*)buf2;
+                    oData = (DTYPE*)buf1;
                 }
                 /* unroll the reduction procedure. The code is messy but it is faster. */
                 if (strideNum <= 32) {
@@ -830,8 +830,7 @@ void _CudaReduceSum(const XTensor * input, XTensor * output, int dim, const XTen
                 __half * buf1ft16 = (__half *)buf1;
                 __half * buf2ft16 = (__half *)buf2;
                 __half * spft16 = (__half *)sp;
-                unsigned short power2 = FloatToFloat16(power);
-                __half * powerft16p = (__half*)&power2;
+                __half powerft16p = __float2half(power);
                 __half * iData = NULL;
                 __half * oData = NULL;
                 if (iter == 0) {
@@ -854,7 +853,7 @@ void _CudaReduceSum(const XTensor * input, XTensor * output, int dim, const XTen
                     if (cudaGridSize[0] == 1)
                         oData = (__half*)output->data;
                     KernelReduceSum <<<blocks, threads>>> (iData, oData, stride, strideNum, blocks.y, 
-                                                           blockSize, blockNum, spft16, *powerft16p, isExp);
+                                                           blockSize, blockNum, spft16, powerft16p, isExp);
                 }
                 else if (strideNum < 128) {
                     GDevs.GetCudaThread2D(devID, MAX(strideNum / 2 + 1, 64), stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);
@@ -863,7 +862,7 @@ void _CudaReduceSum(const XTensor * input, XTensor * output, int dim, const XTen
                         oData = (__half*)output->data;
                     CheckNTErrors((cudaBlockSize[0] >= 64), "Incorrect thread number when calling the cuda kernel!");
                     KernelReduceSumFast<64> <<<blocks, threads>>> (iData, oData, stride, strideNum, blocks.y, 
-                                                                   blockSize, blockNum, spft16, *powerft16p, isExp);
+                                                                   blockSize, blockNum, spft16, powerft16p, isExp);
                 }
                 else if (strideNum < 256) {
                     GDevs.GetCudaThread2D(devID, MAX(strideNum / 2 + 1, 128), stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);
@@ -872,7 +871,7 @@ void _CudaReduceSum(const XTensor * input, XTensor * output, int dim, const XTen
                         oData = (__half*)output->data;
                     CheckNTErrors((cudaBlockSize[0] >= 128), "Incorrect thread number when calling the cuda kernel!");
                     KernelReduceSumFast<128> <<<blocks, threads>>> (iData, oData, stride, strideNum, blocks.y, 
-                                                                    blockSize, blockNum, spft16, *powerft16p, isExp);
+                                                                    blockSize, blockNum, spft16, powerft16p, isExp);
                 }
                 else if (strideNum < 512) {
                     GDevs.GetCudaThread2D(devID, MAX(strideNum / 2 + 1, 256), stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);
@@ -881,7 +880,7 @@ void _CudaReduceSum(const XTensor * input, XTensor * output, int dim, const XTen
                         oData = (__half*)output->data;
                     CheckNTErrors((cudaBlockSize[0] >= 256), "Incorrect thread number when calling the cuda kernel!");
                     KernelReduceSumFast<256> <<<blocks, threads>>> (iData, oData, stride, strideNum, blocks.y, 
-                                                                    blockSize, blockNum, spft16, *powerft16p, isExp);
+                                                                    blockSize, blockNum, spft16, powerft16p, isExp);
                 }
                 else {
                     GDevs.GetCudaThread2D(devID, MAX(strideNum / 2 + 1, 512), stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);
@@ -890,8 +889,11 @@ void _CudaReduceSum(const XTensor * input, XTensor * output, int dim, const XTen
                         oData = (__half*)output->data;
                     CheckNTErrors((cudaBlockSize[0] >= 512), "Incorrect thread number when calling the cuda kernel!");
                     KernelReduceSumFast<512> <<<blocks, threads>>> (iData, oData, stride, strideNum, blocks.y, 
-                                                                    blockSize, blockNum, spft16, *powerft16p, isExp);
+                                                                    blockSize, blockNum, spft16, powerft16p, isExp);
                 }
+            }
+            else {
+                ShowNTErrors("Unsupported dataType!");
             }
 
             strideNum = cudaGridSize[0];

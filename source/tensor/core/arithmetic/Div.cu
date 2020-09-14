@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
-* Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+* Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
 * All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,7 @@
 
 /*
 * $Created by: XIAO Tong (email: xiaotong@mail.neu.edu.cn) 2018-04-24
+* $Update by: Lin Ye (email: linye2015@outlook.com) 2019-07-05 float16 added
 */
 
 #include "../../XDevice.h"
@@ -34,8 +35,9 @@ division of data arrays in a element-wise manner c(i) = a(i)/b(i)
 >> c - result data array
 >> size - size of c
 */
+template <class T>
 __global__
-void KernelDivElementWise(DTYPE * a, DTYPE * b, DTYPE * c, int size)
+void KernelDivElementWise(T * a, T * b, T * c, int size)
 {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
 
@@ -51,8 +53,9 @@ division of data arrays in a element-wise manner c(i) = a(i)/b(i) + \alpha*c(i)
 >> size - size of c
 >> alpha - the coefficient
 */
+template <class T>
 __global__
-void KernelDivElementWiseV2(DTYPE * a, DTYPE * b, DTYPE * c, int size, DTYPE alpha)
+void KernelDivElementWiseV2(T * a, T * b, T * c, int size, T alpha)
 {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
 
@@ -75,13 +78,13 @@ where |a_lead| means the size of the leading dimension of a
 >> ldSizeC - size of the leading dimension of c
 >> blockNum - number of blocks
 */
-template<int nonZeroAlpha> __global__
-void KernelDivElementWiseTensorDynamic(DTYPE * a, DTYPE * b, DTYPE * c, DTYPE alpha,
+template<class T, int nonZeroAlpha> __global__
+void KernelDivElementWiseTensorDynamic(T * a, T * b, T * c, T alpha,
     int stride, int ldSizeA, int ldSizeB, int ldSizeC, int blockNum)
 {
-    __shared__ DTYPE* ap[MAX_CUDA_THREAD_NUM_PER_BLOCK];
-    __shared__ DTYPE* bp[MAX_CUDA_THREAD_NUM_PER_BLOCK];
-    __shared__ DTYPE* cp[MAX_CUDA_THREAD_NUM_PER_BLOCK];
+    __shared__ T* ap[MAX_CUDA_THREAD_NUM_PER_BLOCK];
+    __shared__ T* bp[MAX_CUDA_THREAD_NUM_PER_BLOCK];
+    __shared__ T* cp[MAX_CUDA_THREAD_NUM_PER_BLOCK];
 
     int i = blockDim.x * blockIdx.x + threadIdx.x;
     int j = blockDim.y * blockIdx.y + threadIdx.y;
@@ -168,16 +171,47 @@ void _CudaDiv(const XTensor * a, const XTensor * b, XTensor * c, DTYPE alpha, in
                 dim3 blocks(cudaGridSize[0], cudaGridSize[1]), threads(cudaBlockSize[0], cudaBlockSize[1]);
 
                 if (alpha == 0) {
-                    KernelDivElementWiseTensorDynamic<0> << <blocks, threads >> >
+                    KernelDivElementWiseTensorDynamic<DTYPE, 0> << <blocks, threads >> >
                         ((DTYPE*)a->data, (DTYPE*)b->data, (DTYPE*)c->data, 0,
                         stride, dimensionSizeA, dimensionSizeB, dimensionSizeC, blockNum);
                 }
                 else {
-                    KernelDivElementWiseTensorDynamic<1> << <blocks, threads >> >
+                    KernelDivElementWiseTensorDynamic<DTYPE, 1> << <blocks, threads >> >
                         ((DTYPE*)a->data, (DTYPE*)b->data, (DTYPE*)c->data, alpha,
                         stride, dimensionSizeA, dimensionSizeB, dimensionSizeC, blockNum);
                 }
             }
+        }
+        else if (a->dataType == X_FLOAT16 && b->dataType == X_FLOAT16) {
+#ifdef HALF_PRECISION
+            int cudaGridSize[3];
+            int cudaBlockSize[3];
+            half alpha1 = __float2half(alpha);
+            if (a->unitNum == c->unitNum && b->unitNum == c->unitNum) {
+                GDevs.GetCudaThread(a->devID, c->unitNum, cudaGridSize, cudaBlockSize);
+                dim3 blocks(cudaGridSize[0]), threads(cudaBlockSize[0]);
+                if (alpha == 0)
+                    KernelDivElementWise << <blocks, threads >> > ((__half *)a->data, (__half *)b->data, (__half *)c->data, c->unitNum);
+                else
+                    KernelDivElementWiseV2 << <blocks, threads >> > ((__half *)a->data, (__half *)b->data, (__half *)c->data, c->unitNum, alpha1);
+            }
+            else {
+                GDevs.GetCudaThread2D(c->devID, stride * blockNum, dimensionSizeC, MAX_INT, cudaGridSize, cudaBlockSize);
+                dim3 blocks(cudaGridSize[0], cudaGridSize[1]), threads(cudaBlockSize[0], cudaBlockSize[1]);
+                if (alpha == 0) {
+                    KernelDivElementWiseTensorDynamic<__half, 0> << <blocks, threads >> >
+                        ((__half *)a->data, (__half *)b->data, (__half *)c->data, 0,
+                            stride, dimensionSizeA, dimensionSizeB, dimensionSizeC, blockNum);
+                }
+                else {
+                    KernelDivElementWiseTensorDynamic<__half, 1> << <blocks, threads >> >
+                        ((__half *)a->data, (__half *)b->data, (__half *)c->data, alpha1,
+                            stride, dimensionSizeA, dimensionSizeB, dimensionSizeC, blockNum);
+                }
+            }
+#else
+            ShowNTErrors("Recompile the code with HALF_PRECISION!");
+#endif
         }
         else {
             // TODO!!

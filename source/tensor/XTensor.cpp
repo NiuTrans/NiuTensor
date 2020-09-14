@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2017, Natural Language Processing Lab, Northestern University. 
+ * Copyright (C) 2017, Natural Language Processing Lab, Northeastern University. 
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -134,8 +134,8 @@ constructor
 >> myDevID - device id
 >> myMem - memory pool used to allocating the data array
 */
-XTensor::XTensor(const int myOrder, const int* myDimSize, const TENSOR_DATA_TYPE myDataType,
-    const float myDenseRatio, int myDevID, XMem* myMem)
+XTensor::XTensor(const int myOrder, const int * myDimSize, const TENSOR_DATA_TYPE myDataType,
+                 const float myDenseRatio, int myDevID, XMem * myMem)
 {
     Init();
     SetDataPointer();
@@ -179,11 +179,13 @@ XTensor::XTensor(const XTensor& reference)
         _CopyValues(&reference, this);
     }
 
-    if(reference.isTmp)
-        XLink::Replace(&reference, this);
-    else{
-        CheckNTErrors(outgo.tailNum == 0, "The node has outgoing edge to other nodes!");
-        XLink::CopyIncoming(&reference, this);
+    if (reference.enableGrad) {
+        if (reference.isTmp)
+            XLink::Replace(&reference, this);
+        else {
+            CheckNTErrors(outgo.tailNum == 0, "The node has outgoing edge to other nodes!");
+            XLink::CopyIncoming(&reference, this);
+        }
     }
 
     isInit = true;
@@ -212,7 +214,9 @@ XTensor::XTensor(const XTensor&& reference)
        This is VERY tricky and there might be better solutions :) */
     *reference.dataP = NULL;
 
-    XLink::Replace(&reference, this);
+    if (reference.enableGrad) {
+        XLink::Replace(&reference, this);
+    }
 
     isInit = true;
     isTmp = reference.isTmp;
@@ -234,13 +238,15 @@ XTensor::~XTensor()
         newTensor->SetTMPFlag();
         newTensor->data = data;
         data = NULL;
-        
-        XLink::Replace(this, newTensor);
+
+        if (enableGrad)
+            XLink::Replace(this, newTensor);
     }
-    
-    XLink::ClearOutgoing(this);
-    XLink::ClearIncoming(this);
-    
+
+    if (enableGrad) {
+        XLink::ClearOutgoing(this);
+        XLink::ClearIncoming(this);
+    }
     DestroyData();
 
     if(grad != NULL)
@@ -341,9 +347,11 @@ XTensor& XTensor::operator= (const XTensor& tensor)
         newTensor->dataHost = dataHost;
         newTensor->signature = tensor.signature;
         
-        XLink::Replace(this, newTensor);
-        XLink::ClearOutgoing(this);
-        XLink::ClearIncoming(this);
+        if (enableGrad) {
+            XLink::Replace(this, newTensor);
+            XLink::ClearOutgoing(this);
+            XLink::ClearIncoming(this);
+        }
         newTensor->ShallowCopy(this);
 
         data = NULL;
@@ -354,15 +362,19 @@ XTensor& XTensor::operator= (const XTensor& tensor)
         /* NOTE: this might lead to additional data copy by Mac LLVM compilers */
         /* we make an identity transformation here */
         
-        if(outgo.tailNum > 0)
-            XLink::ClearOutgoing(this);
-        XLink::ClearIncoming(this);
+        if (enableGrad) {
+            if (outgo.tailNum > 0)
+                XLink::ClearOutgoing(this);
+            XLink::ClearIncoming(this);
+        }
         
         if(!_IsSameShaped(this, &tensor))
             Resize(tensor.order, tensor.dimSize, tensor.dataType, tensor.denseRatio);
         
         _Identity(&tensor, this);
-        XLink::MakeLink(&tensor, NULL, this, FUNC_IDENTITY);
+        if (enableGrad) {
+            XLink::MakeLink(&tensor, NULL, this, FUNC_IDENTITY);
+        }
     }
     else{
         /* hard copy of the data array */
@@ -396,7 +408,9 @@ XTensor& XTensor::operator= (const XTensor& tensor)
         CheckNTErrors(outgo.tailNum == 0, "The node has outgoing edge to other nodes!");
 
         /* create tensor links for the new tensor */
-        XLink::Copy(&tensor, this);
+        if (enableGrad) {
+            XLink::Copy(&tensor, this);
+        }
     }
 
     return *this;
@@ -418,9 +432,11 @@ XTensor& XTensor::operator= (const XTensor&& tensor)
         newTensor->dataHost = dataHost;
         newTensor->signature = tensor.signature;
         
-        XLink::Replace(this, newTensor);
-        XLink::ClearOutgoing(this);
-        XLink::ClearIncoming(this);
+        if (enableGrad) {
+            XLink::Replace(this, newTensor);
+            XLink::ClearOutgoing(this);
+            XLink::ClearIncoming(this);
+        }
         newTensor->ShallowCopy(this);
 
         data = NULL;
@@ -444,7 +460,9 @@ XTensor& XTensor::operator= (const XTensor&& tensor)
        This is VERY tricky and there might be better solutions :) */
     *tensor.dataP = NULL;
 
-    XLink::Copy(&tensor, this);
+    if (enableGrad) {
+        XLink::Copy(&tensor, this);
+    }
 
     return *this;
 }
@@ -657,6 +675,30 @@ void XTensor::ReshapeMerged(const int i, const int j)
 XTensor XTensor::TypeAs(const XTensor input)
 {
     return ConvertDataType(*this, input.dataType);
+}
+
+/* return a tensor that datatype is integer */
+XTensor XTensor::Int()
+{
+    return ConvertDataType(*this, X_INT);
+}
+
+/* return a tensor that datatype is float */
+XTensor XTensor::Float()
+{
+    return ConvertDataType(*this, X_FLOAT);
+}
+
+/* return a tensor that datatype is float16 */
+XTensor XTensor::Float16()
+{
+    return ConvertDataType(*this, X_FLOAT16);
+}
+
+/* return a tensor that datatype is double */
+XTensor XTensor::Double()
+{
+    return ConvertDataType(*this, X_DOUBLE);
 }
 
 /* get the number of items in the data array */
@@ -1676,8 +1718,8 @@ void XTensor::Dump(FILE* file, const char* label, const int n, const int beg, co
         fprintf(file, "NULL");
     }
     if (!isSparse) {
+        int end = MIN(n > 0 ? beg + n : beg + unitNum, unitNum);
         if (dataType == DEFAULT_DTYPE) {
-            int end = MIN(n > 0 ? beg + n : beg + unitNum, unitNum);
             for(int i = beg; i < end; i++){
                 DTYPE f = ((DTYPE*)d)[i];
                 if(i == beg)
@@ -1688,13 +1730,22 @@ void XTensor::Dump(FILE* file, const char* label, const int n, const int beg, co
             }
         }
         else if (dataType == X_INT) {
-            int end = MIN(n > 0 ? beg + n : beg + unitNum, unitNum);
             for(int i = beg; i < end; i++){
                 int f = ((int*)d)[i];
                 if(i == beg)
                     fprintf(file, "%d", f);
                 else
                     fprintf(file, " %d", f);
+            }
+        }
+        else if (dataType == X_FLOAT16) {
+            float16* f = (float16*)d;
+            for (int i = beg; i < end; i++) {
+                float v = f[i].Float();
+                if (i == beg)
+                    fprintf(file, "%e", v);
+                else
+                    fprintf(file, " %e", v);
             }
         }
         else
@@ -1749,12 +1800,18 @@ void XTensor::BinaryDump(FILE* file)
     _CopyValues(this, &tmp);
 
     switch (dataType) {
-    case X_INT: {
-        fwrite(tmp.data, sizeof(int), unitNum, file);
-    }
-    default: {
-        fwrite(tmp.data, sizeof(float), unitNum, file);
-    }
+        case X_INT: {
+            fwrite(tmp.data, sizeof(int), unitNum, file);
+            break;
+        }
+        case X_FLOAT16: {
+            fwrite(tmp.data, sizeof(float16), unitNum, file);
+            break;
+        }
+        default: {
+            fwrite(tmp.data, sizeof(float), unitNum, file);
+            break;
+        }
     }
 }
 
@@ -1877,20 +1934,28 @@ read data from a binary file
 */
 void XTensor::BinaryRead(FILE* file, size_t offset)
 {
-    fseek(file, offset, 0);
     switch (dataType) {
-    case X_INT: {
-        int* d = new int[unitNum];
-        fread(d, sizeof(int), unitNum, file);
-        SetData(d, unitNum);
-        delete[] d;
-    }
-    default: {
-        float* d = new float[unitNum];
-        fread(d, sizeof(float), unitNum, file);
-        SetData(d, unitNum);
-        delete[] d;
-    }
+        case X_INT: {
+            int* d = new int[unitNum];
+            fread(d, sizeof(int), unitNum, file);
+            SetData(d, unitNum);
+            delete[] d;
+            break;
+        }
+        case X_FLOAT16: {
+            float16* d = new float16[unitNum];
+            fread(d, sizeof(float16), unitNum, file);
+            SetData(d, unitNum);
+            delete[] d;
+            break;
+        }
+        default: {
+            float* d = new float[unitNum];
+            fread(d, sizeof(float), unitNum, file);
+            SetData(d, unitNum);
+            delete[] d;
+            break;
+        }
     }
 }
 

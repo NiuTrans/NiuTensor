@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
-* Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+* Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
 * All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,6 +30,7 @@ namespace nts { // namespace nts(NiuTrans.Tensor)
 /*************************************************
 * we define the "new and delete" functions below
 */
+bool X_ENABLE_GRAD = true;
 
 /* 
 initialize a tensor V2

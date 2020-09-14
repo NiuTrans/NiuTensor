@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2017, Natural Language Processing Lab, Northestern University. 
+ * Copyright (C) 2017, Natural Language Processing Lab, Northeastern University. 
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -293,7 +293,7 @@ public:
     void SetComputationMode(bool myIsForComputation);
 
     /* initialize the index */
-    void SetIndex(INT_64 size, MTYPE minSizeFirst = 256, int minSizeNum = 20);
+    void SetIndex(INT_64 indexSize, MTYPE minSizeFirst = 256, int minSizeNum = 20);
 
     /* get device id */
     int GetDevID();

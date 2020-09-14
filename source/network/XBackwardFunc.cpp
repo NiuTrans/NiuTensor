@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2018, Natural Language Processing Lab, Northestern University.
+ * Copyright (C) 2018, Natural Language Processing Lab, Northeastern University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -53,6 +53,7 @@ void XFuncGrad::MakeGrad(XTensor * node, bool isEfficient)
         XTensor * dedy = output->grad;
         //XTensor * tmp = NewTensorBufV2(output, output->devID, output->mem);
         XTensor * tmp = NewTensor(output);
+        tmp->SetZeroAll();
 
         if (operID == FUNC_HARDTANH)
             _HardTanHBackward(output, input, dedy, tmp);
@@ -73,7 +74,7 @@ void XFuncGrad::MakeGrad(XTensor * node, bool isEfficient)
             _SoftmaxBackward(NULL, output, input, dedy, tmp, NULL, leadDim, NOLOSS);
         }
         else {
-            ShowNTErrors("Wrong activation function type!");
+            ShowNTErrors("Unsupported backward computation! TODO!");
         }
 
         _SumMe(dedx, tmp);

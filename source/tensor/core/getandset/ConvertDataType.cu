@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2017, Natural Language Processing Lab, Northestern University. 
+ * Copyright (C) 2017, Natural Language Processing Lab, Northeastern University. 
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -70,6 +70,36 @@ void KernelIntToFloat(int * inputData, float * outputData, int size)
     }
 }
 
+/* 
+data conversion (cuda code) 
+>> devID - device id
+>> s - source data array
+>> typeS - source data type
+>> t - target data array
+>> typeT - target data type
+>> size - number of the items in s (and t)
+*/
+void _CudaConvertDataType(int devID, void * s, TENSOR_DATA_TYPE typeS, void * t, TENSOR_DATA_TYPE typeT, int size)
+{
+    CheckNTErrors((devID >= 0), "This code must be run on GPUs!");
+    if(typeS == typeT)
+        return;
+    int gridSize[3];
+    int blockSize[3];
+    GDevs.GetCudaThread(devID, size, gridSize, blockSize);
+    dim3 blocks(gridSize[0]);
+    dim3 threads(blockSize[0]);
+    int devIDBackup;
+    ProtectCudaDev(devID, devIDBackup);
+    if(typeS == X_FLOAT && typeT == X_FLOAT16)
+        KernelFloatToFloat16<<<blocks, threads>>>((float*)s, (__half*)t, size);
+    else if(typeS == X_FLOAT16 && typeT == X_FLOAT)
+        KernelFloat16ToFloat<<<blocks, threads>>>((__half*)s, (float*)t, size);
+    else{
+        ShowNTErrors("Unsupported data types for conversion!");
+    }
+    ProtectCudaDev(devID, devIDBackup);
+}
 /*
 convert data type (cuda code) 
 >> input - input tensor

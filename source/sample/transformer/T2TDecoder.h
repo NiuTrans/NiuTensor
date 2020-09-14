@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2018, Natural Language Processing Lab, Northestern University. 
+ * Copyright (C) 2020, Natural Language Processing Lab, Northeastern University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,18 +17,17 @@
 
 /*
  * $Created by: XIAO Tong (xiaotong@mail.neu.edu.cn) 2018-07-31
+ * $Modified by: HU Chi (huchinlp@gmail.com) 2020-04
  */
 
 #ifndef __T2TDECODER_H__
 #define __T2TDECODER_H__
 
 #include "T2TEncoder.h"
+#include "module/T2TUtility.h"
 
 namespace transformer
 {
-    
-#define DECODING_NAME "decoding"
-#define DECODING_INPUT_NAME "decoding_input"
 
 class AttDecoder
 {
@@ -52,50 +51,52 @@ public:
     /* dropout probability */
     DTYPE dropoutP;
 
-    /* some positions can be ignored in attention. this is useful in lm where the first position needs
- *     special design for the attention model. */
-    int ignored;
-
     /* embedding of word at each position */
     T2TEmbedder embedder;
 
     /* FNN model of each layer */
-    T2TFNN * fnns;
+    T2TFNN* fnns;
 
     /* attention model of each layer */
-    T2TAttention * attentions;
-
-    /* layer normalization for fnn */
-    T2TLN * fnnLayerNorms;
+    T2TAttention* selfAtt;
 
     /* layer normalization for attention */
-    T2TLN * attLayerNorms;
+    T2TLN* selfAttLayerNorms;
 
-    /* input tensor of the encoder */
-    XTensor * input;
+    /* layer normalization for fnn */
+    T2TLN* fnnLayerNorms;
 
-    /* output tensor of the encoder */
-    XTensor * output;
+    /* layer normalization for decoder */
+    T2TLN* decoderLayerNorm;
 
     /* encoder-decoder attention model of each layer */
-    T2TAttention * attentionsEnde;
+    T2TAttention* enDeAtt;
 
     /* layer normalization for encoder-decoder attention */
-    T2TLN * attEndeLayerNorms;
+    T2TLN* enDeAttLayerNorms;
+
+    /* layer cache list */
+    Cache* selfAttCache;
+
+    /* layer cache list */
+    Cache* enDeAttCache;
+
+    /* the location of layer normalization */
+    bool preNorm;
+
 public:
     /* constructor */
     AttDecoder();
 
-    /* deconstructor */
+    /* de-constructor */
     ~AttDecoder();
 
     /* initialize the model */
-    void InitModel(int argc, char ** argv, 
-                   bool myIsMasked, int myIgnored, 
-                   int myDevID = -1);
+    void InitModel(T2TConfig& config);
 
     /* make the decoding network */
-    XTensor Make(XTensor &inputDec, XTensor &outputEnc, XTensor &mask, XTensor &maskEncDec, bool isTraining);
+    XTensor Make(XTensor& inputDec, XTensor& outputEnc, XTensor* mask,
+                 XTensor* maskEncDec, int nstep, bool isTraining);
 };
 
 }

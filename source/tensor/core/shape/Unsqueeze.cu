@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
-* Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+* Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
 * All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -268,6 +268,14 @@ void _CudaUnsqueeze(const XTensor * a, XTensor * b, int dim, int dSize)
                 KernelUnsqueezeByCol<int> << <dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1]) >> >
                                              (a->data, blockNumA, dSize, b->data);
         }
+        else if (a->dataType == X_FLOAT16 && b->dataType == X_FLOAT16) {
+            if (cudaBlocks[1] == 1)
+                KernelUnsqueezeByColBigRow<__half> << <dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1]) >> >
+                                                   (a->data, blockNumA, dSize, b->data);
+            else
+                KernelUnsqueezeByCol<__half> << <dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1]) >> >
+                                             (a->data, blockNumA, dSize, b->data);
+        }
         else {
             ShowNTErrors("TODO!");
         }
@@ -285,6 +293,10 @@ void _CudaUnsqueeze(const XTensor * a, XTensor * b, int dim, int dSize)
             KernelUnsqueeze<int> << <dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1]) >> >
                                     (a->data, blockSize, blockNumA, blockSize * dSize, b->data, dSize);
         }
+        else if (a->dataType == X_FLOAT16 && b->dataType == X_FLOAT16) {
+            KernelUnsqueeze<half> << <dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1]) >> >
+                                    (a->data, blockSize, blockNumA, blockSize * dSize, b->data, dSize);
+        }
         else {
             ShowNTErrors("TODO!");
         }
@@ -299,6 +311,10 @@ void _CudaUnsqueeze(const XTensor * a, XTensor * b, int dim, int dSize)
         else if (a->dataType == X_INT && b->dataType == X_INT) {
             KernelUnsqueezeFlat2D<int> << <dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1]) >> >
                                         (a->data, blockSize, blockSize * dSize, b->data, dSize);
+        }
+        else if (a->dataType == X_FLOAT16 && b->dataType == X_FLOAT16) {
+            KernelUnsqueezeFlat2D<half> << <dim3(cudaGrids[0], cudaGrids[1]), dim3(cudaBlocks[0], cudaBlocks[1]) >> >
+                                           (a->data, blockSize, blockSize * dSize, b->data, dSize);
         }
         else {
             ShowNTErrors("TODO!");
@@ -315,6 +331,10 @@ void _CudaUnsqueeze(const XTensor * a, XTensor * b, int dim, int dSize)
             KernelUnsqueezeFlatBigram<int> << <dim3(cudaGrids[0]), dim3(cudaBlocks[0]) >> >
                                               (a->data, blockSize, blockSize * dSize, b->data, dSize);
         }
+        else if (a->dataType == X_FLOAT16 && b->dataType == X_FLOAT16) {
+            KernelUnsqueezeFlatBigram<half> << <dim3(cudaGrids[0]), dim3(cudaBlocks[0]) >> >
+                                               (a->data, blockSize, blockSize * dSize, b->data, dSize);
+        }
         else {
             ShowNTErrors("TODO!");
         }
@@ -329,6 +349,10 @@ void _CudaUnsqueeze(const XTensor * a, XTensor * b, int dim, int dSize)
         else if (a->dataType == X_INT && b->dataType == X_INT) {
             KernelUnsqueezeFlat<int> << <dim3(cudaGrids[0]), dim3(cudaBlocks[0]) >> >
                                         (a->data, blockSize, blockSize * dSize, b->data, dSize);
+        }
+        else if (a->dataType == X_FLOAT16 && b->dataType == X_FLOAT16) {
+            KernelUnsqueezeFlat<half> << <dim3(cudaGrids[0]), dim3(cudaBlocks[0]) >> >
+                                         (a->data, blockSize, blockSize * dSize, b->data, dSize);
         }
         else {
             ShowNTErrors("TODO!");

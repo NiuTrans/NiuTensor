@@ -1,40 +1,66 @@
-# if your visual studio's version is before 2019
-# use commond "cmake -A x64 .." to build this project
-# or use cmake gui to build VS (remember to select x64)
-# if there's some warnings, don't worry about that.
-
 # cmake minimum version
 cmake_minimum_required(VERSION 2.8)
 
-# project's name
+# Project's name
 project(NiuTensor)
 
-# the prefix of the generated executable file
-set(NIUTRANS_EXE "NiuTensor")
+# The name of the generated executable file
+# The name of the dynamic link library
+set(NIUTENSOR_EXE "NiuTensor")
+set(NIUTENSOR_DLL "${NIUTENSOR_EXE}")
 
-# generated file path
+# Generated file path
 set(EXECUTABLE_OUTPUT_PATH ../bin)
+set(LIBRARY_OUTPUT_PATH ../lib)
 
-# 0 - Linux or macOS
-# 1 - Windows
-set(ON_WINDOWS 0)
-
-# 0 - Not use
-# 1 - Use, if set 1, please modify the CUDA_VERSION and CUDA_TOOLKIT_ROOT_DIR below
-set(USE_CUDA 0)
-if (USE_CUDA)
-    set(CUDA_VERSION 9.0)
-    set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda") 
-endif()
-
-# use CMAKE_MACOSX_RPATH for macOS 
+# Use CMAKE_MACOSX_RPATH for macOS 
 set(CMAKE_MACOSX_RPATH 1)
 
-# open floder manage
-set_property(GLOBAL PROPERTY USE_FOLDERS On)
-add_definitions(-std=c++11)
+# Open floder manage
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+option(USE_CUDA "Use CUDA" OFF)
+option(USE_HALF_PRECISION "Use Half Precision in CUDA Codes" OFF)
+option(USE_MKL "Use MKL" OFF)
+option(USE_OPENBLAS "Use OpenBLAS" OFF)
+option(GEN_DLL "Generate Dynamic Link Library" OFF)
 
-# find all the .cpp .h .cu .chu files in source folder
+# If set USE_CUDA ON, please modify CUDA_ROOT below.
+# If set USE_MKL ON, please modify the INTEL_ROOT below.
+# If set USE_OPENBLAS ON, please modify the OPENBLAS_ROOT below.
+if (USE_CUDA)
+    if(NOT EXISTS ${CUDA_ROOT})
+        if(WIN32)
+            set(CUDA_ROOT "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v9.2")
+        else()
+            set(CUDA_ROOT "/usr/local/cuda-9.2")
+        endif()
+    endif()
+    set(CUDA_TOOLKIT_ROOT_DIR ${CUDA_ROOT})
+    message(STATUS "CUDA_ROOT: ${CUDA_ROOT}")
+endif()
+if(USE_MKL)
+    if(NOT DEFINED INTEL_ROOT)
+        if(WIN32)
+            set(INTEL_ROOT "C:/Program Files (x86)/IntelSWTools/compilers_and_libraries_2020.2.254/windows")
+        else()
+            set(INTEL_ROOT "/opt/intel/compilers_and_libraries_2020.2.254/linux")
+        endif()
+    endif()
+    message(STATUS "INTEL_ROOT: ${INTEL_ROOT}")
+endif()
+if(USE_OPENBLAS)
+    if(NOT DEFINED OPENBLAS_ROOT)
+        if(WIN32)
+            set(OPENBLAS_ROOT "C:/Program Files/OpenBLAS")
+        else()
+            set(OPENBLAS_ROOT "/opt/OpenBLAS")
+        endif()
+    endif()
+    message(STATUS "OPENBLAS_ROOT: ${OPENBLAS_ROOT}")
+endif()
+
+# Find all the .cpp .h .cu .chu files in source folder
 file(GLOB_RECURSE CPP_FILES source/*.cpp)
 file(GLOB_RECURSE H_FILES source/*.h)
 file(GLOB_RECURSE CU_FILES source/*.cu)
@@ -64,84 +90,212 @@ function(my_add_executable)
     endif()
 endfunction(my_add_executable)
 
+# Set libs and compiler options for CUDA
 if(USE_CUDA)
-    set(NIUTRANS_EXE "${NIUTRANS_EXE}.GPU")
     add_definitions(-DUSE_CUDA)
-    if(ON_WINDOWS)
-        find_package(CUDA ${CUDA_VERSION} REQUIRED)
-        add_compile_options(-Wno-dev)
+    if(USE_HALF_PRECISION)
+        add_definitions(-DHALF_PRECISION)
+    endif()
+    find_package(CUDA REQUIRED)
+    if(WIN32)
         SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4819")
         set(CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} "-maxrregcount=0 -m64 --disable-warnings -use_fast_math -DUSE_CUDA")
-        set(CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} -arch=sm_30 
-            -gencode=arch=compute_30,code=sm_30 
-            -gencode=arch=compute_50,code=sm_50 
-            -gencode=arch=compute_52,code=sm_52 
-            -gencode=arch=compute_60,code=sm_60 
-            -gencode=arch=compute_61,code=sm_61 
-            -gencode=arch=compute_62,code=sm_62 
-            -gencode=arch=compute_70,code=sm_70 
-            -gencode=arch=compute_70,code=compute_70 
-        )
+        if(USE_HALF_PRECISION)
+            set(CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} "-DHALF_PRECISION")
+            set(CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} -arch=sm_60
+                -gencode=arch=compute_60,code=sm_60
+                -gencode=arch=compute_61,code=sm_61
+                -gencode=arch=compute_62,code=sm_62
+                -gencode=arch=compute_70,code=sm_70
+                -gencode=arch=compute_70,code=compute_70
+            )
+        else()
+            set(CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} -arch=sm_30
+                -gencode=arch=compute_30,code=sm_30
+                -gencode=arch=compute_50,code=sm_50
+                -gencode=arch=compute_52,code=sm_52
+                -gencode=arch=compute_60,code=sm_60
+                -gencode=arch=compute_61,code=sm_61
+                -gencode=arch=compute_62,code=sm_62
+                -gencode=arch=compute_70,code=sm_70
+                -gencode=arch=compute_70,code=compute_70
+            )
+        endif()
         set(CMAKE_POLICY_DEFAULT_CMP0028 NEW)
-        link_directories("${CUDA_TOOLKIT_ROOT_DIR}/lib/x64")
-        include_directories("${CUDA_TOOLKIT_ROOT_DIR}/include")
-        set(CUDA_LIB_PATH_ME "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64/")
-        set(CUDA_LIBS_ME ${CUDA_LIBS_ME} "${CUDA_LIB_PATH_ME}cublas.lib")
-        set(CUDA_LIBS_ME ${CUDA_LIBS_ME} "${CUDA_LIB_PATH_ME}npps.lib")
-        set(CUDA_LIBS_ME ${CUDA_LIBS_ME} "${CUDA_LIB_PATH_ME}nppc.lib")
-        set(CUDA_LIBS_ME ${CUDA_LIBS_ME} "${CUDA_LIB_PATH_ME}cudadevrt.lib")
-        set(CUDA_LIBS_ME ${CUDA_LIBS_ME} "${CUDA_LIB_PATH_ME}curand.lib")
-        my_add_executable(${NIUTRANS_EXE} ${CPP_FILES} ${H_FILES} ${CU_FILES} ${CUH_FILES})
+        link_directories("${CUDA_ROOT}/lib/x64")
+        include_directories("${CUDA_ROOT}/include")
+        set(CUDA_LIB_DIR "${CUDA_ROOT}/lib/x64/")
+        set(CUDA_LIB_PATH ${CUDA_LIB_PATH} "${CUDA_LIB_DIR}cublas.lib")
+        set(CUDA_LIB_PATH ${CUDA_LIB_PATH} "${CUDA_LIB_DIR}npps.lib")
+        set(CUDA_LIB_PATH ${CUDA_LIB_PATH} "${CUDA_LIB_DIR}nppc.lib")
+        set(CUDA_LIB_PATH ${CUDA_LIB_PATH} "${CUDA_LIB_DIR}cudadevrt.lib")
+        set(CUDA_LIB_PATH ${CUDA_LIB_PATH} "${CUDA_LIB_DIR}curand.lib")
     else()
-        find_package(CUDA ${CUDA_VERSION} REQUIRED)
         set(CMAKE_CXX_FLAGS "-fPIC -msse4.2 -w -march=native -Wno-enum-compare -Wno-sign-compare -Wno-format -Wno-dev -O3 -DNDEBUG -rdynamic")
         set(CUDA_NVCC_FLAGS "-Xcompiler -fPIC -maxrregcount=0 --disable-warnings -use_fast_math -DUSE_CUDA -Wno-deprecated-gpu-targets -std=c++11")
-        set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -arch=sm_30 
-            -gencode=arch=compute_30,code=sm_30 
-            -gencode=arch=compute_50,code=sm_50 
-            -gencode=arch=compute_52,code=sm_52 
-            -gencode=arch=compute_60,code=sm_60 
-            -gencode=arch=compute_61,code=sm_61 
-            -gencode=arch=compute_62,code=sm_62 
-            -gencode=arch=compute_70,code=sm_70 
-            -gencode=arch=compute_70,code=compute_70 
-        )
-        link_directories(${CUDA_TOOLKIT_ROOT_DIR}/lib64)
-        include_directories(${CUDA_TOOLKIT_ROOT_DIR}/include)
-        set(CUDA_LIB_PATH_ME "${CUDA_TOOLKIT_ROOT_DIR}/lib64/")
-        set(CUDA_LIBS_ME ${CUDA_LIBS_ME} "${CUDA_LIB_PATH_ME}libcublas_static.a")
-        set(CUDA_LIBS_ME ${CUDA_LIBS_ME} "${CUDA_LIB_PATH_ME}libculibos.a")
-        set(CUDA_LIBS_ME ${CUDA_LIBS_ME} "${CUDA_LIB_PATH_ME}libnpps_static.a")
-        set(CUDA_LIBS_ME ${CUDA_LIBS_ME} "${CUDA_LIB_PATH_ME}libnppc_static.a")
-        set(CUDA_LIBS_ME ${CUDA_LIBS_ME} "${CUDA_LIB_PATH_ME}libcudadevrt.a")
-        set(CUDA_LIBS_ME ${CUDA_LIBS_ME} "${CUDA_LIB_PATH_ME}libcurand_static.a")
-        set(CUDA_LIBS_ME ${CUDA_LIBS_ME} "/usr/lib64/libdl.so.2")
-        my_add_executable(${NIUTRANS_EXE} ${CPP_FILES} ${H_FILES} ${CU_FILES} ${CUH_FILES})
-    endif()
-else()
-    set(NIUTRANS_EXE "${NIUTRANS_EXE}.CPU")
-    my_add_executable(${NIUTRANS_EXE} ${CPP_FILES} ${H_FILES})
-endif()
-
-set(CUDA_LIB ${CUDA_LIBS_ME})
-
-if(ON_WINDOWS)
-    add_definitions(-DWIN32) # for windows specially
-    if(USE_CUDA)
-        message(STATUS "On Windows and use cuda")
-        target_link_libraries(${NIUTRANS_EXE} ${CUDA_LIB})
-    else()
-        message(STATUS "On Windows and not use cuda")
-        target_link_libraries(${NIUTRANS_EXE} ${CUDA_LIB})
-    endif()
-else()
-    if(USE_CUDA)
-        message(STATUS "On Linux and use cuda")
-        target_link_libraries(${NIUTRANS_EXE} ${CUDA_LIB} -lpthread -lcudart -lnvidia-ml)
-    else()
-        message(STATUS "On Linux and not use cuda")
-        target_link_libraries(${NIUTRANS_EXE} ${CUDA_LIB} -lpthread)
+        if(USE_HALF_PRECISION)
+            set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-DHALF_PRECISION")
+            set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -arch=sm_60
+                -gencode=arch=compute_60,code=sm_60
+                -gencode=arch=compute_61,code=sm_61
+                -gencode=arch=compute_62,code=sm_62
+                -gencode=arch=compute_70,code=sm_70
+                -gencode=arch=compute_70,code=compute_70
+            )
+        else()
+            set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -arch=sm_30 
+                -gencode=arch=compute_30,code=sm_30 
+                -gencode=arch=compute_50,code=sm_50 
+                -gencode=arch=compute_52,code=sm_52 
+                -gencode=arch=compute_60,code=sm_60 
+                -gencode=arch=compute_61,code=sm_61 
+                -gencode=arch=compute_62,code=sm_62 
+                -gencode=arch=compute_70,code=sm_70 
+                -gencode=arch=compute_70,code=compute_70 
+            )
+        endif()
+        link_directories(${CUDA_ROOT}/lib64)
+        include_directories(${CUDA_ROOT}/include)
+        set(CUDA_LIB_DIR "${CUDA_ROOT}/lib64/")
+        set(CUDA_LIB_PATH ${CUDA_LIB_PATH} "${CUDA_LIB_DIR}libcublas_static.a")
+        set(CUDA_LIB_PATH ${CUDA_LIB_PATH} "${CUDA_LIB_DIR}libculibos.a")
+        set(CUDA_LIB_PATH ${CUDA_LIB_PATH} "${CUDA_LIB_DIR}libnpps_static.a")
+        set(CUDA_LIB_PATH ${CUDA_LIB_PATH} "${CUDA_LIB_DIR}libnppc_static.a")
+        set(CUDA_LIB_PATH ${CUDA_LIB_PATH} "${CUDA_LIB_DIR}libcudadevrt.a")
+        set(CUDA_LIB_PATH ${CUDA_LIB_PATH} "${CUDA_LIB_DIR}libcurand_static.a")
+        set(CUDA_LIB_PATH ${CUDA_LIB_PATH} "/usr/lib64/libdl.so.2")
     endif()
 endif()
 
-message(STATUS "name of executable file:" ${NIUTRANS_EXE})
+# Set libs and compiler options for MKL
+if(USE_MKL)
+    add_definitions(-DUSE_BLAS -DMKL)
+    set(COMPILER_DIR "${INTEL_ROOT}/compiler")
+    set(MKL_DIR "${INTEL_ROOT}/mkl")
+    set(CPU_ARCH intel64)
+    if(WIN32)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNDEBUG")
+        link_directories(${MKL_DIR}/lib/intel64/)
+        link_directories(${COMPILER_DIR}/lib/intel64)
+        include_directories(${MKL_DIR}/include)
+        set(COMPILER_LIB_DIR "${COMPILER_DIR}/lib/intel64/")
+        set(MKL_LIB_DIR "${MKL_DIR}/lib/intel64/")
+        set(MKL_LIB_PATH ${MKL_LIB_PATH} "${MKL_LIB_DIR}mkl_intel_lp64.lib")
+        set(MKL_LIB_PATH ${MKL_LIB_PATH} "${MKL_LIB_DIR}mkl_core.lib")
+        set(MKL_LIB_PATH ${MKL_LIB_PATH} "${MKL_LIB_DIR}mkl_intel_thread.lib")
+        set(MKL_LIB_PATH ${MKL_LIB_PATH} "${COMPILER_LIB_DIR}libiomp5md.lib")
+    else()
+        if(USE_CUDA)
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-reorder")
+        else()
+            set(CMAKE_CXX_FLAGS "-std=c++11 -msse4.2 -w -march=native -Wno-enum-compare -Wno-sign-compare -Wno-reorder -Wno-format -O3 -flto -DNDEBUG -rdynamic -fkeep-inline-functions -fPIC")
+        endif(USE_CUDA)
+        link_directories(${MKL_DIR}/lib/intel64/)
+        link_directories(${COMPILER_DIR}/lib/intel64)
+        include_directories(${MKL_DIR}/include)
+        set(COMPILER_LIB_DIR "${COMPILER_DIR}/lib/intel64/")
+        set(MKL_LIB_DIR "${MKL_DIR}/lib/intel64/")
+        set(MKL_LIB_PATH ${MKL_LIB_PATH} "${MKL_LIB_DIR}libmkl_intel_lp64.a")
+        set(MKL_LIB_PATH ${MKL_LIB_PATH} "${MKL_LIB_DIR}libmkl_core.a")
+        set(MKL_LIB_PATH ${MKL_LIB_PATH} "${MKL_LIB_DIR}libmkl_intel_thread.a")
+        set(MKL_LIB_PATH ${MKL_LIB_PATH} "${COMPILER_LIB_DIR}libiomp5.a")
+    endif()
+endif()
+
+# Set libs and compiler options for OpenBLAS
+if(USE_OPENBLAS)
+    add_definitions(-DUSE_BLAS -DOPENBLAS)
+    set(OPENBLAS_INCLUDE_DIR "${OPENBLAS_ROOT}/include")
+    set(OPENBLAS_LIB_DIR "${OPENBLAS_ROOT}/lib")
+    if(WIN32)
+        link_directories(${OPENBLAS_LIB_DIR})
+        include_directories(${OPENBLAS_INCLUDE_DIR})
+        set(OPENBLAS_LIB_PATH ${OPENBLAS_LIB_PATH} "${OPENBLAS_LIB_DIR}/libopenblas.lib")
+    else()
+        link_directories(${OPENBLAS_LIB_DIR})
+        include_directories(${OPENBLAS_INCLUDE_DIR})
+        set(OPENBLAS_LIB_PATH ${OPENBLAS_LIB_PATH} "${OPENBLAS_LIB_DIR}/libopenblas.a")
+    endif()
+endif()
+
+# Integrate all libs
+set(CUDA_LIB ${CUDA_LIB_PATH})
+set(MKL_LIB ${MKL_LIB_PATH})
+set(OPENBLAS_LIB ${OPENBLAS_LIB_PATH})
+
+# Add executable files to project
+# Generate dynamic link library about project
+if(USE_CUDA)
+    if(GEN_DLL)
+        cuda_add_library(${NIUTENSOR_DLL} SHARED ${CPP_FILES} ${H_FILES} ${CU_FILES} ${CUH_FILES})
+    else()
+        my_add_executable(${NIUTENSOR_EXE} ${CPP_FILES} ${H_FILES} ${CU_FILES} ${CUH_FILES})
+    endif()
+else()
+    if(GEN_DLL)
+        add_library(${NIUTENSOR_DLL} SHARED ${CPP_FILES} ${H_FILES})
+    else()
+        my_add_executable(${NIUTENSOR_EXE} ${CPP_FILES} ${H_FILES})
+    endif()
+endif()
+
+# Link external libs to executable files
+# Link external libs to dynamic link library
+if(WIN32)
+    add_definitions(-DWIN32)
+    set(MESS ${MESS} "On Windows")
+    if(USE_CUDA)
+        set(MESS ${MESS} " Use CUDA")
+        set(ALL_LIB ${ALL_LIB} ${CUDA_LIB})
+    endif()
+    if(USE_MKL)
+        set(MESS ${MESS} " Use MKL")
+        set(ALL_LIB ${ALL_LIB} ${MKL_LIB})
+    elseif(USE_OPENBLAS)
+        set(MESS ${MESS} " Use OpenBLAS")
+        set(ALL_LIB ${ALL_LIB} ${OPENBLAS_LIB})
+    else()
+    endif()
+
+    if(GEN_DLL)
+        message(STATUS "Generate Dynamic Link Library")
+        message(STATUS "Name of Dynamic Link Library: " ${NIUTENSOR_DLL})
+        target_link_libraries(${NIUTENSOR_DLL} ${ALL_LIB})
+    else()
+        message(STATUS "Generate Makefile For Executable File")
+        message(STATUS "Name of Executable File :" ${NIUTENSOR_EXE})
+        target_link_libraries(${NIUTENSOR_EXE} ${ALL_LIB})
+    endif()
+    message(STATUS "${MESS}")
+else()
+    add_definitions(-std=c++11)
+    set(MESS ${MESS} "On Linux or macOS")
+    if(USE_CUDA)
+        set(MESS ${MESS} " Use CUDA")
+        set(ALL_LIB ${ALL_LIB} ${CUDA_LIB})
+        set(FLAG ${FLAG} "-lpthread -lcudart -lnvidia-ml")
+    else()
+        set(FLAG ${FLAG} "-lpthread")
+    endif()
+    if(USE_MKL)
+        set(MESS ${MESS} " Use MKL")
+        set(ALL_LIB ${ALL_LIB} ${MKL_LIB})
+        set(FLAG ${FLAG} "-liomp5 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -ldl")
+    elseif(USE_OPENBLAS)
+        set(MESS ${MESS} " Use OpenBLAS")
+        set(ALL_LIB ${ALL_LIB} ${OPENBLAS_LIB})
+        set(FLAG ${FLAG} "-lopenblas")
+    else()
+    endif()
+
+    if(GEN_DLL)
+        message(STATUS "Generate Dynamic Link Library")
+        message(STATUS "Name of Dynamic Link Library: " ${NIUTENSOR_DLL})
+        target_link_libraries(${NIUTENSOR_DLL} ${ALL_LIB} ${FLAG})
+    else()
+        message(STATUS "Generate Makefile For Executable File")
+        message(STATUS "Name of Executable File: " ${NIUTENSOR_EXE})
+        target_link_libraries(${NIUTENSOR_EXE} ${ALL_LIB} ${FLAG})
+    endif()
+    message(STATUS "${MESS}")
+endif()

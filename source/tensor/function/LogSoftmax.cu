@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
-* Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+* Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
 * All rights reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,7 @@
 
 /*
 * $Created by: XIAO Tong (email: xiaotong@mail.neu.edu.cn) 2018-04-26
+* $Update by: Lin Ye (email: linye2015@outlook.com) 2019-07-01 float16 added
 */
 
 #include "LogSoftmax.h"
@@ -27,6 +28,7 @@
 #include "../core/reduce/ReduceMax.cuh"
 #include "../core/shape/IsSameShaped.h"
 #include "../XDevice.h"
+#include <device_launch_parameters.h>
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
@@ -58,11 +60,12 @@ y_{i,j} = log(e^x_{i,j} / \sum_{i} e^{x_{i,j})
 >> rowNum - row number of the matrix
 >> colNum - column number of the matrix
 */
+template <class T ,TENSOR_DATA_TYPE dataType>
 __global__
-void KernelLogSoftmaxComputeByRow(DTYPE * x, DTYPE * max, DTYPE * sum, DTYPE * y, int rowNum, int colNum)
+void KernelLogSoftmaxComputeByRow(T * x, T * max, T * sum, T * y, int rowNum, int colNum)
 {
-    __shared__ DTYPE inputSum[MAX_CUDA_THREAD_NUM_PER_BLOCK];
-    __shared__ DTYPE inputMax[MAX_CUDA_THREAD_NUM_PER_BLOCK];
+    __shared__ T inputSum[MAX_CUDA_THREAD_NUM_PER_BLOCK];
+    __shared__ T inputMax[MAX_CUDA_THREAD_NUM_PER_BLOCK];
 
     int i = blockDim.y * blockIdx.y + threadIdx.y;
     int j = blockDim.x * blockIdx.x + threadIdx.x;
@@ -79,14 +82,22 @@ void KernelLogSoftmaxComputeByRow(DTYPE * x, DTYPE * max, DTYPE * sum, DTYPE * y
     /* y_{i,j} = log(e^(s_{i,j} - max_{j}) / \sum_{k} e^{s_{k,j} - max_{j}}) */
     if (i < rowNum && j < colNum) {
         int key = i * colNum + j;
-        DTYPE r = log(exp(x[key] - inputMax[threadIdx.x]) / inputSum[threadIdx.x]);
+        if (dataType == DEFAULT_DTYPE) {
+            DTYPE r = log((DTYPE)exp((DTYPE)(x[key] - inputMax[threadIdx.x])) / (DTYPE)inputSum[threadIdx.x]);
 
-        if (isnan(r))
-            r = LOGPROB_MIN;
-        if (isinf(r))
-            r = LOGPROB_MIN;
+            if (isnan(r))
+                r = LOGPROB_MIN;
+            if (isinf(r))
+                r = LOGPROB_MIN;
 
-        y[key] = MAX(r, LOGPROB_MIN);
+            y[key] = MAX(r, LOGPROB_MIN);
+        }
+        else if (dataType == X_FLOAT16) {
+#if __CUDA_ARCH__ >= 600
+            half r = hlog((half)hexp(x[key] - inputMax[threadIdx.y]) / (half)inputSum[threadIdx.y]);
+            y[key] = r;
+#endif
+        }
     }
 }
 
@@ -105,11 +116,12 @@ y_{i,j} = log(e^x_{i,j} / \sum_{j} e^{x_{i,j})
 >> rowNum - row number of the matrix
 >> colNum - column number of the matrix
 */
+template <class T ,TENSOR_DATA_TYPE dataType>
 __global__
-void KernelLogSoftmaxComputeByCol(DTYPE * x, DTYPE * max, DTYPE * sum, DTYPE * y, int rowNum, int colNum)
+void KernelLogSoftmaxComputeByCol(T * x, T * max, T * sum, T * y, int rowNum, int colNum)
 {
-    __shared__ DTYPE inputSum[MAX_CUDA_THREAD_NUM_PER_BLOCK];
-    __shared__ DTYPE inputMax[MAX_CUDA_THREAD_NUM_PER_BLOCK];
+    __shared__ T inputSum[MAX_CUDA_THREAD_NUM_PER_BLOCK];
+    __shared__ T inputMax[MAX_CUDA_THREAD_NUM_PER_BLOCK];
 
     int i = blockDim.y * blockIdx.y + threadIdx.y;
     int j = blockDim.x * blockIdx.x + threadIdx.x;
@@ -126,19 +138,27 @@ void KernelLogSoftmaxComputeByCol(DTYPE * x, DTYPE * max, DTYPE * sum, DTYPE * y
     /* y_{i,j} = log(e^(s_{i,j} - max_{i}) / \sum_{k} e^{s_{i,k} - max_{i}}) */
     if (i < rowNum && j < colNum) {
         int key = i * colNum + j;
-        DTYPE r = log(exp(x[key] - inputMax[threadIdx.y]) / inputSum[threadIdx.y]);
+        if (dataType == DEFAULT_DTYPE) {
+            DTYPE r = log((DTYPE)exp((DTYPE)(x[key] - inputMax[threadIdx.y])) / (DTYPE)inputSum[threadIdx.y]);
 
-        /*if (r < LOGPROB_MIN)
-        {
-            printf("min %e %e, %e %e, %e %e\n", r, x[key] - inputMax[threadIdx.y], x[key], inputMax[threadIdx.y], exp(x[key] - inputMax[threadIdx.y]), inputSum[threadIdx.y]);
-        }*/
+            /*if (r < LOGPROB_MIN)
+            {
+                printf("min %e %e, %e %e, %e %e\n", r, x[key] - inputMax[threadIdx.y], x[key], inputMax[threadIdx.y], exp(x[key] - inputMax[threadIdx.y]), inputSum[threadIdx.y]);
+            }*/
 
-        if (isnan(r))
-            r = LOGPROB_MIN;
-        if (isinf(r))
-            r = LOGPROB_MIN;
+            if (isnan(r))
+                r = LOGPROB_MIN;
+            if (isinf(r))
+                r = LOGPROB_MIN;
         
-        y[key] = MAX(r, LOGPROB_MIN);
+            y[key] = MAX(r, LOGPROB_MIN);
+        }
+        else if (dataType == X_FLOAT16) {
+#if __CUDA_ARCH__ >= 600
+            half r = hlog((half)hexp(x[key] - inputMax[threadIdx.y]) / (half)inputSum[threadIdx.y]);
+            y[key] = r;
+#endif
+        }
     }
 }
 
@@ -174,16 +194,40 @@ void _CudaLogSoftmaxSumMax(XTensor * x, XTensor * y, int leadDim, XTensor * sum,
             GDevs.GetCudaThread2D(x->devID, n, m, MAX_INT, gridSize, blockSize);
 
             /* y_{i,j} = log(e^(s_{i,j} - max_{j}) / \sum_{k} e^{s_{k,j} - max_{j}}) */
-            KernelLogSoftmaxComputeByRow << <dim3(gridSize[1], gridSize[0]), dim3(blockSize[1], blockSize[0]) >> >
+            KernelLogSoftmaxComputeByRow<DTYPE, DEFAULT_DTYPE> <<<dim3(gridSize[1], gridSize[0]), dim3(blockSize[1], blockSize[0])>>>
                                             ((DTYPE*)x->data, maxData, sumData, (DTYPE*)y->data, n, m);
         }
         else {
             GDevs.GetCudaThread2D(x->devID, m, n, MAX_INT, gridSize, blockSize);
 
             /* y_{i,j} = log(e^(s_{i,j} - max_{i}) / \sum_{k} e^{s_{i,k} - max_{i}}) */
-            KernelLogSoftmaxComputeByCol << <dim3(gridSize[0], gridSize[1]), dim3(blockSize[0], blockSize[1]) >> >
+            KernelLogSoftmaxComputeByCol<DTYPE, DEFAULT_DTYPE> <<<dim3(gridSize[0], gridSize[1]), dim3(blockSize[0], blockSize[1])>>>
                                             ((DTYPE*)x->data, maxData, sumData, (DTYPE*)y->data, n, m);
         }
+    }
+    else if (x->dataType == X_FLOAT16 && y->dataType == X_FLOAT16) {
+#ifdef HALF_PRECISION
+        int gridSize[3], blockSize[3];
+        int n = x->dimSize[0];
+        int m = x->dimSize[1];
+        /* allocate the buffer */
+        __half * maxData = (half*)max->data;
+        __half * sumData = (half*)sum->data;
+        if (leadDim == 0) {
+            GDevs.GetCudaThread2D(x->devID, n, m, MAX_INT, gridSize, blockSize);
+            /* y_{i,j} = log(e^(s_{i,j} - max_{j}) / \sum_{k} e^{s_{k,j} - max_{j}}) */
+            KernelLogSoftmaxComputeByRow<half, X_FLOAT16> <<<dim3(gridSize[1], gridSize[0]), dim3(blockSize[1], blockSize[0])>>>
+                                       ((half*)x->data, maxData, sumData, (half *)y->data, n, m);
+        }
+        else {
+            GDevs.GetCudaThread2D(x->devID, m, n, MAX_INT, gridSize, blockSize);
+            /* y_{i,j} = log(e^(s_{i,j} - max_{i}) / \sum_{k} e^{s_{i,k} - max_{i}}) */
+            KernelLogSoftmaxComputeByCol<half, X_FLOAT16> <<<dim3(gridSize[0], gridSize[1]), dim3(blockSize[0], blockSize[1])>>>
+                                       ((half*)x->data, maxData, sumData, (half*)y->data, n, m);
+        }
+#else
+        ShowNTErrors("Recompile the code with HALF_PRECISION!");
+#endif
     }
     else {
         ShowNTErrors("TODO!");

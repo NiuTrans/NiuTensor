@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2017, Natural Language Processing Lab, Northestern University. 
+ * Copyright (C) 2017, Natural Language Processing Lab, Northeastern University. 
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -91,6 +91,7 @@
 #include "sort/TopK.h"
 
 #include "utilities/CheckData.h"
+#include "utilities/Float16.h"
 #include "utilities/FlushToMem.h"
 #include "utilities/SetAscendingOrder.h"
 #include "utilities/XMatrixSegment.h"

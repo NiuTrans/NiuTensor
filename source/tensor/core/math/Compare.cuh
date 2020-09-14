@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+ * Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,8 +31,14 @@ namespace nts{ // namespace nts(NiuTrans.Tensor)
 /* check whether every entry is equal to the given value (cuda version) */
 void _CudaEqual(const XTensor * a, XTensor * b, DTYPE value);
 
+/* check whether every entry is equal to the given value (cuda version) */
+void _CudaEqual(const XTensor * a, const XTensor * b, XTensor * c);
+
 /* check whether every entry is not equal to the given value (cuda version) */
 void _CudaNotEqual(const XTensor * a, XTensor * b, DTYPE value);
+
+/* check whether every entry is not equal to the given value (cuda version) */
+void _CudaNotEqual(const XTensor * a, const XTensor * b, XTensor * c);
 
 /* return maximum of two tensor for each items (cuda version) */
 void _CudaMax(const XTensor * a, const XTensor * b, XTensor *c);

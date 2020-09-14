@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+ * Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -130,15 +130,18 @@ bool CheckStackShape(const TensorList &smalls, XTensor &t, int dim)
     int order = tensor->order;
 
     for (int i = 0; i < tensor->order; i++) {
-        if (i < dim)
+        if (i < dim) {
             if (t.GetDim(i) != tensor->GetDim(i)) 
                 return false;
-        else if (i > dim)
-            if (t.GetDim(i) != tensor->GetDim(i-1)) 
+        }
+        else if (i > dim) {
+            if (t.GetDim(i) != tensor->GetDim(i-1))
                 return false;
-        else if (i == dim)
-            if (t.GetDim(i) != smalls.count) 
+        }
+        else if (i == dim) {
+            if (t.GetDim(i) != smalls.count)
                 return false;
+        }
     }
 
     return true;

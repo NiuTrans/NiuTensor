@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2017, Natural Language Processing Lab, Northestern University. 
+ * Copyright (C) 2017, Natural Language Processing Lab, Northeastern University. 
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -176,8 +176,9 @@ void XMem::Initialize(int myDevID, MEMPOOL_MODE myMode, MTYPE myBlockSize, int m
 /* free memory */
 void XMem::Free()
 {
-    for(int i = 0; i < blockNum; i++){
-        Free(devID, blocks[i].mem);
+    for (int i = 0; i < blockNum; i++) {
+        if (blocks != NULL)
+            Free(devID, blocks[i].mem);
     }
     delete[] blocks;
     blocks = NULL;
@@ -1499,18 +1500,24 @@ void XMem::CreateBLASHandle()
 /* show profile of the memory pool */
 void XMem::ShowMemUsage(FILE * file)
 {
-    MTYPE used = 0;
-    MTYPE total = 0;
+    MTYPE blockUsed = 0;
+    MTYPE blockTotal = 0;
 
     for(int i = 0; i < blockNum; i++){
         if(blocks[i].mem != NULL){
-            used  += blocks[i].used;
-            total += blocks[i].size;
+            blockUsed  += blocks[i].used;
+            blockTotal += blocks[i].size;
         }
     }
 
-    fprintf(file, "mem:%.1fMB used:%.1fMB usage:%.3f\n", 
-           (DTYPE)total/MILLION, (DTYPE)used/MILLION, (DTYPE)used/total);
+    MTYPE bufTotal = bufSize;
+    MTYPE bufUsed = bufUsed;
+
+    fprintf(file, "block mem:%.1fMB used:%.1fMB usage:%.3f\n",
+           (DTYPE)blockTotal/MILLION, (DTYPE)blockUsed/MILLION, (DTYPE)blockUsed/blockTotal);
+    fprintf(file, "buffer mem:%.1fMB used:%.1fMB usage:%.3f\n",
+            (DTYPE)bufTotal / 1024 / 1024, (DTYPE)bufUsed / 1024 / 1024, (DTYPE)bufUsed / bufTotal);
+
 }
 
 #ifdef USE_CUDA
@@ -1583,16 +1590,16 @@ MTYPE XMemManager::GetAvailableGPUMemory(int devID)
 void XMemManager::GetBufferSize(MTYPE freeMem, MTYPE * myBufSize)
 {
     *myBufSize = 0;
-    if (freeMem >= MILLION * 128){
-        *myBufSize = MILLION * 32;
-        if (freeMem >= MILLION * 256){
-            *myBufSize = MILLION * 64;
-            if (freeMem >= MILLION * 512){
-                *myBufSize = MILLION * 128;
-                if (freeMem >= MILLION * 1024) {
-                    *myBufSize = MILLION * 128;
-                    if (freeMem >= MILLION * 2048)
-                        *myBufSize = MILLION * 128;
+    if (freeMem >= MILLION * 128ULL){
+        *myBufSize = MILLION * 32ULL;
+        if (freeMem >= MILLION * 256ULL){
+            *myBufSize = MILLION * 64ULL;
+            if (freeMem >= MILLION * 512ULL){
+                *myBufSize = MILLION * 128ULL;
+                if (freeMem >= MILLION * 1024ULL) {
+                    *myBufSize = MILLION * 128ULL;
+                    if (freeMem >= MILLION * 2048ULL)
+                        *myBufSize = MILLION * 128ULL;
                 }
             }
         }

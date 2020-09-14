@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2017, Natural Language Processing Lab, Northestern University.
+ * Copyright (C) 2017, Natural Language Processing Lab, Northeastern University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -142,6 +142,15 @@ T UnaryCudaTan(T x)
     return (T)tan((float)x);
 }
 
+template<class T>
+__device__
+T UnaryCudaReciprocal(T x)
+{
+    //if (x == 0)
+        //ShowNTErrors("Zero does not have reciprocal value.");
+    return (T)(1 / x);
+}
+
 
 #define SIMPLE_UNARY_FUNCTION_GPU(funcName, origFunc)                       \
 template<class T>                                                           \
@@ -155,7 +164,7 @@ void Kernel##funcName(T * a, T * b, int size)                               \
 }                                                                           \
 void _Cuda##funcName(const XTensor * a, XTensor * b)                        \
 {                                                                           \
-    CheckNTErrors((_IsSameShaped(a, b)),                            \
+    CheckNTErrors((_IsSameShaped(a, b)),                                    \
                   "Input tensors should have the same type!");              \
     CheckNTErrors(a->isSparse == false, "TODO!");                           \
                                                                             \
@@ -207,6 +216,8 @@ SIMPLE_UNARY_FUNCTION_GPU(Square, UnaryCudaSquare)
 SIMPLE_UNARY_FUNCTION_GPU(Sin, UnaryCudaSin)
 SIMPLE_UNARY_FUNCTION_GPU(Cos, UnaryCudaCos)
 SIMPLE_UNARY_FUNCTION_GPU(Tan, UnaryCudaTan)
+
+SIMPLE_UNARY_FUNCTION_GPU(Reciprocal, UnaryCudaReciprocal)
 
 #endif // USE_CUDA
 

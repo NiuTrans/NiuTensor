@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2018, Natural Language Processing Lab, Northestern University.
+ * Copyright (C) 2018, Natural Language Processing Lab, Northeastern University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -300,7 +300,7 @@ void XLink::MakeLink(const XTensor * t1, const XTensor * t2, XTensor * h, int id
     if(h == NULL)
         return;
     
-    if (!t1->enableGrad)
+    if (!(t1->enableGrad && X_ENABLE_GRAD))
         return;
 
     TensorList list(2);
@@ -323,7 +323,7 @@ void XLink::MakeLink(const XTensor * t1, const XTensor * t2, const XTensor * t3,
     if (h == NULL)
         return;
 
-    if (!t1->enableGrad || !t2->enableGrad)
+    if (!t1->enableGrad || !t2->enableGrad || !X_ENABLE_GRAD)
         return;
     
     TensorList list(3);
@@ -342,6 +342,9 @@ create a hyper edge with a list of tensors and a output tensor
 */
 void XLink::MakeLink(const TensorList * list, XTensor * h, int id)
 {
+    if (!X_ENABLE_GRAD || !h->enableGrad)
+        return;
+
     /* forward */
     XLink &income = h->income;
     income.Reset();
@@ -376,7 +379,7 @@ create a hyper edge with a input tensors and a list of output tensors
 */
 void XLink::MakeLink(XTensor * t, TensorList * list, int id)
 {
-    if (!t->enableGrad)
+    if (!t->enableGrad || !X_ENABLE_GRAD)
         return;
 
     /* forward */
@@ -633,7 +636,9 @@ void XLink::CopyIncoming(const XTensor * reference, XTensor * target)
     ClearIncoming(target);
 
     int tailNum = reference->income.tailNum;
-    TensorList tails(tailNum);
+    if (tailNum <= 0)
+        return;
+    TensorList tails;
     for(int i = 0; i < tailNum; i++){
         XTensor * tail = (XTensor*)reference->income.tails[i];
         tails.Add(tail);

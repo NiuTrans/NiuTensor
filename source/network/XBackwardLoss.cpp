@@ -1,5 +1,5 @@
 /* NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2018, Natural Language Processing Lab, Northestern University.
+ * Copyright (C) 2018, Natural Language Processing Lab, Northeastern University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -60,6 +60,7 @@ void XLossGrad::MakeGrad(XTensor * node, bool isEfficient)
 
         //XTensor * tmp = NewTensorBufV2(output, output->devID, output->mem);
         XTensor* tmp = NewTensor(output);
+        tmp->SetZeroAll();
 
         if (operID == LOSS_CROSSENTROPY) {
             if (income.tailNum == 3)
@@ -70,7 +71,7 @@ void XLossGrad::MakeGrad(XTensor * node, bool isEfficient)
             _SumMe(dedy, tmp);
         }
         else {
-            ShowNTErrors("Wrong activation function type!");
+            ShowNTErrors("Unsupported backward computation! TODO!");
         }
         //DelTensorBuf(tmp);
         DelTensor(tmp);

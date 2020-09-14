@@ -1,6 +1,6 @@
 /*
  * NiuTrans.Tensor - an open-source tensor library
- * Copyright (C) 2018, Natural Language Processing Lab, Northestern University.
+ * Copyright (C) 2018, Natural Language Processing Lab, Northeastern University.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,6 +25,7 @@
 #include "SetData.cuh"
 #include "../../XUtility.h"
 #include "../movement/CopyValues.h"
+#include "../utilities/Float16.h"
 
 #if !defined( WIN32 ) && !defined( _WIN32 )
     #include "sys/time.h"
@@ -434,13 +435,19 @@ void _SetDataRand(XTensor * tensor, DTYPE lower, DTYPE upper)
         if(tensor->dataType == X_FLOAT){
             float * d = (float*)tensor->data;
             for(int i = 0; i < tensor->unitNum; i++){
-                d[i] = variance * ((float)rand()/RAND_MAX) + lower;
+                d[i] = ((float)rand()/RAND_MAX) * variance  + lower;
+            }
+        }
+        else if (tensor->dataType == X_FLOAT16) {
+            float16* d = (float16*)tensor->data;
+            for (int i = 0; i < tensor->unitNum; i++) {
+                d[i] = ((float16)rand() / RAND_MAX) * variance + lower;
             }
         }
         else if(tensor->dataType == X_DOUBLE){
             double * d = (double*)tensor->data;
             for(int i = 0; i < tensor->unitNum; i++){
-                d[i] = variance * ((double)rand()/RAND_MAX) + lower;
+                d[i] = ((double)rand()/RAND_MAX) * variance+ lower;
             }
         }
         else{
@@ -521,7 +528,15 @@ void _SetDataRange(XTensor * tensor, DTYPE lower, DTYPE upper, DTYPE step)
     /* set the data from the array */
     tensor->SetData(data, num);
 
-    delete[] data;
+    if (tensor->dataType == X_INT) {
+        delete[] (int*)data;
+    }
+    else if (tensor->dataType == X_FLOAT) {
+        delete[] (float*)data;
+    }
+    else {
+        ShowNTErrors("TODO! Unsupported datatype!")
+    }
 }
 
 /* 
