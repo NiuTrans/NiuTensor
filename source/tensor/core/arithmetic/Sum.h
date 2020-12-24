@@ -43,7 +43,7 @@ void SumMe(XTensor & a, const XTensor & b, DTYPE beta = (DTYPE)1.0);
 tensor summation c = a + b * \beta
 make a new tensor c to keep the result and return it
 */
-XTensor Sum(const XTensor &a, const XTensor &b, DTYPE beta = (DTYPE)1.0);
+XTensor Sum(const XTensor &a, const XTensor &b, bool inplace = false, DTYPE beta = (DTYPE)1.0);
 
 /* tensor summation c = a + b * \beta */
 void Sum(const XTensor &a, const XTensor &b, XTensor &c, DTYPE beta = (DTYPE)1.0);

@@ -165,15 +165,10 @@ XTensor Gather(XTensor &s, XTensor &index)
         memcpy(dims, index.dimSize, index.order * sizeof(int));
         dims[index.order] = t.GetDim(-1);
 
-        XTensor tt;
-        tt = Reshape(t, index.order + 1, dims);
+        t.Reshape(index.order + 1, dims);
         delete[] dims;
-
-        return tt;
     }
-    else {
-        return t;
-    }   
+    return t;
 }
 
 } // namespace nts(NiuTrans.Tensor)

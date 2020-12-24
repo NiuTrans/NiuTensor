@@ -262,13 +262,27 @@ make a new tensor c to keep the result and return it
 
 >> a - a tensor
 >> b - another tensor
+>> inplace - indicates whether the result will be placed in the input tensor
 >> beta - the scaling factor
 << return - the result of tensor summation
 */
-XTensor Sum(const XTensor & a, const XTensor & b, DTYPE beta)
+XTensor Sum(const XTensor &a, const XTensor &b, bool inplace, DTYPE beta)
 {
-    XTensor c(&a);
+    XTensor c;
+
+    if (inplace) {
+        /* the result is stored into the input tensor */
+        int dims[MAX_TENSOR_DIM_NUM];
+        memcpy(&(dims[0]), &(a.dimSize[0]), sizeof(int) * a.order);
+        dims[0] = -dims[0];
+        InitTensor(&c, a.order, dims, a.dataType, a.devID, a.enableGrad);
+        c.data = a.data;
+    }
+    else {
+        InitTensorV2(&c, &a);
+    }
     c.SetTMPFlag();
+    c.enableGrad = a.enableGrad;
 
     if (b.order == 0){
         DTYPE shift = b.Get0D() * beta;
@@ -302,6 +316,10 @@ XTensor Sum(const XTensor & a, const XTensor & b, DTYPE beta)
             ShowNTErrors("Something is wrong!");
         }
     }
+
+    XTensor* p = const_cast<XTensor*>(&a);
+    if (inplace)
+        p->data = NULL;
     return c;
 }
 

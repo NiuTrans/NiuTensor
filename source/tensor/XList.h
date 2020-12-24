@@ -57,6 +57,9 @@ public:
     /* constructor */
     TensorListBase(int myMaxNum);
 
+    /* constructor */
+    TensorListBase(const T* inputItems, int inputItemCount);
+
     /* copy-constructor */
     TensorListBase(const TensorListBase<T>& l);
 
@@ -104,6 +107,9 @@ public:
 
     /* find the position of the first matched item  */
     int FindFirst(const T& item);
+
+    /* check if an item exists in this list */
+    bool Contains(const T& item);
 
     /* clear the data array */
     void Clear();

@@ -46,6 +46,10 @@ enum MATRIX_TRANS_TYPE{X_TRANS, X_NOTRANS};
 extern const char * GetDataTypeName(TENSOR_DATA_TYPE type);
 extern TENSOR_DATA_TYPE GetDataType(const char * typeName);
 
+/* data conversion (for lower precision computation) */
+unsigned short FloatToFloat16(float f);
+float Float16ToFloat(unsigned short h);
+
 #define CheckDataType(a, b) \
 { \
     if(GetDataTypeName(a) != GetDataTypeName(a)){ \

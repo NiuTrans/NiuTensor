@@ -27,6 +27,8 @@
 
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
+/* generate data items with a Glorot initialization*/
+void _SetDataXavierNormal(XTensor * tensor, DTYPE gain = 1.0F);
 /* generate data items with a xavier initialization */
 void _SetDataFanInOut(XTensor * tensor, DTYPE gain = 1.0F);
 

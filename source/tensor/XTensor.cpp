@@ -87,20 +87,19 @@ int MakeTensorID()
 XTensor::XTensor()
 {
     Init();
-    SetDataPointer();
 
     id = MakeTensorID();
     isDefaultDType = true;
     isInGlobalMem = false;
     isInit = false;
     isTmp = false;
+    reserved = 0;
 }
 
 /* constructor */
 XTensor::XTensor(const XTensor* reference)
 {
     Init();
-    SetDataPointer();
     id = MakeTensorID();
 
     InitTensorV2(this, reference);
@@ -117,7 +116,6 @@ XTensor::XTensor(const int myOrder, int myDevID, XMem* myMem)
     CheckNTErrors((myOrder >= 0), "Illegal tensor order!");
 
     Init();
-    SetDataPointer();
 
     id = MakeTensorID();
     order = myOrder;
@@ -138,7 +136,6 @@ XTensor::XTensor(const int myOrder, const int * myDimSize, const TENSOR_DATA_TYP
                  const float myDenseRatio, int myDevID, XMem * myMem)
 {
     Init();
-    SetDataPointer();
 
     id = MakeTensorID();
     order = myOrder;
@@ -153,7 +150,6 @@ XTensor::XTensor(const int myOrder, const int * myDimSize, const TENSOR_DATA_TYP
 XTensor::XTensor(const XTensor& reference)
 {
     Init();
-    SetDataPointer();
     id = MakeTensorID();
     ShallowCopy(reference);
     data = NULL;
@@ -163,14 +159,10 @@ XTensor::XTensor(const XTensor& reference)
         devID = reference.devID;
         mem = reference.mem;
         data = reference.data;
+        reserved = reference.reserved;
+        const_cast<XTensor&>(reference).reserved = 0;
         signature = reference.signature;
-        
-        /* what we really want to do is "reference.data = NULL;"
-           As "reference" is constant, we cannot reset "reference.data"
-           here. So we save the ADDRESS of "reference.data" in
-           "reference.dataP", and do this work by updating "*reference.dataP".
-           This is VERY tricky and there might be better solutions :) */
-        *reference.dataP = NULL;
+        const_cast<XTensor&>(reference).data = NULL;
     }
     else{
         devID = reference.devID;
@@ -196,7 +188,6 @@ XTensor::XTensor(const XTensor& reference)
 XTensor::XTensor(const XTensor&& reference)
 {
     Init();
-    SetDataPointer();
     id = MakeTensorID();
     ShallowCopy(reference);
     data = NULL;
@@ -206,13 +197,7 @@ XTensor::XTensor(const XTensor&& reference)
     mem = reference.mem;
     data = reference.data;
     signature = reference.signature;
-        
-    /* what we really want to do is "reference.data = NULL;"
-       As "reference" is constant, we cannot reset "reference.data"
-       here. So we save the ADDRESS of "reference.data" in
-       "reference.dataP", and do this work by updating "*reference.dataP".
-       This is VERY tricky and there might be better solutions :) */
-    *reference.dataP = NULL;
+    const_cast<XTensor&>(reference).data = NULL;
 
     if (reference.enableGrad) {
         XLink::Replace(&reference, this);
@@ -220,6 +205,8 @@ XTensor::XTensor(const XTensor&& reference)
 
     isInit = true;
     isTmp = reference.isTmp;
+    reserved = reference.reserved;
+    const_cast<XTensor&>(reference).reserved = 0;
 }
 
 /* de-constructor */
@@ -236,8 +223,13 @@ XTensor::~XTensor()
 
         XTensor* newTensor = new XTensor(order, dims, dataType, denseRatio, devID, mem);
         newTensor->SetTMPFlag();
-        newTensor->data = data;
-        data = NULL;
+        if (reserved == -1) {
+            newTensor->data = NULL;
+        }
+        else {
+            newTensor->data = data;
+            data = NULL;
+        }
 
         if (enableGrad)
             XLink::Replace(this, newTensor);
@@ -268,7 +260,6 @@ void XTensor::Init()
     signature = 0;
     data = NULL;
     dataHost = NULL;
-    dataP = NULL;
     devID = -1;
     order = -1;
     memset(dimSize, 0, sizeof(int) * MAX_TENSOR_DIM_NUM);
@@ -343,6 +334,11 @@ XTensor& XTensor::operator= (const XTensor& tensor)
         
         XTensor* newTensor = new XTensor(order, dims, dataType, denseRatio, devID, mem);
         newTensor->SetTMPFlag();
+        
+        /* release the data if it won't be used in backward */
+        if (reserved == -1) {
+            DestroyData();
+        }
         newTensor->data = data;
         newTensor->dataHost = dataHost;
         newTensor->signature = tensor.signature;
@@ -428,6 +424,11 @@ XTensor& XTensor::operator= (const XTensor&& tensor)
         
         XTensor* newTensor = new XTensor(order, dims, dataType, denseRatio, devID, mem);
         newTensor->SetTMPFlag();
+
+        /* release the data if it won't be used in backward */
+        if (reserved == -1) {
+            DestroyData();
+        }
         newTensor->data = data;
         newTensor->dataHost = dataHost;
         newTensor->signature = tensor.signature;
@@ -452,18 +453,14 @@ XTensor& XTensor::operator= (const XTensor&& tensor)
     mem = tensor.mem;
     data = tensor.data;
     signature = tensor.signature;
-        
-    /* what we really want to do is "reference.data = NULL;"
-       As "reference" is constant, we cannot reset "reference.data"
-       here. So we save the ADDRESS of "reference.data" in
-       "reference.dataP", and do this work by updating "*reference.dataP".
-       This is VERY tricky and there might be better solutions :) */
-    *tensor.dataP = NULL;
+    const_cast<XTensor&>(tensor).data = NULL;
 
     if (enableGrad) {
-        XLink::Copy(&tensor, this);
+        XLink::Replace(&tensor, this);
     }
 
+    reserved = tensor.reserved;
+    const_cast<XTensor&>(tensor).reserved = 0;
     return *this;
 }
 
@@ -907,12 +904,6 @@ set tensor items with an array of values
 void XTensor::SetDataBatchedWithValues(MTYPE* offsets, void* values, int num)
 {
     _SetDataWithOffsetAndValue(this, offsets, values, num);
-}
-
-/* set the pointer to "data" */
-void XTensor::SetDataPointer()
-{
-    dataP = &data;
 }
 
 /* 
@@ -1739,13 +1730,12 @@ void XTensor::Dump(FILE* file, const char* label, const int n, const int beg, co
             }
         }
         else if (dataType == X_FLOAT16) {
-            float16* f = (float16*)d;
-            for (int i = beg; i < end; i++) {
-                float v = f[i].Float();
-                if (i == beg)
-                    fprintf(file, "%e", v);
+            for(int i = beg; i < end; i++){
+                DTYPE f = ((unsigned short*)d)[i];
+                if(i == beg)
+                    fprintf(file, "%e", f);
                 else
-                    fprintf(file, " %e", v);
+                    fprintf(file, " %e", f);
             }
         }
         else
@@ -1805,7 +1795,7 @@ void XTensor::BinaryDump(FILE* file)
             break;
         }
         case X_FLOAT16: {
-            fwrite(tmp.data, sizeof(float16), unitNum, file);
+            fwrite(tmp.data, sizeof(unsigned short), unitNum, file);
             break;
         }
         default: {
@@ -1943,8 +1933,8 @@ void XTensor::BinaryRead(FILE* file, size_t offset)
             break;
         }
         case X_FLOAT16: {
-            float16* d = new float16[unitNum];
-            fread(d, sizeof(float16), unitNum, file);
+            unsigned short* d = new unsigned short[unitNum];
+            fread(d, sizeof(unsigned short), unitNum, file);
             SetData(d, unitNum);
             delete[] d;
             break;

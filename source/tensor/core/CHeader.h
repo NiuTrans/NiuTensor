@@ -91,7 +91,6 @@
 #include "sort/TopK.h"
 
 #include "utilities/CheckData.h"
-#include "utilities/Float16.h"
 #include "utilities/FlushToMem.h"
 #include "utilities/SetAscendingOrder.h"
 #include "utilities/XMatrixSegment.h"

@@ -153,11 +153,24 @@ b = a * scale + shift
 >> a - the input tensor
 >> scale - the scale factor
 >> shift - the shift factor
+>> inplace - indicates whether the result will be placed in the input tensor
 << return - the result of scaling and shifting all tensor entires
 */
-XTensor ScaleAndShift(const XTensor &a, DTYPE scale, DTYPE shift)
+XTensor ScaleAndShift(const XTensor &a, DTYPE scale, DTYPE shift, bool inplace)
 {
-    XTensor b(&a);
+    XTensor b;
+
+    if (inplace) {
+        /* the result is stored into the input tensor */
+        int dims[MAX_TENSOR_DIM_NUM];
+        memcpy(&(dims[0]), &(a.dimSize[0]), sizeof(int) * a.order);
+        dims[0] = -dims[0];
+        InitTensor(&b, a.order, dims, a.dataType, a.devID, a.enableGrad);
+        b.data = a.data;
+    }
+    else {
+        InitTensorV2(&b, &a);
+    }
     b.SetTMPFlag();
 
     if (scale == 1.0F)
@@ -178,6 +191,9 @@ XTensor ScaleAndShift(const XTensor &a, DTYPE scale, DTYPE shift)
         }
     }
     
+    XTensor* p = const_cast<XTensor*>(&a);
+    if (inplace)
+        p->data = NULL;
     return b;
 }
 

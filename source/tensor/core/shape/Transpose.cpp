@@ -138,6 +138,7 @@ XTensor Transpose(const XTensor &a, const int i, const int j)
 
     float dr = (!a.isSparse) ? 1.0F : a.denseRatio;
     XTensor b(order, dimSize, a.dataType, dr, a.devID, a.mem);
+    b.enableGrad = a.enableGrad;
     b.SetTMPFlag();
 
     /* call _Transpose function */

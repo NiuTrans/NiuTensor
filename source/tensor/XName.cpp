@@ -79,6 +79,10 @@ const char * GetOPName(int type)
             return "M_MULTIPLY";
         else if (type == MATH_MULTIPLYDIM)
             return "M_MULTIPLYDIM";
+        else if (type == MATH_MULTIPLY_INPLACE)
+            return "M_MULTIPLY_I";
+        else if (type == MATH_MULTIPLYDIM_INPLACE)
+            return "M_MULTIPLYDIM_I";
         else if (type == MATH_MULTIPLYBROADCAST)
             return "M_MULTIPLYBROADCAST";
         else if (type == MATH_NEGATE)
@@ -97,6 +101,8 @@ const char * GetOPName(int type)
             return "M_SHIFT";
         else if (type == MATH_MULANDSHIFT)
             return "M_OPERATION";
+        else if (type == MATH_MLP)
+            return "M_MLP";
         else if (type == MATH_SIGN)
             return "M_SIGN";
         else if (type == MATH_SUB)

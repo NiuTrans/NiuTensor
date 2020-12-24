@@ -48,7 +48,7 @@ make a new tensor to keep the result and return it
 c(i) = a(i)*b(i)
 where i is the index of the element 
 */
-XTensor Multiply(const XTensor &a, const XTensor &b, int leadingDim = 0);
+XTensor Multiply(const XTensor &a, const XTensor &b, bool inplace = false, int leadingDim = 0);
 
 /* 
 element-wise product of two tensors:

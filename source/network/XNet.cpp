@@ -121,8 +121,13 @@ void XNet::Backward(TensorList &roots)
                 ClearGrad(parent);
             }
 
-            if(XNoder::IsLeaf(node))
+            if (XNoder::IsLeaf(node)) {
                 ClearGrad(node);
+                if (node->outgo.tailNum == 0) {
+                    delete node;
+                }
+            }
+            
         }
     }
 }
@@ -333,7 +338,7 @@ void XNet::ShowNetwork(FILE * file, XTensor * node)
 
     Traverse(roots);
 
-    XLink::ShowNode(file, node);
+    //XLink::ShowNode(file, node);
 
     /* go over nodes in its topological order */
     for(int i = nodes.count - 1; i >= 0; i--){

@@ -47,6 +47,8 @@ void XLossGrad::MakeGrad(XTensor * node, bool isEfficient)
     XTensor * padding = NULL;
     int leadingDim;
 
+    bool isRoot = XNoder::IsRoot(node);
+
     if (!isEfficient || output->isGrad) {
         XNoder::MakeGrad(output);
         XTensor * dedy = output->grad;
@@ -58,9 +60,14 @@ void XLossGrad::MakeGrad(XTensor * node, bool isEfficient)
 
         gold = income.tails[1];
 
-        //XTensor * tmp = NewTensorBufV2(output, output->devID, output->mem);
-        XTensor* tmp = NewTensor(output);
-        tmp->SetZeroAll();
+        XTensor* tmp;
+        if (!isRoot) {
+            tmp = NewTensor(output);
+            tmp->SetZeroAll();
+        }
+        else{
+            tmp = dedy;
+        }
 
         if (operID == LOSS_CROSSENTROPY) {
             if (income.tailNum == 3)
@@ -68,13 +75,17 @@ void XLossGrad::MakeGrad(XTensor * node, bool isEfficient)
             leadingDim = income.GetParamInt(0);
             CheckNTErrors(leadingDim >= 0 && leadingDim < output->order, "wrong leading dimension in logsoftmax!");
             _CrossEntropyBackward(tmp, output, gold, weight, padding, leadingDim);
-            _SumMe(dedy, tmp);
+            if (isRoot)
+                gold->DestroyData();
+            else
+                _SumMe(dedy, tmp);
         }
         else {
             ShowNTErrors("Unsupported backward computation! TODO!");
         }
-        //DelTensorBuf(tmp);
-        DelTensor(tmp);
+        
+        if (!isRoot)
+            DelTensor(tmp);
     }
 
     node->visitMark = NODE_FINISHED;

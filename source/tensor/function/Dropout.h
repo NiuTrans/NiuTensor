@@ -41,7 +41,7 @@ void _DropoutBackward(const XTensor * y, const XTensor * x,
                       unsigned int seed, DTYPE dropProb, int leadingDim = -1);
 
 /* dropout function */
-XTensor Dropout(const XTensor &x, DTYPE dropProb, int leadingDim = -1, int leadingDim2 = -1);
+XTensor Dropout(const XTensor &x, DTYPE dropProb, bool inplace = false, int leadingDim = -1, int leadingDim2 = -1);
     
 /* dropout function without broadcast */
 XTensor DropoutWithoutBroadcast(const XTensor &x, DTYPE dropProb);

@@ -1511,12 +1511,9 @@ void XMem::ShowMemUsage(FILE * file)
     }
 
     MTYPE bufTotal = bufSize;
-    MTYPE bufUsed = bufUsed;
 
     fprintf(file, "block mem:%.1fMB used:%.1fMB usage:%.3f\n",
            (DTYPE)blockTotal/MILLION, (DTYPE)blockUsed/MILLION, (DTYPE)blockUsed/blockTotal);
-    fprintf(file, "buffer mem:%.1fMB used:%.1fMB usage:%.3f\n",
-            (DTYPE)bufTotal / 1024 / 1024, (DTYPE)bufUsed / 1024 / 1024, (DTYPE)bufUsed / bufTotal);
 
 }
 

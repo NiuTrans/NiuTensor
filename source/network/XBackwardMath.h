@@ -200,6 +200,10 @@ private:
     /* gradient for operation */
     static
     void GradMulAndShift(XTensor * node, bool isEfficient);
+
+    /* gradient for MLP */
+    static
+    void GradMLP(XTensor* node, bool isEfficient);
 };
 
 }

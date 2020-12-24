@@ -55,7 +55,7 @@ scale and shift all tensor entires
 make a new tensor to keep the result and return it
 b = a * scale + shift 
 */
-XTensor ScaleAndShift(const XTensor &a, DTYPE scale, DTYPE shift = 0);
+XTensor ScaleAndShift(const XTensor &a, DTYPE scale, DTYPE shift = 0, bool inplace=false);
 
 /* 
 scale and shift all tensor entires 

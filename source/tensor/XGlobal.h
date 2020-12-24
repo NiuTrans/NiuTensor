@@ -180,6 +180,8 @@ extern FILE * tF;
 extern int tmpCountV2;
 extern int nnnTotal;
 
+void PrintTrace(void);
+
 } /* end of the nts (NiuTrans.Tensor) namespace */
 
 #endif

@@ -242,6 +242,7 @@ XTensor GetReduceTensor(const XTensor & input, int dim)
     XTensor output(order, dimSize, input.dataType, dr, input.devID, input.mem);
     output.SetTMPFlag();
 
+    delete[] dimSize;
     return output;
 }
 

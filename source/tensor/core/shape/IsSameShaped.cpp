@@ -75,7 +75,7 @@ check whether the three matrices are in the same type and size
 */
 bool _IsSameShaped(const XTensor * a, const XTensor * b, const XTensor * c)
 {
-    return IsSameShaped(a, b) && IsSameShaped(a, c);
+    return _IsSameShaped(a, b) && _IsSameShaped(a, c);
 }
 
 /*

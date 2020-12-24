@@ -25,7 +25,6 @@
 #include "SetData.cuh"
 #include "../../XUtility.h"
 #include "../movement/CopyValues.h"
-#include "../utilities/Float16.h"
 
 #if !defined( WIN32 ) && !defined( _WIN32 )
     #include "sys/time.h"
@@ -39,6 +38,49 @@
 
 namespace nts{ // namespace nts(NiuTrans.Tensor)
 
+
+/* 
+generate data items according to the method
+described in `Understanding the difficulty 
+of training deep feedforward neural networks`
+- Glorot, X. & Bengio, Y. (2010), using a normal 
+distribution. The resulting tensor will have values sampled from
+:math:`\mathcal{N}(0, \text{std}^2)` where
+
+.. math::
+\text{std} = \text{gain} \times \sqrt{\frac{2}{\text{fan\_in} + \text{fan\_out}}}
+
+Also known as Glorot initialization.
+>> tensor - the tensor whose data array would be initialized
+>> gain - an optional scaling factor
+*/
+void _SetDataXavierNormal(XTensor * tensor, DTYPE gain)
+{
+    CheckNTErrors(tensor->dataType == X_FLOAT, "the tensor must be in X_FLOAT!");
+    CheckNTErrors(tensor->order >= 2, "the tensor dimension must be no less than 2!");
+
+    int fanIn = 1;
+    int fanOut = 1;
+
+    int order = tensor->order;
+    if (order == 2) {
+        fanIn = tensor->dimSize[1];
+        fanOut = tensor->dimSize[0];
+    }
+    else {
+        int numInputFmaps = tensor->dimSize[1];
+        int numOutputFmaps = tensor->dimSize[0];
+        int receptiveFieldSize = 0;
+        for (int i = 2; i < order; i++)
+            receptiveFieldSize += tensor->dimSize[i];
+        fanIn = numInputFmaps * receptiveFieldSize;
+        fanOut = numOutputFmaps * receptiveFieldSize;
+    }
+
+    DTYPE std = gain * (float)sqrt(2.0 / (float)(fanIn + fanOut));
+    
+    tensor->SetDataRandn(0, std);
+}
 /*
 Fills the input Tensor or Variable with values according to the method described in 
 "Understanding the difficulty of training deep feedforward neural networks" - Glorot, X. & Bengio, Y. (2010), 
@@ -71,7 +113,7 @@ void _SetDataFanInOut(XTensor * tensor, DTYPE gain)
         fanOut = numOutputFmaps * receptiveFieldSize;
     }
 
-    DTYPE std = gain * (float)sqrt(2.0 / (fanIn + fanOut));
+    DTYPE std = gain * (float)sqrt(2.0 / (float)(fanIn + fanOut));
     DTYPE a = (DTYPE)sqrt(3.0F) * std;
     tensor->SetDataRand(-a, a);
     //_SetDataRand(tensor, -finfout, finfout);
@@ -435,19 +477,19 @@ void _SetDataRand(XTensor * tensor, DTYPE lower, DTYPE upper)
         if(tensor->dataType == X_FLOAT){
             float * d = (float*)tensor->data;
             for(int i = 0; i < tensor->unitNum; i++){
-                d[i] = ((float)rand()/RAND_MAX) * variance  + lower;
+                d[i] = variance * ((float)rand()/RAND_MAX) + lower;
             }
         }
         else if (tensor->dataType == X_FLOAT16) {
-            float16* d = (float16*)tensor->data;
+            unsigned short* d = (unsigned short*)tensor->data;
             for (int i = 0; i < tensor->unitNum; i++) {
-                d[i] = ((float16)rand() / RAND_MAX) * variance + lower;
+                d[i] = variance * ((unsigned short)rand() / RAND_MAX) + lower;
             }
         }
         else if(tensor->dataType == X_DOUBLE){
             double * d = (double*)tensor->data;
             for(int i = 0; i < tensor->unitNum; i++){
-                d[i] = ((double)rand()/RAND_MAX) * variance+ lower;
+                d[i] = variance * ((double)rand()/RAND_MAX) + lower;
             }
         }
         else{

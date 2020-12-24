@@ -52,10 +52,25 @@ TensorListBase<T>::TensorListBase(int myMaxNum)
     items = (T*)malloc(sizeof(T) * myMaxNum);
 }
 
+/*
+constructor
+>> myMaxNum - maximum number of items to keep
+*/
+template <typename T>
+TensorListBase<T>::TensorListBase(const T* inputItems, int inputItemCount)
+{
+    CheckNTErrors(inputItemCount > 0, "check if the input number > 0");
+    maxNum = inputItemCount;
+    count = inputItemCount;
+    items = (T*)malloc(sizeof(T) * inputItemCount);
+    memcpy(items, inputItems, inputItemCount * sizeof(T));
+}
+
 /* copy-constructor */
 template<typename T>
 TensorListBase<T>::TensorListBase(const TensorListBase<T>& l)
 {
+    CheckNTErrors(l.maxNum > 0, "check if the input number > 0");
     maxNum = l.maxNum;
     count = l.count;
     items = (T*)malloc(sizeof(T) * maxNum);
@@ -66,10 +81,11 @@ TensorListBase<T>::TensorListBase(const TensorListBase<T>& l)
 template<typename T>
 TensorListBase<T>::TensorListBase(TensorListBase<T>&& l)
 {
+    CheckNTErrors(l.maxNum > 0, "check if the input number > 0");
     maxNum = l.maxNum;
     count = l.count;
-    items = (T*)malloc(sizeof(T) * maxNum);
-    memcpy(items, l.items, l.count * sizeof(T));
+    items = l.items;
+    l.items = NULL;
 }
 
 /* assignment operator for a constant reference */
@@ -297,6 +313,13 @@ inline int TensorListBase<T>::FindFirst(const T& item)
             return i;
     }
     return -1;
+}
+
+/* check if an item exists in this list */
+template<typename T>
+bool TensorListBase<T>::Contains(const T& item)
+{
+    return FindFirst(item) >= 0;
 }
 
 /* clear the data array */

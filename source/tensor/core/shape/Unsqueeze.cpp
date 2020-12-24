@@ -149,6 +149,7 @@ XTensor Unsqueeze(const XTensor &a, int dim, int dSize)
 
     float dr = (!a.isSparse) ? 1.0F : a.denseRatio;
     XTensor b(order, dimSize, a.dataType, dr, a.devID, a.mem);
+    b.enableGrad = a.enableGrad;
     b.SetTMPFlag();
 
     /* call _Unsqueeze function */

@@ -81,10 +81,6 @@ public:
     /* copy of data on the host memory. It is only activated 
        when the tensor is operated on GPUs */
     void * dataHost;
-    
-    /* a pointer to data (i.e., a pointer to the address of "data".
-       This is for reset "data" when XTensor is used as a const variable. */
-    void ** dataP;
 
     /* 
     device id 
@@ -145,6 +141,9 @@ public:
 
     /* indicates whether the tensor is created temporarily */
     bool isTmp;
+
+    /* indicates whether the data is reserved for backward. 0: uncertain; 1: reserved; -1: deletable */
+    int reserved;
 
     /* indicates whether the tensor keeps the gradient when used as model parameters */
     bool isGrad;
@@ -330,9 +329,6 @@ public:
 
     /* set tensor items with an array of values */
     void SetDataBatchedWithValues(MTYPE * offsets, void * values, int num);
-    
-    /* set the pointer to "data" */
-    void SetDataPointer();
 
     /* get the value of a cell with the index */
     DTYPE Get(int index[], int size = -1) const;

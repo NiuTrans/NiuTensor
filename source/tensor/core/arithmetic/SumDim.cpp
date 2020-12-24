@@ -136,6 +136,7 @@ i.e., a is summed with b by broadcasting
 >> a - a tensor
 >> b - another tensor whose size is equal to that of dimension n of a
 >> n - the dimension index
+>> inplace - indicates whether the result will be placed in the input tensor
 >> beta - the scaling factor
 */
 void _SumDim(XTensor * a, const XTensor * b, int n, DTYPE beta)
@@ -154,12 +155,25 @@ i.e., a is summed with b by broadcasting
 >> a - a tensor
 >> b - another tensor whose size is equal to that of dimension n of a
 >> n - the dimension index
+>> inplace - indicates whether the result will be placed in the input tensor
 >> beta - the scaling factor
 << return - the result tensor by tensor summation
 */
-XTensor SumDim(const XTensor &a, const XTensor &b, int n, DTYPE beta)
+XTensor SumDim(const XTensor &a, const XTensor &b, int n, bool inplace, DTYPE beta)
 {
-    XTensor c(&a);
+    XTensor c;
+
+    if (inplace) {
+        /* the result is stored into the input tensor */
+        int dims[MAX_TENSOR_DIM_NUM];
+        memcpy(&(dims[0]), &(a.dimSize[0]), sizeof(int) * a.order);
+        dims[0] = -dims[0];
+        InitTensor(&c, a.order, dims, a.dataType, a.devID, a.enableGrad);
+        c.data = a.data;
+    }
+    else {
+        InitTensorV2(&c, &a);
+    }
     c.SetTMPFlag();
 
     n = MODX(n, a.order);
@@ -174,6 +188,9 @@ XTensor SumDim(const XTensor &a, const XTensor &b, int n, DTYPE beta)
         XLink::AddParamToHead(&c, beta);
     }
     
+    XTensor* p = const_cast<XTensor*>(&a);
+    if (inplace)
+        p->data = NULL;
     return c;
 }
 

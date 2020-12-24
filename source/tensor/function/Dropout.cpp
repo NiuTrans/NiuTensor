@@ -140,11 +140,12 @@ the same inference procedure as that with no use of dropout on the test data.
 
 >> x - input tensor
 >> dropProb - probability to set an element to zero
+>> inplace - indicates whether the result will be placed in the input tensor
 >> leadingDim - the dimension which we generate the random numbers and perform broadcasting
 >> leadingDim2 - another dimension which we generate the random numbers and perform broadcasting
 << return - tensor after dropout
 */
-XTensor Dropout(const XTensor &x, DTYPE dropProb, int leadingDim, int leadingDim2)
+XTensor Dropout(const XTensor &x, DTYPE dropProb, bool inplace, int leadingDim, int leadingDim2)
 {
     CheckNTErrors(dropProb >= 0.0 && dropProb <= 1.0, "The probability must be 0-1!");
 
@@ -158,7 +159,7 @@ XTensor Dropout(const XTensor &x, DTYPE dropProb, int leadingDim, int leadingDim
 
         _SetDataRandP(&mask, 0, 1.0F, dropProb, scaleFactor);
 
-        return Multiply(x, mask);
+        return Multiply(x, mask, inplace);
 
         /* dropout with index */
         /*int unitNum = floor(x.unitNum*dropProb);

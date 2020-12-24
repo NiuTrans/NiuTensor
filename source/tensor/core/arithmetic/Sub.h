@@ -41,7 +41,7 @@ void SubMe(XTensor & a, const XTensor & b, DTYPE beta = (DTYPE)1.0);
 tensor subtraction c = a - b * \beta
 make a new tensor c to keep the result and return it
 */
-XTensor Sub(const XTensor &a, const XTensor &b, DTYPE beta = (DTYPE)1.0);
+XTensor Sub(const XTensor &a, const XTensor &b, bool inplace = false, DTYPE beta = (DTYPE)1.0);
 
 /* tensor subtraction c = a - b * \beta */
 void Sub(const XTensor &a, const XTensor &b, XTensor &c, DTYPE beta = (DTYPE)1.0);

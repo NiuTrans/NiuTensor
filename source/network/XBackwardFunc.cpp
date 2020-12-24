@@ -51,9 +51,18 @@ void XFuncGrad::MakeGrad(XTensor * node, bool isEfficient)
 
         XTensor * dedx = input->grad;
         XTensor * dedy = output->grad;
-        //XTensor * tmp = NewTensorBufV2(output, output->devID, output->mem);
-        XTensor * tmp = NewTensor(output);
-        tmp->SetZeroAll();
+
+        XTensor* tmp;
+
+        /* store the result to a temporary node if the input has multiple children */
+        if (input->outgo.tailNum > 1) {
+            tmp = NewTensor(output);
+            tmp->SetZeroAll();
+        }
+        /* otherwise, the result is directly stored into the input node  */
+        else {
+            tmp = dedx;
+        }
 
         if (operID == FUNC_HARDTANH)
             _HardTanHBackward(output, input, dedy, tmp);
@@ -77,9 +86,10 @@ void XFuncGrad::MakeGrad(XTensor * node, bool isEfficient)
             ShowNTErrors("Unsupported backward computation! TODO!");
         }
 
-        _SumMe(dedx, tmp);
-        //DelTensorBuf(tmp);
-        DelTensor(tmp);
+        if (input->outgo.tailNum > 1) {
+            _SumMe(dedx, tmp);
+            DelTensor(tmp);
+        }
     }
 
     node->visitMark = NODE_FINISHED;

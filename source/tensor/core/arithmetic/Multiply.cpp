@@ -190,12 +190,25 @@ where i is the index of the item
 
 >> a - tensor a
 >> b - tensor b
+>> inplace - indicates whether the result will be placed in the input tensor
 >> leadingDim - the dimension along which we perform broadcasting
 << return - the product of the tensors
 */
-XTensor Multiply(const XTensor &a, const XTensor &b, int leadingDim)
+XTensor Multiply(const XTensor &a, const XTensor &b, bool inplace, int leadingDim)
 {
-    XTensor c(&a);
+    XTensor c;
+
+    if (inplace) {
+        /* the result is stored into the input tensor */
+        int dims[MAX_TENSOR_DIM_NUM];
+        memcpy(&(dims[0]), &(a.dimSize[0]), sizeof(int) * a.order);
+        dims[0] = -dims[0];
+        InitTensor(&c, a.order, dims, a.dataType, a.devID, a.enableGrad);
+        c.data = a.data;
+    }
+    else {
+        InitTensorV2(&c, &a);
+    }
     c.SetTMPFlag();
 
     if (b.order == 0){
@@ -214,7 +227,10 @@ XTensor Multiply(const XTensor &a, const XTensor &b, int leadingDim)
 
             /* tensor connections */
             if (a.enableGrad && b.enableGrad) {
-                XLink::MakeLink(&a, &b, &c, MATH_MULTIPLY);
+                if(inplace == false)
+                    XLink::MakeLink(&a, &b, &c, MATH_MULTIPLY);
+                else
+                    XLink::MakeLink(&a, &b, &c, MATH_MULTIPLY_INPLACE);
             }
         }
         else if(n >= 0 && n < a.order){
@@ -223,7 +239,10 @@ XTensor Multiply(const XTensor &a, const XTensor &b, int leadingDim)
 
             /* tensor connections */
             if (a.enableGrad && b.enableGrad) {
-                XLink::MakeLink(&a, &b, &c, MATH_MULTIPLYDIM);
+                if (inplace == false)
+                    XLink::MakeLink(&a, &b, &c, MATH_MULTIPLYDIM);
+                else
+                    XLink::MakeLink(&a, &b, &c, MATH_MULTIPLYDIM_INPLACE);
                 XLink::AddParamToHeadInt(&c, n);
             }
         }
@@ -232,6 +251,9 @@ XTensor Multiply(const XTensor &a, const XTensor &b, int leadingDim)
         }
     }
 
+    XTensor* p = const_cast<XTensor*>(&a);
+    if (inplace)
+        p->data = NULL;
     return c;
 }
 
