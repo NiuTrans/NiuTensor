@@ -168,7 +168,6 @@ void XDevice::Clear()
 
     GPUMaxThreadNum = 0;
 
-    MUTEX_DELE(cublasMutex);
     if (isHandleReady) {
         cublasDestroy(cublasHandle);
         isHandleReady = false;
