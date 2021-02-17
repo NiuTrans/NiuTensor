@@ -161,7 +161,7 @@ bool TestSub2()
     /* call Sub function */
     _Sub(a, b, c, beta);
     _SubMe(cMe, b, beta);
-    cUser = Sub(*a, *b, beta);
+    cUser = Sub(*a, *b, false, beta);
 
     /* check results */
     cpuTest = _CheckData(c, answer, unitNum, 1e-4F) &&
@@ -188,7 +188,7 @@ bool TestSub2()
     /* call Sub function */
     _Sub(aGPU, bGPU, cGPU, beta);
     _SubMe(cMeGPU, bGPU, beta);
-    cUserGPU = Sub(*aGPU, *bGPU, beta);
+    cUserGPU = Sub(*aGPU, *bGPU, false, beta);
 
     /* check results */
     gpuTest = _CheckData(cGPU, answer, unitNum, 1e-4F) &&
@@ -268,7 +268,7 @@ bool TestSub3()
     b->SetData(bData, bUnitNum);
 
     /* call Sum function */
-    cUser = Sub(*a, *b, beta);
+    cUser = Sub(*a, *b, false, beta);
 
     /* check results */
     cpuTest = _CheckData(&cUser, answer, cUnitNum, 1e-4F);
@@ -287,7 +287,7 @@ bool TestSub3()
     bGPU->SetData(bData, bUnitNum);
 
     /* call Sum function */
-    cUserGPU = Sub(*aGPU, *bGPU, beta);
+    cUserGPU = Sub(*aGPU, *bGPU, false, beta);
 
     /* check results */
     gpuTest = _CheckData(&cUserGPU, answer, cUnitNum, 1e-4F);
@@ -370,7 +370,7 @@ bool TestSub4()
     b->SetData(bData, bUnitNum);
 
     /* call Sum function */
-    cUser = Sub(*a, *b, beta);
+    cUser = Sub(*a, *b, false, beta);
 
     /* check results */
     cpuTest = _CheckData(&cUser, answer, cUnitNum, 1e-4F);
@@ -389,7 +389,7 @@ bool TestSub4()
     bGPU->SetData(bData, bUnitNum);
 
     /* call Sum function */
-    cUserGPU = Sub(*aGPU, *bGPU, beta);
+    cUserGPU = Sub(*aGPU, *bGPU, false, beta);
 
     /* check results */
     gpuTest = _CheckData(&cUserGPU, answer, cUnitNum, 1e-4F);
@@ -472,7 +472,7 @@ bool TestSub5()
     b->SetData(bData, bUnitNum);
 
     /* call Sum function */
-    cUser = Sub(*a, *b, beta);
+    cUser = Sub(*a, *b, false, beta);
 
     /* check results */
     cpuTest = _CheckData(&cUser, answer, cUnitNum, 1e-4F);
@@ -491,7 +491,7 @@ bool TestSub5()
     bGPU->SetData(bData, bUnitNum);
 
     /* call Sum function */
-    cUserGPU = Sub(*aGPU, *bGPU, beta);
+    cUserGPU = Sub(*aGPU, *bGPU, false, beta);
 
     /* check results */
     gpuTest = _CheckData(&cUserGPU, answer, cUnitNum, 1e-4F);
