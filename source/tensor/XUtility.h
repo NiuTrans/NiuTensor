@@ -42,7 +42,6 @@ extern void XMemSet(void * p, int value, size_t size);
 extern void XMemSet(int devID, void * p, int value, size_t size);
 extern void XMemCopy(void * t, int devIDT, const void * s, int devIDS, size_t size);
 extern void XMemCopy2D(void * t, size_t tPitch, int devIDT, const void * s, size_t sPitch, int devIDS, size_t mSize, int n);
-extern void XMemCopy2DAsync(void * t, size_t tPitch, int devIDT, const void * s, size_t sPitch, int devIDS, size_t mSize, int n, XStream * stream);
 extern void * XMemAlloc(int devID, size_t size);
 extern void * XMemAllocOnDev(int devID, size_t size);
 extern void XMemFree(int devID, void * p);

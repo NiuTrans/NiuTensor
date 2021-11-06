@@ -847,6 +847,7 @@ XTensor * NewTensorRange(int lower, int upper, int step, const TENSOR_DATA_TYPE 
 
     XTensor * tensor = NewTensor1D(unitNum, myDataType, myDevID, isEnableGrad);
     tensor->Range(lower, upper, step);
+
     return tensor;
 }
 

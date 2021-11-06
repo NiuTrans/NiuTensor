@@ -38,7 +38,7 @@ XThread::XThread()
 #endif
     MUTEX_INIT(gMutex);
     function = NULL;
-    argv = NULL;
+    argv.Clear();
     toBreak = false;
     jobCount = 0;
     working = 0;
@@ -69,6 +69,18 @@ void * XThread::Wrapper(void * ptr)
     return 0;
 }
 
+/* 
+initialize the thread with the function and its parameters 
+>> myFunc - the function to run
+>> myArgv - arguments of the function
+*/
+void XThread::SetFunc(TFunction myFunc, XList * myArgv)
+{
+    function = myFunc;
+    argv.Clear();
+    argv.AddList(myArgv);
+}
+
 
 /* 
 Tunning for this thread. It is very very native implementation.
@@ -77,6 +89,10 @@ After that, we wait again if there is no new job.
 */
 void XThread::Run()
 {
+    if (function == NULL) {
+        ShowNTErrors("You are running a thread with no function specified!");
+    }
+
 #ifdef _WIN32
     //COND_RESET(gCond);
 #endif    
@@ -104,7 +120,7 @@ void XThread::Run()
         }
 
         /* do what you want to do*/
-        function(argv);
+        function(&argv);
 
 #ifdef USE_PTHREAD
         jobCount--;
@@ -207,6 +223,26 @@ void XThread::LetItGo()
     COND_SIGNAL(jobCond);
 #endif
 #endif
+}
+    
+/*
+create the thread and run it immediately (a combination of
+Start() and LetItGo() */
+bool XThread::StartNow()
+{
+    CheckNTErrors(jobCount == 0, "Cannot start a thread again when it is running!");
+    jobCount++;
+    
+    Start();
+    
+#ifdef _WIN32
+    MUTEX_LOCK(workingMutex);
+    COND_RESET(jobCond);
+    MUTEX_UNLOCK(workingMutex);
+    COND_SIGNAL(jobCond);
+#endif
+    
+    return true;
 }
 
 /* waith for a singal */

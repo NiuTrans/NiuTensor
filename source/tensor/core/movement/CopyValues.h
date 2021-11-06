@@ -27,19 +27,19 @@
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
 /* copy s to t */
-void _CopyValues(const XTensor * s, XTensor * t, XStream * stream = NULL);
+void _CopyValues(const XTensor * s, XTensor * t);
 
 /* copy a segment of s to t  */
-void _CopyValues(const XTensor * s, const int sBeg, const int sLen, XTensor * t, const int tBeg, XStream * stream = NULL);
+void _CopyValues(const XTensor * s, const int sBeg, const int sLen, XTensor * t, const int tBeg);
 
 /* copy s to t (rename _CopyValues) */
-void CopyValues(const XTensor &s, XTensor &t, XStream * stream = NULL);
+void CopyValues(const XTensor &s, XTensor &t);
 
 /* 
 copy s to t (return an XTensor structure)
 make a new tensor to keep the result and return it
 */
-XTensor CopyValues(const XTensor &s, XStream * stream = NULL);
+XTensor CopyValues(const XTensor &s);
 
 } // namespace nts(NiuTrans.Tensor)
 

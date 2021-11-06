@@ -290,9 +290,16 @@ void _MultiplyBroadcast(const XTensor * a, const XTensor * b, XTensor * c, DTYPE
                 source = target;
             }
             
-            target = t->mem != NULL ?
+            /*target = t->mem != NULL ?
                      t->mem->AllocBuf(t->devID, t->unitNum * t->unitSize):
-                     XMemAlloc(t->devID, t->unitNum * t->unitSize);
+                     XMemAlloc(t->devID, t->unitNum * t->unitSize);*/
+            if (t->mem != NULL) {
+                t->mem->LockBuf();
+                target = t->mem->AllocBuf(t->devID, t->unitNum * t->unitSize);
+            }
+            else {
+                target = XMemAlloc(t->devID, t->unitNum * t->unitSize);
+            }
             
             s->data = source;
             t->data = target;
@@ -302,8 +309,9 @@ void _MultiplyBroadcast(const XTensor * a, const XTensor * b, XTensor * c, DTYPE
             /* free the memory space of the one before the last allocation */
             if(count > 0){
                 int size = s->unitNum * s->unitSize;
-                if(t->mem != NULL)
+                if(t->mem != NULL) {
                     t->mem->ReleaseBuf(t->devID, size);
+                }
                 else
                     XMemFree(t->devID, source);
             }
@@ -312,8 +320,10 @@ void _MultiplyBroadcast(const XTensor * a, const XTensor * b, XTensor * c, DTYPE
             if(isLast){
                 CheckNTErrors(t->unitNum == c->unitNum, "Wrong tensor size!");
                 _Multiply(a, t, c, beta);
-                if(t->mem != NULL)
+                if(t->mem != NULL) {
                     t->mem->ReleaseBuf(t->devID, t->unitNum * t->unitSize);
+                    t->mem->UnlockBuf();
+                }
                 else
                     XMemFree(t->devID, target);
                 target = NULL;

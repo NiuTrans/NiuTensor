@@ -39,7 +39,7 @@ NiuTensor工具包可以在Windows、Linux以及macOS环境下进行安装，支
 - 执行CMake命令对Visual Studio项目进行生成（如果 visual studio 版本低于 2019，则在使用下列命令的时候需额外加上`-A x64`的CMake参数），如计划生成动态链接库，则仅需在命令中额外加上`-DGEN_DLL=ON`的CMake参数即可，否则默认生成可执行程序。
   - 如项目计划启用MKL数学运算库（需用户自行安装），则仅需在CMake命令中使用`-DUSE_MKL=ON`参数，并通过`-DINTEL_ROOT='/intel/root/path'`指定MKL库（Intel工具包）的安装路径。如`cmake -DUSE_MKL=ON -DINTEL_ROOT='C:/Program Files (x86)/IntelSWTools/compilers_and_libraries_2020.2.254/windows' ..`。
   - 如项目计划启用OpenBLAS数学运算库（需用户自行安装），则仅需在CMake命令中使用`-DUSE_OPENBLAS=ON`参数，并通过`-DOPENBLAS_ROOT='/openblas/root/path'`指定OpenBLAS库的安装路径。如`cmake -DUSE_OPENBLAS=ON -DOPENBLAS_ROOT='C:/Program Files/OpenBLAS' ..`。
-  - 如项目计划启用CUDA数学运算库（需用户自行安装），则仅需在CMake命令中使用`-DUSE_CUDA=ON`参数，并通过`-DCUDA_ROOT='/cuda/root/path'`指定CUDA库的安装路径。如`cmake -DUSE_CUDA=ON -DCUDA_ROOT='C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v9.2' ..`。如需在GPU设备上使用半精度浮点数进行运算，需在启用`-DUSE_CUDA=ON`参数的同时启用`-USE_HALF_PRECISION=ON`参数（需要注意的是半精度但需要注意的是，半精度操作仅在使用Pascal及更新架构的NVIDIA GPU中提供支持，该项可参考[NVIDIA GPU设备信息](https://developer.nvidia.com/cuda-gpus)进行查询）。
+  - 如项目计划启用CUDA数学运算库（需用户自行安装），则仅需在CMake命令中使用`-DUSE_CUDA=ON`参数，并通过`-DCUDA_ROOT='/cuda/root/path'`指定CUDA库的安装路径，通过-DGPU_ARCH=ARCH指定所在GPU设备的架构（K：Kepler架构；M：Maxwell架构；P：Pascal架构；V：Volta架构；T：Turing架构；A：Ampere架构）。如`cmake -DUSE_CUDA=ON -DCUDA_ROOT='C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v9.2' -DGPU_ARCH=P ..`。如需在GPU设备上使用半精度浮点数进行运算，需在启用`-DUSE_CUDA=ON`参数的同时启用`-USE_HALF_PRECISION=ON`参数（需要注意的是半精度但需要注意的是，半精度操作仅在使用Pascal及更新架构的NVIDIA GPU中提供支持，该项可参考[NVIDIA GPU设备信息](https://developer.nvidia.com/cuda-gpus)进行查询）。
 - 执行成功将显示`Build files have been written to:...`。
 - 打开build目录中的NiuTensor.sln文件即可通过Visual Studio打开NiuTensor项目。
 - 打开后在解决方案管理器中选中NiuTensor，右键将其设为启动项目即可开始使用。
@@ -60,7 +60,7 @@ NiuTensor工具包可以在Windows、Linux以及macOS环境下进行安装，支
 - 打开CLion首选项，点击“构建，执行，部署”选项卡中的CMake，在“CMake选项”中进行设置，设置完成后CLion将自动使用CMake对项目进行构建，如计划生成动态链接库，则仅需在在“CMake选项”中额外加上`-DGEN_DLL=ON`的CMake参数即可，否则默认生成可执行程序。
   - 如项目计划启用MKL数学运算库（需用户自行安装），则仅需在“CMake选项”中填入`-DUSE_MKL=ON`，并通过`-DINTEL_ROOT='/intel/root/path'`指定MKL库（Intel工具包）的安装路径。如`-DUSE_MKL=ON -DINTEL_ROOT='/opt/intel/compilers_and_libraries_2020.2.254/linux'`。
   - 如项目计划启用OpenBLAS数学运算库（需用户自行安装），则仅需在“CMake选项”中填入`-DUSE_OPENBLAS=ON`，并通过`-DOPENBLAS_ROOT='/openblas/root/path'`指定OpenBLAS库的安装路径。如`-DUSE_OPENBLAS=ON -DOPENBLAS_ROOT='/opt/OpenBLAS'`。
-  - 如项目计划启用CUDA数学运算库（需用户自行安装），则仅需在“CMake选项”中填入`-DUSE_CUDA=ON`，并通过`-DCUDA_ROOT='/cuda/root/path'`指定CUDA库的安装路径。如`-DUSE_CUDA=ON -DCUDA_ROOT='/usr/local/cuda-9.2'`。如需在GPU设备上使用半精度浮点数进行运算，需在启用`-DUSE_CUDA=ON`参数的同时启用`-USE_HALF_PRECISION=ON`参数（需要注意的是半精度但需要注意的是，半精度操作仅在使用Pascal及更新架构的NVIDIA GPU中提供支持，该项可参考[NVIDIA GPU设备信息](https://developer.nvidia.com/cuda-gpus)进行查询）。
+  - 如项目计划启用CUDA数学运算库（需用户自行安装），则仅需在“CMake选项”中填入`-DUSE_CUDA=ON`，并通过`-DCUDA_ROOT='/cuda/root/path'`指定CUDA库的安装路径，通过-DGPU_ARCH=ARCH指定所在GPU设备的架构（K：Kepler架构；M：Maxwell架构；P：Pascal架构；V：Volta架构；T：Turing架构；A：Ampere架构）。如`-DUSE_CUDA=ON -DCUDA_ROOT='/usr/local/cuda-9.2' -DGPU_ARCH=P `。如需在GPU设备上使用半精度浮点数进行运算，需在启用`-DUSE_CUDA=ON`参数的同时启用`-USE_HALF_PRECISION=ON`参数（需要注意的是半精度但需要注意的是，半精度操作仅在使用Pascal及更新架构的NVIDIA GPU中提供支持，该项可参考[NVIDIA GPU设备信息](https://developer.nvidia.com/cuda-gpus)进行查询）。
 
 ##### CMake方式（命令行）
 
@@ -71,7 +71,7 @@ NiuTensor工具包可以在Windows、Linux以及macOS环境下进行安装，支
 - 执行CMake命令对项目进行生成，如计划生成动态链接库，则仅需在命令中额外加上`-DGEN_DLL=ON`的CMake参数即可，否则默认生成可执行程序。
   - 如项目计划启用MKL数学运算库（需用户自行安装），则仅需在CMake命令中使用`-DUSE_MKL=ON`参数，并通过`-DINTEL_ROOT='/intel/root/path'`指定MKL库（Intel工具包）的安装路径。如`cmake -DUSE_MKL=ON -DINTEL_ROOT='/opt/intel/compilers_and_libraries_2020.2.254/linux' ..`。
   - 如项目计划启用OpenBLAS数学运算库（需用户自行安装），则仅需在CMake命令中使用`-DUSE_OPENBLAS=ON`参数，并通过`-DOPENBLAS_ROOT='/openblas/root/path'`指定OpenBLAS库的安装路径。如`cmake -DUSE_OPENBLAS=ON -DOPENBLAS_ROOT='/opt/OpenBLAS' ..`。
-  - 如项目计划启用CUDA数学运算库（需用户自行安装），则仅需在CMake命令中使用`-DUSE_CUDA=ON`参数，并通过`-DCUDA_ROOT='/cuda/root/path'`指定CUDA库的安装路径。如`cmake -DUSE_CUDA=ON -DCUDA_ROOT='/usr/local/cuda-9.2' ..`。如需在GPU设备上使用半精度浮点数进行运算，需在启用`-DUSE_CUDA=ON`参数的同时启用`-USE_HALF_PRECISION=ON`参数（需要注意的是半精度但需要注意的是，半精度操作仅在使用Pascal及更新架构的NVIDIA GPU中提供支持，该项可参考[NVIDIA GPU设备信息](https://developer.nvidia.com/cuda-gpus)进行查询）。
+  - 如项目计划启用CUDA数学运算库（需用户自行安装），则仅需在CMake命令中使用`-DUSE_CUDA=ON`参数，并通过`-DCUDA_ROOT='/cuda/root/path'`指定CUDA库的安装路径，通过-DGPU_ARCH=ARCH指定所在GPU设备的架构（K：Kepler架构；M：Maxwell架构；P：Pascal架构；V：Volta架构；T：Turing架构；A：Ampere架构）。如`cmake -DUSE_CUDA=ON -DCUDA_ROOT='/usr/local/cuda-9.2' -DGPU_ARCH=P ..`。如需在GPU设备上使用半精度浮点数进行运算，需在启用`-DUSE_CUDA=ON`参数的同时启用`-USE_HALF_PRECISION=ON`参数（需要注意的是半精度但需要注意的是，半精度操作仅在使用Pascal及更新架构的NVIDIA GPU中提供支持，该项可参考[NVIDIA GPU设备信息](https://developer.nvidia.com/cuda-gpus)进行查询）。
 - 执行成功将显示`Build files have been written to:...`并在该目录下生成Makefile文件。
 - 执行`make -j`命令对NiuTensor项目进行编译，执行成功将显示`Built target NiuTensor`，安装完毕。
 
@@ -2802,92 +2802,165 @@ $\textrm{Attention}(\small\textnormal{Q},\small\textnormal{K},\small\textnormal{
 代码如下
 
 ```C++
-/* 
-make the network 
->> k - keys. It might be of size B * L * H
-       where B = batch size, L = sequence length, 
+/*
+make the network
+>> k - keys, B * L * H 
+       where B = batch size, L = sequence length,
        and H = vector size of each position
->> q - queries
->> v - values
+>> q - queries, B * L * H for encoders, B * 1 * H for decoders during inference
+>> v - values, B * L * H 
+>> mask - as it is
+>> isTraining - indicates whether the model is used for training
+>> cache - decoder cache
+>> cacheType - type of cache, e.g., self-attention
+<< return - attention result
 */
-XTensor T2TAttention::Make(XTensor &k, XTensor &q, XTensor &v, XTensor &mask, bool isTraining)
+XTensor Attention::Make(XTensor& k, XTensor& q, XTensor& v, 
+                        XTensor* mask, Cache* cache, int attType)
 {
-    XTensor k2;
-    XTensor q2;
-    XTensor v2;
-    
+    const bool isEnc = (!cache) ? true : false;
+
     /* linear transformation before self-attention */
-    k2 = MMul(k, wk);
-    q2 = MMul(q, wq);
-    v2 = MMul(v, wv);
-    
-    return MakeAttention(k2, q2, v2, mask, isTraining);
+    XTensor q2, k2, v2;
+
+    q2 = MulAndShift(q, weightQ, biasQ);
+
+    if (!cache || isTraining || !(cache->enable)) {
+        /* self attention for encoder layers */
+        k2 = MulAndShift(k, weightK, biasK);
+        v2 = MulAndShift(v, weightV, biasV);
+
+        if (useRPR && attType == SELF_ATT)
+            return MakeRPRAttention(k2, q2, v2, mask, isEnc);
+        return MakeAttention(k2, q2, v2, mask, isEnc);
+    }
+
+    else {
+        if (attType == SELF_ATT) {
+            k2 = MulAndShift(k, weightK, biasK);
+            v2 = MulAndShift(v, weightV, biasV);
+
+            /* if hit, we only concat the cache with the new token */
+            if (!cache->miss) {
+                k2 = Concatenate(cache->key, k2, 1);
+                v2 = Concatenate(cache->value, v2, 1);
+            }
+            cache->key = k2;
+            cache->value = v2;
+            cache->miss = false;
+
+            if (useRPR)
+                return MakeRPRAttention(cache->key, q2, cache->value, mask, isEnc);
+            return MakeAttention(cache->key, q2, cache->value, mask, isEnc);
+        }
+        else if (attType == EN_DE_ATT) {
+            if (cache->miss) {
+                cache->key = MulAndShift(k, weightK, biasK);
+                cache->value = MulAndShift(v, weightV, biasV);
+                cache->miss = false;
+            }
+
+            return MakeAttention(cache->key, q2, cache->value, mask, isEnc);
+        }
+        CheckNTErrors(0, "invalid cache type");
+    }
 }
 
-XTensor T2TAttention::MakeAttention(XTensor &k, XTensor &q, XTensor &v, XTensor &mask, bool isTraining)
+/*
+make the attention network given keys, queries and values (after linear transformation)
+>> k - keys, B * L * H
+>> q - queries, B * L * H
+>> v - values, B * L * H
+>> mask - as it is
+>> isEnc - indicates whether it is a encoder module
+*/
+XTensor Attention::MakeAttention(XTensor& k, XTensor& q, XTensor& v, 
+                                 XTensor* mask, bool isEnc)
 {
     XTensor kheads;
-    XTensor qheads;
     XTensor vheads;
-    
-    /* multi head */
-    kheads = Split(k, k.order - 1, nhead);
-    qheads = Split(q, q.order - 1, nhead);
-    vheads = Split(v, v.order - 1, nhead);
-    
-    XTensor att;
-    XTensor dot;
-    XTensor scalar;
-    
-    /* scalar = softmax(Q * K^T / sqrt(dk)) * V */
-    dot = BMMul(qheads, X_NOTRANS, kheads, X_TRANS);
-    
-    if(isMasked)
-        dot = dot + mask;
-    
-    dot = Linear(dot, 1.0F/(float)sqrt((float)dk/nhead));
-    
-    scalar = Softmax(dot, -1);
 
-    if(isTraining && dropoutP > 0)
-        scalar = Dropout(scalar, dropoutP);
+    const auto dataType = k.dataType;
+
+    /* multi head */
+    if (nhead > 1) {
+        q = Split(q, q.order - 1, nhead);
+        kheads = Split(k, k.order - 1, nhead);
+        vheads = Split(v, v.order - 1, nhead);
+    }
+
+    XTensor att;
+
+    if (isTraining)
+        q = Scale(q, 1.0F / (float)sqrt((float)kDim / nhead));
+    else
+        ScaleMe(q, 1.0F / (float)sqrt((float)kDim / nhead));
+
+    /* scalar = softmax(Q * K^T / sqrt(dk)) * V */
+    if(nhead > 1)
+        att = BMMul(q, X_NOTRANS, kheads, X_TRANS);
+    else
+        att = BMMul(q, X_NOTRANS, k, X_TRANS);
+
+    if (att.dataType == X_FLOAT16) {
+        att = ConvertDataType(att, X_FLOAT);
+    }
+
+    if (mask) {
+        if (isTraining)
+            att = Sum(att, *mask, /*inplace=*/true);
+        else
+            SumMe(att, *mask);
+    }
+
+    att = Softmax(att, -1);
+
+    if (isTraining && dropoutP > 0)
+        att = Dropout(att, dropoutP);
+
+    if (dataType != att.dataType)
+        att = ConvertDataType(att, dataType);
     
-    att = BMMul(scalar, vheads);
-    
+    if (nhead > 1)
+        att = BMMul(att, vheads);
+    else
+        att = BMMul(att, v);
+
     /* concatenate the heads */
-    return MMul(Merge(att, att.order - 1), wa);
+    if (nhead > 1)
+        return MulAndShift(Merge(att, att.order - 1), weightO, biasO);
+    else
+        return MulAndShift(att, weightO, biasO);
 }
 ```
-上述代码位于/source/sample/transformer/T2TAttention.cpp
+上述代码位于/source/sample/transformer/submodel/Attention.cpp
 
 **全连接**
 
 在得到attention的输出结果之后，数据将流入第一层encoder的下一个模块，即全连接层。在此处的全连接层为一个双层的全连接网络，标准的输入维度与输出维度为512，隐层维度为2048，在隐层的输出位置使用Relu作为激活函数。全连接网络的作用主要体现在将经过注意力操作之后的表示映射到新的空间中，新的空间会有利于接下来的非线性变换等操作。当数据经过全连接网络后，将作为第二层encoder的输入经第二层计算后继续向第三层传递。
 
 ```C++
-/* 
-make the network 
+/*
+make the network
 y = max(0, x * w1 + b1) * w2 + b2
 >> input - the input tensor
->> return - the output tensor 
+>> return - the output tensor
 */
-XTensor T2TFNN::Make(XTensor &input, bool isTraining)
+XTensor FFN::Make(XTensor& input)
 {
     XTensor t1;
 
     /* t1 = max(0, x * w1 + b1) */
-    //t1 = Rectify(MMul(input, w1) + b1);
     t1 = Rectify(MulAndShift(input, w1, b1));
     
-    if(isTraining && dropoutP > 0)
-        t1 = Dropout(t1, dropoutP);
+    if (isTraining && dropoutP > 0)
+        t1 = Dropout(t1, dropoutP, /*inplace=*/true);
 
     /* result = t1 * w2 + b2 */
-    //return MMul(t1, w2) + b2;
     return MulAndShift(t1, w2, b2);
 }
 ```
-上述代码位于/source/sample/transformer/T2TFNN.cpp
+上述代码位于/source/sample/transformer/submodel/FNN.cpp
 
 **残差与层正则化**
 
@@ -2898,112 +2971,207 @@ XTensor T2TFNN::Make(XTensor &input, bool isTraining)
 从上式中可以看出，当$x_{l+1}$对$x_{l}$求导时，无论$\digamma (x_l)$对$x_{l}$有多小，都会有$x_{l}$对$x_{l}$的导数为1。这就极大的缓解了梯度消失的问题。同时，由于引入了残差操作，将前面所有层的输出加到一起。这样会导致不同层（或子层）的结果之间的差异性很大，造成训练过程不稳定、训练时间较长。为了避免这种情况，在每层中加入了层正则化操作。
 
 ```C++
-/* 
+/*
 make the encoding network
 >> input - the input tensor of the encoder
 >> mask - the mask that indicate each position is valid
->> maskEncDec - no use
->> isTraining - indicates whether the model is used for training
+>> maskEncDec - a place-holder, not used
 << return - the output tensor of the encoder
 */
-XTensor AttEncoder::Make(XTensor &input, XTensor &mask, XTensor &maskEncDec, bool isTraining)
+XTensor AttEncoder::Make(XTensor& input, XTensor* mask, XTensor& maskEncDec)
 {
-    ...
-    ...
-    /* self attention */
-    att = attentions[i].MakeBig(x, mask, isTraining);
-        
-    /* dropout */
-    if(isTraining && dropoutP > 0)
-        att = Dropout(att, dropoutP);
+    /* clear the history */
+    if (useHistory)
+        history->ClearHistory();
 
-    /* residual connection */
-    res = Sum(att, x);
-
-    /* layer normalization */
-    x = attLayerNorms[i].Make(res);
-
-    /* fnn */
-    fnn = fnns[i].Make(x, isTraining);
+    XTensor x;
+    x = embedder.Make(input, false, 0);
 
     /* dropout */
-    if(isTraining && dropoutP > 0)
-        fnn = Dropout(fnn, dropoutP);
+    if (isTraining && dropoutP > 0)
+        x = Dropout(x, dropoutP, /*inplace=*/true);
 
-    /* residual connection */
-    res = Sum(fnn, x);
+    if (useHistory)
+        history->Add(x);
 
-    /* layer normalization */
-    x = fnnLayerNorms[i].Make(res);
+    for (int i = 0; i < nlayer; i++) {
+
+        if (useHistory)
+            x = history->Pop();
+
+        XTensor att;
+        XTensor fnn;
+        XTensor res;
+        XTensor attnBefore;
+        XTensor attnAfter;
+        XTensor fnnBefore;
+
+        /* layer normalization with pre-norm for self-attn */
+        attnBefore = LN(x, attLayerNorms[i], preLN, true, false);
+
+        /* self attention */
+        att = selfAtts[i].Make(attnBefore, attnBefore, attnBefore, mask, NULL, SELF_ATT);
+
+        /* dropout */
+        if (isTraining && dropoutP > 0)
+            att = Dropout(att, dropoutP, /*inplace=*/true);
+
+        /* residual connection */
+        res = Sum(att, x, /*inplace=*/true);
+
+        /* layer normalization with post-norm for self-attn */
+        attnAfter = LN(res, attLayerNorms[i], preLN, false, true);
+
+        /* layer normalization with pre-norm for fnn */
+        fnnBefore = LN(attnAfter, fnnLayerNorms[i], preLN, true, false);
+
+        /* fnn */
+        fnn = ffns[i].Make(fnnBefore);
+
+        /* dropout */
+        if (isTraining && dropoutP > 0)
+            fnn = Dropout(fnn, dropoutP, /*inplace=*/true);
+
+        /* residual connection */
+        res = Sum(fnn, attnAfter, /*inplace=*/true);
+
+        /* layer normalization with post-norm for fnn */
+        x = LN(res, fnnLayerNorms[i], preLN, false, true);
+
+        if (useHistory)
+            history->Add(x);
     }
+
+    if (useHistory)
+        x = history->Pop();
+
+    /* clear the history while not training */
+    if (useHistory && !isTraining)
+        history->ClearHistory();
+
+    if (finalNorm)
+        return encoderLayerNorm->Run(x);
+
+    return x;
+}
 ```
-上述代码位于/source/sample/transformer/T2TEncoder.cpp
+上述代码位于/source/sample/transformer/Encoder.cpp
 
 #### decoder层
 
 可以对应前面Transformer结构图，在数据输入decoder后，首先计算self-attention，其后计算encoder-decoder attention（这是encoder端与decoder端计算的唯一区别），encoder-decoder attention与self-attention计算十分相似，同样通过$\small\textnormal{Q}$、$\small\textnormal{K}$和$\small\textnormal{V}$计算attention，但是在encoder-decoder attention中只有$\small\textnormal{Q}$来自decoder，而$\small\textnormal{K}$和$\small\textnormal{V}$均来自于encoder最顶层的输出。这部分计算完成后，接下来再经过一个全连接层得到该层decoder的输出，与encoder端一样，该层decoder的输出将作为下一层decoder的输入继续传递。
 
 ```C++
-/* 
+/*
 make the decoding network
 >> inputDec - the input tensor of the decoder
 >> outputEnc - the output tensor of the encoder
 >> mask - mask that indicates which position is valid
 >> maskEncDec - mask for the encoder-decoder attention
->> isTraining - indicates whether the model is used for training
-<< return - the output tensor of the encoder
+>> nstep - the current length of the decoder input
+<< return - the output tensor of the decoder
 */
-XTensor AttDecoder::Make(XTensor &inputDec, XTensor &outputEnc, XTensor &mask, XTensor &maskEncDec, bool isTraining)
+XTensor AttDecoder::Make(XTensor& inputDec, XTensor& outputEnc, 
+                         XTensor* mask, XTensor* maskEncDec, int nstep)
 {
-    ...
-    ...
-    /******************/
-    /* self attention */
-    att = attentions[i].MakeBig(x, mask, isTraining);
+    /* clear the history */
+    if (useHistory)
+        history->ClearHistory();
+
+    XTensor x;
+    x = embedder->Make(inputDec, true, nstep);
 
     /* dropout */
-    if(isTraining && dropoutP > 0)
-        att = Dropout(att, dropoutP);
+    if (isTraining && dropoutP > 0)
+        x = Dropout(x, dropoutP, /*inplace=*/true);
 
-    /* residual connection */
-    res = Sum(att, x);
+    if (useHistory)
+        history->Add(x);
 
-    /* layer normalization */
-    x = attLayerNorms[i].Make(res);
+    for (int i = 0; i < nlayer; i++) {
 
-    /*****************************/
-    /* encoder-decoder attention */
-    ende = attentionsEnde[i].Make(outputEnc, x, outputEnc, maskEncDec, isTraining);
+        if (useHistory)
+            x = history->Pop();
 
-    /* dropout */
-    if(isTraining && dropoutP > 0)
-        ende = Dropout(ende, dropoutP);
+        XTensor att;
+        XTensor ffn;
+        XTensor res;
+        XTensor ende;
+        XTensor ffnBefore;
+        XTensor selfAttnBefore;
+        XTensor selfAttnAfter;
+        XTensor endeAttnBefore;
+        XTensor endeAttnAfter;
 
-    /* residual connection */
-    res = Sum(ende, x);
+        /* layer normalization with pre-norm for self-attn */
+        selfAttnBefore = LN(x, selfAttLayerNorms[i], preLN, true, false);
 
-    /* layer normalization */
-    x = attEndeLayerNorms[i].Make(res);
+        /******************/
+        /* self attention */
+        att = selfAtts[i].Make(selfAttnBefore, selfAttnBefore, selfAttnBefore, 
+                               mask, &selfAttCache[i], SELF_ATT);
 
-    /*******/
-    /* fnn */
-    fnn = fnns[i].Make(x, isTraining);
+        /* dropout */
+        if (isTraining && dropoutP > 0)
+            att = Dropout(att, dropoutP, /*inplace=*/true);
 
-    /* dropout */
-    if(isTraining && dropoutP > 0)
-        fnn = Dropout(fnn, dropoutP);
+        /* residual connection */
+        res = Sum(att, x, /*inplace=*/true);
 
-    /* residual connection */
-    res = Sum(fnn, x);
+        /* layer normalization with post-norm for self-attention */
+        selfAttnAfter = LN(res, selfAttLayerNorms[i], preLN, false, true);
 
-    /* layer normalization */
-    x = fnnLayerNorms[i].Make(res);
+        /* layer normalization with pre-norm for encoder-decoder attention */
+        endeAttnBefore = LN(selfAttnAfter, enDeAttLayerNorms[i], preLN, true, false);
+
+        /* encoder-decoder attention */
+        ende = enDeAtts[i].Make(outputEnc, endeAttnBefore, outputEnc, maskEncDec, 
+                                &enDeAttCache[i], EN_DE_ATT);
+
+        /* dropout */
+        if (isTraining && dropoutP > 0)
+            ende = Dropout(ende, dropoutP, /*inplace=*/true);
+
+        /* residual connection */
+        res = Sum(ende, selfAttnAfter, /*inplace=*/true);
+
+        /* layer normalization with post-norm for encoder-decoder attention */
+        endeAttnAfter = LN(res, enDeAttLayerNorms[i], preLN, false, true);
+
+        /* layer normalization with pre-norm for ffn */
+        ffnBefore = LN(endeAttnAfter, ffnLayerNorms[i], preLN, true, false);
+
+        /* ffn */
+        ffn = ffns[i].Make(ffnBefore);
+
+        /* dropout */
+        if (isTraining && dropoutP > 0)
+            ffn = Dropout(ffn, dropoutP, /*inplace=*/true);
+
+        /* residual connection */
+        res = Sum(ffn, endeAttnAfter, /*inplace=*/true);
+
+        /* layer normalization with post-norm for ffn */
+        x = LN(res, ffnLayerNorms[i], preLN, false, true);
+
+        if (useHistory)
+            history->Add(x);
     }
-    ...
-    ...
+
+    if (useHistory)
+        x = history->Pop();
+
+    /* clear the history while not training */
+    if (useHistory && !isTraining)
+        history->ClearHistory();
+
+    if (finalNorm)
+        return decoderLayerNorm->Run(x);
+
+    return x;
 }
 ```
-上述代码位于/source/sample/transformer/T2TDecoder.cpp
+上述代码位于/source/sample/transformer/Decoder.cpp
 
 #### 训练
 
@@ -3026,34 +3194,35 @@ Transformer的解码过程和训练时类似，都是从左往右生成，且下
 最后附上NiuTensor中的Transformer机器翻译模型实现，完整代码详见：NiuTensor/source/sample/transformer。
 
 ```C++
-/* 
-make the network for machine translation (with the output softmax layer) 
->> inputEnc - input tensor of the encoder
->> inputDec - input tensor of the decoder
->> output - output tensor (distribution)
->> paddingEnc - padding of the sequences (on the encoder side)
->> paddingDec - padding of the sequences (on the decoder side)
->> isTraining - indicates whether the model is for training
+/*
+make the network for machine translation (with the output softmax layer)
+>> inputEnc - input tensor of the encoder, (batchSize, srcLen)
+>> inputDec - input tensor of the decoder, (batchSize, tgtLen)
+>> paddingEnc - padding of the sequences (on the encoder side), (batchSize, srcLen)
+>> paddingDec - padding of the sequences (on the decoder side), (batchSize, tgtLen)
+<< output - output tensor (distribution), (batchSize, tgtLen, hiddenDim)
 */
-void T2TModel::MakeMT(XTensor &inputEnc, XTensor &inputDec, XTensor &output, XTensor &paddingEnc, XTensor &paddingDec, bool isTraining)
+XTensor NMTModel::MakeMT(XTensor& inputEnc, XTensor& inputDec,
+                         XTensor& paddingEnc, XTensor& paddingDec)
 {
     XTensor encoding;
     XTensor decoding;
+
     XTensor maskEnc;
     XTensor maskDec;
     XTensor maskEncDec;
 
     /* encoder mask */
-    MakeMTMaskEnc(inputEnc, paddingEnc, maskEnc);
-    
+    MakeMTMaskEnc(paddingEnc, maskEnc);
+
     /* decoder mask */
-    MakeMTMaskDec(inputEnc, inputDec, paddingEnc, paddingDec, maskDec, maskEncDec);
+    MakeMTMaskDec(paddingEnc, paddingDec, maskDec, maskEncDec);
 
-    encoding = MakeEncoder(inputEnc, maskEnc, isTraining);
+    encoding = MakeEncoder(inputEnc, &maskEnc);
 
-    decoding = MakeDecoder(inputDec, encoding, maskDec, maskEncDec, isTraining);
+    decoding = MakeDecoder(inputDec, encoding, &maskDec, maskEncDec);
 
-    outputLayer->Make(decoding, output);
+    return outputLayer->Make(decoding, true);
 }
 ```
 

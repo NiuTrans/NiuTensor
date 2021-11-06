@@ -231,8 +231,8 @@ And this is a special spread function for backward computation of gather functio
 */
 void _SpreadForGather(XTensor * source, XTensor * collection, XTensor * index)
 {
-    int dim = 0;
-    int order = source->order;
+    //int dim = 0;
+    //int order = source->order;
 
     CheckNTErrors(source->dataType == DEFAULT_DTYPE, "TODO!");
     CheckNTErrors(collection->GetDim(-1) == source->GetDim(-1), "Illegal dimension!");

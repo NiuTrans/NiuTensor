@@ -117,7 +117,7 @@ void _CudaMergeBlockLists(const StrList* sourceList, int * blockSizes, int block
 
     GDevs.GetCudaThread2D(myMem->devID, realMaxBlockSize, newBlockListSize, MAX_INT,
                           cudaGridSizes, cudaBlockSizes);
-
+    myMem->LockBuf();
     myMem->SetPinBuf();
     int * sizesGPU = (int*)myMem->AllocBuf(myMem->devID, sizeof(int) * newBlockListSize, 256);
 
@@ -133,6 +133,7 @@ void _CudaMergeBlockLists(const StrList* sourceList, int * blockSizes, int block
                             (sourceArraysGPU, sizesGPU, newBlockListSize, targetArraysGPU);
 
     myMem->BackToPinBuf();
+    myMem->UnlockBuf();
 
     delete[] sourceArrays;
     delete[] targetArrays;

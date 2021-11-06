@@ -32,7 +32,7 @@ c = trans(a) * trans(b) * alpha + c * beta
 where trans() return the transposed matrix if the flag is fired
 */
 void _MatrixMul2D(const XTensor * a, MATRIX_TRANS_TYPE transposedA, const XTensor * b, MATRIX_TRANS_TYPE transposedB, XTensor * c,
-                  DTYPE alpha = (DTYPE)1.0, DTYPE beta = 0, XPRunner * parallelRunner = NULL, XStream * stream = NULL);
+                  DTYPE alpha = (DTYPE)1.0, DTYPE beta = 0, XPRunner * parallelRunner = NULL);
 
 } // namespace nts(NiuTrans.Tensor)
 

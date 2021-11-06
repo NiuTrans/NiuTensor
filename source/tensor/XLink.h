@@ -26,8 +26,6 @@
 #ifndef __XLINK_H__
 #define __XLINK_H__
 
-#include "XGlobal.h"
-
 namespace nts{ // namespace nts(NiuTrans.Tensor)
 
 /* cross reference */

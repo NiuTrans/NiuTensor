@@ -1,5 +1,5 @@
 # cmake minimum version
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.6)
 
 # Project's name
 project(NiuTensor)
@@ -25,19 +25,19 @@ option(USE_MKL "Use MKL" OFF)
 option(USE_OPENBLAS "Use OpenBLAS" OFF)
 option(GEN_DLL "Generate Dynamic Link Library" OFF)
 
-# If set USE_CUDA ON, please modify CUDA_ROOT below.
+# If set USE_CUDA ON, please modify CUDA_TOOLKIT_ROOT below.
 # If set USE_MKL ON, please modify the INTEL_ROOT below.
 # If set USE_OPENBLAS ON, please modify the OPENBLAS_ROOT below.
 if (USE_CUDA)
-    if(NOT EXISTS ${CUDA_ROOT})
+    if(NOT EXISTS ${CUDA_TOOLKIT_ROOT})
         if(WIN32)
-            set(CUDA_ROOT "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v9.2")
+            set(CUDA_TOOLKIT_ROOT "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1")
         else()
-            set(CUDA_ROOT "/usr/local/cuda-9.2")
+            set(CUDA_TOOLKIT_ROOT "/home/huchi/cuda-10.1/")
         endif()
     endif()
-    set(CUDA_TOOLKIT_ROOT_DIR ${CUDA_ROOT})
-    message(STATUS "CUDA_ROOT: ${CUDA_ROOT}")
+    set(CUDA_TOOLKIT_ROOT_DIR ${CUDA_TOOLKIT_ROOT})
+    message(STATUS "CUDA_TOOLKIT_ROOT: ${CUDA_TOOLKIT_ROOT}")
 endif()
 if(USE_MKL)
     if(NOT DEFINED INTEL_ROOT)
@@ -97,73 +97,79 @@ if(USE_CUDA)
         add_definitions(-DHALF_PRECISION)
     endif()
     find_package(CUDA REQUIRED)
-    if(WIN32)
-        SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4819")
-        set(CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} "-maxrregcount=0 -m64 --disable-warnings -use_fast_math -DUSE_CUDA")
-        if(USE_HALF_PRECISION)
-            set(CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} "-DHALF_PRECISION")
-            set(CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} -arch=sm_60
-                -gencode=arch=compute_60,code=sm_60
-                -gencode=arch=compute_61,code=sm_61
-                -gencode=arch=compute_62,code=sm_62
-                -gencode=arch=compute_70,code=sm_70
+    if(GPU_ARCH STREQUAL K) # Kepler cards (CUDA 5 until CUDA 10)
+        set(ARCH_FLAGS -arch=compute_30 -code=compute_30,sm_30,sm_35,sm_37)
+    elseif(GPU_ARCH STREQUAL M) # Maxwell cards (CUDA 6 until CUDA 11)
+        set(ARCH_FLAGS -arch=compute_50 -code=compute_50,sm_50,sm_52,sm_53)
+    elseif(GPU_ARCH STREQUAL P) # Pascal (CUDA 8 and later)
+        set(ARCH_FLAGS -arch=compute_60 -code=compute_60,sm_60,sm_61,sm_62)
+    elseif(GPU_ARCH STREQUAL V) # Volta (CUDA 9 and later)
+        set(ARCH_FLAGS -arch=compute_70 -code=compute_70,sm_70,sm_72)
+    elseif(GPU_ARCH STREQUAL T) # Turing (CUDA 10 and later)
+        set(ARCH_FLAGS -arch=compute_75 -code=sm_75)
+    elseif(GPU_ARCH STREQUAL A) # Ampere (CUDA 11 and later)
+        set(ARCH_FLAGS -arch=compute_80 -code=sm_80)
+    endif()
+
+    if(USE_HALF_PRECISION)
+        message(STATUS "try to compile with half precision")
+        if(NOT DEFINED GPU_ARCH)
+            message(STATUS "compile cuda with multiple archs")
+            set(ARCH_FLAGS -gencode=arch=compute_70,code=sm_70
                 -gencode=arch=compute_70,code=compute_70
+                -gencode=arch=compute_75,code=sm_75
+                -gencode=arch=compute_75,code=compute_75
+                -gencode=arch=compute_80,code=sm_80
+                -gencode=arch=compute_80,code=compute_80
             )
-        else()
-            set(CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} -arch=sm_30
-                -gencode=arch=compute_30,code=sm_30
-                -gencode=arch=compute_50,code=sm_50
-                -gencode=arch=compute_52,code=sm_52
-                -gencode=arch=compute_60,code=sm_60
-                -gencode=arch=compute_61,code=sm_61
-                -gencode=arch=compute_62,code=sm_62
-                -gencode=arch=compute_70,code=sm_70
-                -gencode=arch=compute_70,code=compute_70
-            )
+        elseif(${GPU_ARCH} STREQUAL K OR ${GPU_ARCH} STREQUAL M)
+            message(FATAL_ERROR "your GPU cannot use the function half precision")
         endif()
+    endif()
+    
+    if(WIN32)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4819 /wd4996")
+        set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-maxrregcount=0 -Wno-deprecated-gpu-targets -use_fast_math")
+        string(REPLACE -m32 -m64 CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS}")
+        set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${ARCH_FLAGS})
         set(CMAKE_POLICY_DEFAULT_CMP0028 NEW)
-        link_directories("${CUDA_ROOT}/lib/x64")
-        include_directories("${CUDA_ROOT}/include")
-        set(CUDA_LIB_DIR "${CUDA_ROOT}/lib/x64/")
+        link_directories("${CUDA_TOOLKIT_ROOT}/lib/x64")
+        include_directories("${CUDA_TOOLKIT_ROOT}/include")
+        set(CUDA_LIB_DIR "${CUDA_TOOLKIT_ROOT}/lib/x64/")
         set(CUDA_LIB_PATH ${CUDA_LIB_PATH} "${CUDA_LIB_DIR}cublas.lib")
+        if(CUDA_VERSION_MAJOR GREATER_EQUAL 10)
+            message(STATUS "CUDA_LIB_PATH:" "${CUDA_LIB_PATH}")
+            set(CUDA_LIB_PATH ${CUDA_LIB_PATH} "${CUDA_LIB_DIR}cublasLt.lib")
+        endif()
         set(CUDA_LIB_PATH ${CUDA_LIB_PATH} "${CUDA_LIB_DIR}npps.lib")
         set(CUDA_LIB_PATH ${CUDA_LIB_PATH} "${CUDA_LIB_DIR}nppc.lib")
         set(CUDA_LIB_PATH ${CUDA_LIB_PATH} "${CUDA_LIB_DIR}cudadevrt.lib")
         set(CUDA_LIB_PATH ${CUDA_LIB_PATH} "${CUDA_LIB_DIR}curand.lib")
     else()
-        set(CMAKE_CXX_FLAGS "-fPIC -msse4.2 -w -march=native -Wno-enum-compare -Wno-sign-compare -Wno-format -Wno-dev -O3 -DNDEBUG -rdynamic")
+        message(STATUS "ARCH_FLAGS:" "${ARCH_FLAGS}")
+        set(CMAKE_CXX_FLAGS "-fPIC -msse4.2 -w -march=native -O3 -rdynamic -DNDEBUG")
         set(CUDA_NVCC_FLAGS "-Xcompiler -fPIC -maxrregcount=0 --disable-warnings -use_fast_math -DUSE_CUDA -Wno-deprecated-gpu-targets -std=c++11")
-        if(USE_HALF_PRECISION)
-            set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-DHALF_PRECISION")
-            set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -arch=sm_60
-                -gencode=arch=compute_60,code=sm_60
-                -gencode=arch=compute_61,code=sm_61
-                -gencode=arch=compute_62,code=sm_62
-                -gencode=arch=compute_70,code=sm_70
-                -gencode=arch=compute_70,code=compute_70
-            )
-        else()
-            set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -arch=sm_30 
-                -gencode=arch=compute_30,code=sm_30 
-                -gencode=arch=compute_50,code=sm_50 
-                -gencode=arch=compute_52,code=sm_52 
-                -gencode=arch=compute_60,code=sm_60 
-                -gencode=arch=compute_61,code=sm_61 
-                -gencode=arch=compute_62,code=sm_62 
-                -gencode=arch=compute_70,code=sm_70 
-                -gencode=arch=compute_70,code=compute_70 
-            )
-        endif()
-        link_directories(${CUDA_ROOT}/lib64)
-        include_directories(${CUDA_ROOT}/include)
-        set(CUDA_LIB_DIR "${CUDA_ROOT}/lib64/")
+        set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${ARCH_FLAGS})
+        link_directories("${CUDA_TOOLKIT_ROOT}/lib64")
+        include_directories("${CUDA_TOOLKIT_ROOT}/include")
+        set(CUDA_LIB_DIR "${CUDA_TOOLKIT_ROOT}/lib64/")
         set(CUDA_LIB_PATH ${CUDA_LIB_PATH} "${CUDA_LIB_DIR}libcublas_static.a")
+        if(CUDA_VERSION_MAJOR GREATER_EQUAL 10)
+            message(STATUS "CUDA_LIB_PATH:" "${CUDA_LIB_PATH}")
+            set(CUDA_LIB_PATH ${CUDA_LIB_PATH} "${CUDA_LIB_DIR}libcublasLt_static.a")
+        endif()
         set(CUDA_LIB_PATH ${CUDA_LIB_PATH} "${CUDA_LIB_DIR}libculibos.a")
         set(CUDA_LIB_PATH ${CUDA_LIB_PATH} "${CUDA_LIB_DIR}libnpps_static.a")
         set(CUDA_LIB_PATH ${CUDA_LIB_PATH} "${CUDA_LIB_DIR}libnppc_static.a")
         set(CUDA_LIB_PATH ${CUDA_LIB_PATH} "${CUDA_LIB_DIR}libcudadevrt.a")
         set(CUDA_LIB_PATH ${CUDA_LIB_PATH} "${CUDA_LIB_DIR}libcurand_static.a")
-        set(CUDA_LIB_PATH ${CUDA_LIB_PATH} "/usr/lib64/libdl.so.2")
+        if(EXISTS "/usr/lib64/libdl.so.2")
+            set(CUDA_LIB_PATH ${CUDA_LIB_PATH} "/usr/lib64/libdl.so.2")
+        elseif(EXISTS "/lib/x86_64-linux-gnu/libdl.so.2")
+            set(CUDA_LIB_PATH ${CUDA_LIB_PATH} "/lib/x86_64-linux-gnu/libdl.so.2")
+        elseif(EXISTS "/lib64/libdl.so.2")
+            set(CUDA_LIB_PATH ${CUDA_LIB_PATH} "/lib64/libdl.so.2")
+        endif()
     endif()
 endif()
 

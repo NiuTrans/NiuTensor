@@ -29,6 +29,7 @@ namespace nts { // namespace nts(NiuTrans.Tensor)
 
 /* generate data items with a Glorot initialization*/
 void _SetDataXavierNormal(XTensor * tensor, DTYPE gain = 1.0F);
+
 /* generate data items with a xavier initialization */
 void _SetDataFanInOut(XTensor * tensor, DTYPE gain = 1.0F);
 
@@ -56,8 +57,8 @@ void _SetDataRand(XTensor * tensor, int rNum, int cNum);
 /* generate data items with a uniform distribution in [lower, upper] */
 void _SetDataRand(XTensor * tensor, DTYPE lower, DTYPE upper);
 
-/* generate data items with a range by start, end and the step */
-void _SetDataRange(XTensor * tensor, DTYPE lower, DTYPE upper, DTYPE step);
+/* generate data items with a range [begin, end] and the step */
+void _SetDataRange(XTensor * tensor, int beg, int end, int step);
 
 /* generate data items with a uniform distribution in [lower, upper] and set 
    the item to a pre-defined value if the item >= p, set the item to 0 otherwise */

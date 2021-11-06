@@ -113,6 +113,9 @@ void _CudaBLASMatrixMULBatched(cublasHandle_t * handle,
                                int count, int na, int ma, int nb, int mb, int nc, int mc,
                                DTYPE alpha, DTYPE beta)
 {
+    int version = 0;
+    cudaRuntimeGetVersion(&version);
+
     /*
     matrxi-matrix multiplication
     For row-major matrices (as in c/c++), the trick used here is (AB)^T = B^T * A^T
@@ -327,6 +330,7 @@ void _CudaBLASMatrixMULList(cublasHandle_t * handle,
             DTYPE ** cpGPU = NULL;
 
             if (mem != NULL) {
+                mem->LockBuf();
                 mem->SetPinBuf();
                 apGPU = (DTYPE**)mem->AllocBuf(mem->devID, sizeof(DTYPE*) * a->count, 256);
                 bpGPU = (DTYPE**)mem->AllocBuf(mem->devID, sizeof(DTYPE*) * a->count, 256);
@@ -353,8 +357,10 @@ void _CudaBLASMatrixMULList(cublasHandle_t * handle,
             delete[] bp;
             delete[] cp;
 
-            if(mem != NULL)
+            if (mem != NULL) {
                 mem->BackToPinBuf();
+                mem->UnlockBuf();
+            }
             else {
                 XMemFree(a0->devID, apGPU);
                 XMemFree(a0->devID, bpGPU);

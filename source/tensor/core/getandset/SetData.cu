@@ -636,12 +636,23 @@ void _CudaSetDataWithOffsetAndValue(XTensor * tensor, MTYPE * offsets, void * va
     int devIDBackup;
     ProtectCudaDev(tensor->devID, devIDBackup);
 
-    MTYPE * offsetsCuda = mem != NULL ? 
+    /*MTYPE * offsetsCuda = mem != NULL ? 
                             (MTYPE*)mem->AllocBuf(mem->devID, offsetSize) : 
                             (MTYPE*)XMemAlloc(tensor->devID, offsetSize);
-    void * valuesCuda  = mem != NULL ? 
-                            mem->AllocBuf(mem->devID, valueSize) : 
-                            XMemAlloc(tensor->devID, valueSize);
+    void * valuesCuda = mem != NULL ?
+                        mem->AllocBuf(mem->devID, valueSize) :
+                        XMemAlloc(tensor->devID, valueSize);*/
+    MTYPE * offsetsCuda;
+    void * valuesCuda; 
+    if (mem != NULL) {
+        mem->LockBuf();
+        offsetsCuda = (MTYPE*)mem->AllocBuf(mem->devID, offsetSize);
+        valuesCuda = mem->AllocBuf(mem->devID, valueSize);
+    }
+    else {
+        offsetsCuda = (MTYPE*)XMemAlloc(tensor->devID, offsetSize);
+        valuesCuda = XMemAlloc(tensor->devID, valueSize);
+    }
 
     if (mem != NULL) {
         XMemCopy(offsetsCuda, mem->devID, offsets, -1, offsetSize);
@@ -657,6 +668,7 @@ void _CudaSetDataWithOffsetAndValue(XTensor * tensor, MTYPE * offsets, void * va
     if (mem != NULL) {
         mem->ReleaseBuf(mem->devID, valueSize);
         mem->ReleaseBuf(mem->devID, offsetSize);
+        mem->UnlockBuf();
     }
     else {
         XMemFree(tensor->devID, valuesCuda);

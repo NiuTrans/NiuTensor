@@ -136,7 +136,6 @@ i.e., a is summed with b by broadcasting
 >> a - a tensor
 >> b - another tensor whose size is equal to that of dimension n of a
 >> n - the dimension index
->> inplace - indicates whether the result will be placed in the input tensor
 >> beta - the scaling factor
 */
 void _SumDim(XTensor * a, const XTensor * b, int n, DTYPE beta)
@@ -294,10 +293,16 @@ void _SumBroadcast(const XTensor * a, const XTensor * b, XTensor * c, DTYPE beta
                 source = target;
             }
             
-            target = t->mem != NULL ?
+            /*target = t->mem != NULL ?
                      t->mem->AllocBuf(t->devID, t->unitNum * t->unitSize):
-                     XMemAlloc(t->devID, t->unitNum * t->unitSize);
-            
+                     XMemAlloc(t->devID, t->unitNum * t->unitSize);*/
+            if (t->mem != NULL) {
+                t->mem->LockBuf();
+                target = t->mem->AllocBuf(t->devID, t->unitNum * t->unitSize);
+            }
+            else {
+                target = XMemAlloc(t->devID, t->unitNum * t->unitSize);
+            }
             s->data = source;
             t->data = target;
             
@@ -316,8 +321,10 @@ void _SumBroadcast(const XTensor * a, const XTensor * b, XTensor * c, DTYPE beta
             if(isLast){
                 CheckNTErrors(t->unitNum == c->unitNum, "Wrong tensor size!");
                 _Sum(a, t, c, beta);
-                if(t->mem != NULL)
+                if(t->mem != NULL) {
                     t->mem->ReleaseBuf(t->devID, t->unitNum * t->unitSize);
+                    t->mem->UnlockBuf();
+                }
                 else
                     XMemFree(t->devID, target);
                 target = NULL;

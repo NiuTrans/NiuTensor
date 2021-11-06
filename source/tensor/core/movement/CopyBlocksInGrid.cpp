@@ -47,14 +47,17 @@ void _CopyBlocksInGrid(void * source, int blockSize, int blockNum, int gridNum, 
 #ifdef USE_CUDA
         int * indexGPU = index;
         if (!isIndexOnDev) {
+            myMem->LockBuf();
             indexGPU = (int*)myMem->AllocBuf(myMem->devID, blockNum * gridNum * sizeof(int));
             XMemCopy(indexGPU, myMem->devID, index, -1, blockNum * gridNum * sizeof(int));
         }
 
         _CudaCopyBlocksInGrid(source, blockSize, blockNum, gridNum, target, indexGPU, unitSize, myMem);
 
-        if (!isIndexOnDev)
+        if (!isIndexOnDev) {
             myMem->ReleaseBuf(myMem->devID, blockNum * gridNum * sizeof(int));
+            myMem->UnlockBuf();
+        }
 #else
         ShowNTErrors("Plesae specify USE_CUDA and recompile the code!");
 #endif

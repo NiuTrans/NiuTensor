@@ -80,12 +80,23 @@ void _CudaCopyBlocksSelected(void * source, int unitSize, int blockSize, int * s
     ProtectCudaDev(devID, devIDBackup);
 
     /* copy the index to the GPU memory */
-    int * sourceBlocksTMP = myMem != NULL ? 
+    /*int * sourceBlocksTMP = myMem != NULL ? 
                            (int*)myMem->AllocBuf(myMem->devID, blockNum * sizeof(int)) : 
                            (int *)XMemAlloc(devID, blockNum * sizeof(int));
     int * targetBlocksTMP = myMem != NULL ? 
                            (int*)myMem->AllocBuf(myMem->devID, blockNum * sizeof(int)) : 
-                           (int *)XMemAlloc(devID, blockNum * sizeof(int));
+                           (int *)XMemAlloc(devID, blockNum * sizeof(int));*/
+    int * sourceBlocksTMP;
+    int * targetBlocksTMP;
+    if (myMem != NULL) {
+        myMem->LockBuf();
+        sourceBlocksTMP = (int*)myMem->AllocBuf(myMem->devID, blockNum * sizeof(int));
+        targetBlocksTMP = (int*)myMem->AllocBuf(myMem->devID, blockNum * sizeof(int));
+    }
+    else {
+        sourceBlocksTMP = (int *)XMemAlloc(devID, blockNum * sizeof(int));
+        targetBlocksTMP = (int *)XMemAlloc(devID, blockNum * sizeof(int));
+    }
     
     XMemCopy(sourceBlocksTMP, devID, sourceBlocks, -1, blockNum * sizeof(int));
     XMemCopy(targetBlocksTMP, devID, targetBlocks, -1, blockNum * sizeof(int));
@@ -107,6 +118,7 @@ void _CudaCopyBlocksSelected(void * source, int unitSize, int blockSize, int * s
     if (myMem != NULL) {
         myMem->ReleaseBuf(myMem->devID, blockNum * sizeof(int));
         myMem->ReleaseBuf(myMem->devID, blockNum * sizeof(int));
+        myMem->UnlockBuf();
     }
     else {
         XMemFree(devID, sourceBlocksTMP);

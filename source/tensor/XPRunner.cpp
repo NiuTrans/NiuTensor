@@ -146,7 +146,7 @@ run a set of jobs in parallel
 >> jobArgs - the list of arguments for each job
 >> sleepTime - time to sleep (in ms) for each round
 */
-void XPRunner::Run(TensorList * jobFunctions, TensorList * jobArgs, float sleepTime)
+void XPRunner::Run(XList * jobFunctions, XList * jobArgs, float sleepTime)
 {
     if(threadNum <= 0){
         XPRINT(1, stderr, "Error! No threads were created!\n");
@@ -195,13 +195,12 @@ void XPRunner::Run(TensorList * jobFunctions, TensorList * jobArgs, float sleepT
             TFunction function = (TFunction)jobFunctions->GetItem(jobArgs->count - c);
 
             /* the arguments that are passed to the function */
-            volatile TensorList * args = (TensorList*)jobArgs->GetItem(jobArgs->count - c);
+            XList * args = (XList*)jobArgs->GetItem(jobArgs->count - c);
 
             /* thread */
             XThread * thread  = threads + availableThreads[i];
 
-            thread->argv = args;
-            thread->function = function;
+            thread->SetFunc(function, args);
 
             MUTEX_LOCK(thread->workingMutex);
             thread->working = 1;

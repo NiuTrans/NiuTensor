@@ -32,9 +32,8 @@ copy s to t
 
 >> s - source
 >> t - target
->> stream - the stream for creating the job pipeline
 */
-void _CopyValues(const XTensor * s, XTensor * t, XStream * stream)
+void _CopyValues(const XTensor * s, XTensor * t)
 {
     if(s->data == NULL && t->data == NULL)
         return;
@@ -55,7 +54,7 @@ void _CopyValues(const XTensor * s, XTensor * t, XStream * stream)
 
 #ifdef USE_CUDA
     if (s->devID >= 0 || t->devID >= 0) {
-        _CudaCopyValues(s, t, stream);
+        _CudaCopyValues(s, t);
         return;
     }
 #endif
@@ -82,9 +81,8 @@ copy s to t
 >> sLen - length of the segment
 >> t - target
 >> tBeg - beginning of the segment on the target side
->> stream - the stream for creating the job pipeline
 */
-void _CopyValues(const XTensor * s, const int sBeg, const int sLen, XTensor * t, const int tBeg, XStream * stream)
+void _CopyValues(const XTensor * s, const int sBeg, const int sLen, XTensor * t, const int tBeg)
 {
     if(s->data == NULL && t->data == NULL)
         return;
@@ -108,13 +106,12 @@ void _CopyValues(const XTensor * s, const int sBeg, const int sLen, XTensor * t,
     
 /*
 copy s to t (rename _CopyValues)
- >> s - source
- >> t - target
- >> stream - the stream for creating the job pipeline
+>> s - source
+>> t - target
 */
-void CopyValues(const XTensor &s, XTensor &t, XStream * stream)
+void CopyValues(const XTensor &s, XTensor &t)
 {
-    _CopyValues(&s, &t, stream);
+    _CopyValues(&s, &t);
 }
 
 /*
@@ -122,16 +119,15 @@ copy s to t (return an XTensor structure)
 make a new tensor to keep the result and return it
 
 >> s - source
->> stream - the stream for creating the job pipeline
 << return - the copyed tensor t
 */
-XTensor CopyValues(const XTensor &s, XStream * stream)
+XTensor CopyValues(const XTensor &s)
 {
     XTensor t(&s);
     t.SetTMPFlag();
 
     /* call _CopyValues function */
-    _CopyValues(&s, &t, stream);
+    _CopyValues(&s, &t);
         
     /* tensor connection */
     if (s.enableGrad) {

@@ -147,25 +147,27 @@ void _Sum(const XTensor * a, const XTensor * b, XTensor * c, DTYPE beta)
                 int * bp = (int*)b->data;
                 int * cp = (int*)c->data;
 
+                /* TODO: new code for beta = 1. the follow code might be slow because it introduces 
+                         additional floating-point computation. */
                 /* unrolling */
                 int num = a->unitNum;
                 if (num % 4 == 0) {
                     for (int i = 0; i < num; i += 4) {
-                        cp[i] = ap[i] + bp[i] * beta;
-                        cp[i + 1] = ap[i + 1] + bp[i + 1] * beta;
-                        cp[i + 2] = ap[i + 2] + bp[i + 2] * beta;
-                        cp[i + 3] = ap[i + 3] + bp[i + 3] * beta;
+                        cp[i] = ap[i] + (int)(bp[i] * beta);
+                        cp[i + 1] = ap[i + 1] + (int)(bp[i + 1] * beta);
+                        cp[i + 2] = ap[i + 2] + (int)(bp[i + 2] * beta);
+                        cp[i + 3] = ap[i + 3] + (int)(bp[i + 3] * beta);
                     }
                 }
                 else if (num % 2 == 0) {
                     for (int i = 0; i < num; i += 2) {
-                        cp[i] = ap[i] + bp[i] * beta;
-                        cp[i + 1] = ap[i + 1] + bp[i + 1] * beta;
+                        cp[i] = ap[i] + (int)(bp[i] * beta);
+                        cp[i + 1] = ap[i + 1] + (int)(bp[i + 1] * beta);
                     }
                 }
                 else {
                     for (int i = 0; i < num; i++) {
-                        cp[i] = ap[i] + bp[i] * beta;
+                        cp[i] = ap[i] + (int)(bp[i] * beta);
                     }
                 }
             }
@@ -204,6 +206,7 @@ keep the result in the tensor a and return nothing
 */
 void SumMe(XTensor & a, const XTensor & b, DTYPE beta)
 {
+    CheckNTErrors(a.dataType == b.dataType, "Unmatched data type");
     if (b.order == 0){
         DTYPE shift = b.Get0D() * beta;
         _ScaleAndShift(&a, &a, 1.0F, shift);

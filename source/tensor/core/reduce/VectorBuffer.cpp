@@ -20,7 +20,7 @@
 */
 
 #include "VectorBuffer.h"
-#include "math.h"
+#include "cmath"
 namespace nts {
 /* data size for each buffer */
 int VectorBuffer::size()
@@ -67,6 +67,11 @@ VectorBuffer VectorBuffer::loadu(const DTYPE* ptr, bool isExp , DTYPE power , DT
                     vec.values[i] = (DTYPE)exp(sqrt(*(ptr + i)));
                 }
             }
+            else if (power == (DTYPE)-1.0F) {
+                for (int i = 0; i != count; i++) {
+                    vec.values[i] = (DTYPE)exp(std::abs(*(ptr + i)));
+                }
+            }
             else {
                 for (int i = 0; i != count; i++) {
                     vec.values[i] = (DTYPE)exp(pow(*(ptr + i), power));
@@ -88,6 +93,11 @@ VectorBuffer VectorBuffer::loadu(const DTYPE* ptr, bool isExp , DTYPE power , DT
             else if (power == (DTYPE)0.5) {
                 for (int i = 0; i != count; i++) {
                     vec.values[i] = (DTYPE)exp(sqrt(*(ptr + i) - bias[i]));
+                }
+            }
+            else if (power == (DTYPE)-1.0F) {
+                for (int i = 0; i != count; i++) {
+                    vec.values[i] = (DTYPE)exp(std::abs(*(ptr + i) - bias[i]));
                 }
             }
             else {
@@ -112,6 +122,11 @@ VectorBuffer VectorBuffer::loadu(const DTYPE* ptr, bool isExp , DTYPE power , DT
                     vec.values[i] = (DTYPE)sqrt(*(ptr + i));
                 }
             }
+            else if (power == (DTYPE)-1.0F) {
+                for (int i = 0; i != count; i++) {
+                    vec.values[i] = (DTYPE)std::abs(*(ptr + i));
+                }
+            }
             else {
                 for (int i = 0; i != count; i++) {
                     vec.values[i] = (DTYPE)pow(*(ptr + i), power);
@@ -133,6 +148,11 @@ VectorBuffer VectorBuffer::loadu(const DTYPE* ptr, bool isExp , DTYPE power , DT
             else if (power == (DTYPE)0.5) {
                 for (int i = 0; i != count; i++) {
                     vec.values[i] = (DTYPE)sqrt(*(ptr + i) - bias[i]);
+                }
+            }
+            else if (power == (DTYPE)-1.0F) {
+                for (int i = 0; i != count; i++) {
+                    vec.values[i] = (DTYPE)std::abs(*(ptr + i) - bias[i]);
                 }
             }
             else {

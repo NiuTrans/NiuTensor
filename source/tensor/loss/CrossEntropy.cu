@@ -57,6 +57,9 @@ void _CudaCrossEntropyFast(const XTensor * output, const XTensor * gold,
 {
     int n = leadingDim < 0 ? output->order - 1 : leadingDim;
     
+    if (output->mem != NULL) {
+        output->mem->LockBuf();
+    }
     XTensor * interBuf1 = NewTensorBufV2(output, output->devID, output->mem);
     XTensor * interBuf2 = NewTensorBufV2(output, output->devID, output->mem);
     
@@ -73,6 +76,9 @@ void _CudaCrossEntropyFast(const XTensor * output, const XTensor * gold,
 
     DelTensorBuf(interBuf2);
     DelTensorBuf(interBuf1);
+    if (output->mem != NULL) {
+        output->mem->UnlockBuf();
+    }
 }
 
 /*
@@ -118,6 +124,9 @@ DTYPE _CudaCrossEntropyFast(const XTensor * output, const XTensor * gold,
             dimSize[i - 1] = output->dimSize[i];
     }
 
+    if (output->mem != NULL) {
+        output->mem->LockBuf();
+    }
     XTensor * lossBuf = NewTensorBufV2(output->order - 1, dimSize, output->dataType, output->denseRatio, 
                                      output->devID, output->mem);
 
@@ -131,10 +140,16 @@ DTYPE _CudaCrossEntropyFast(const XTensor * output, const XTensor * gold,
             nonZeroNum = (DTYPE)lossBuf->unitNum;
         }
         else {
+            if ((padding->mem != NULL) && (padding->mem != output->mem)) {
+                padding->mem->LockBuf();
+            }
             XTensor * tmp = NewTensorBufV2(padding, padding->devID, padding->mem);
             _IsNonZero(padding, tmp);
             _ReduceSumAll(tmp, &nonZeroNum);
             DelTensorBuf(tmp);
+            if ((padding->mem != NULL) && (padding->mem != output->mem)) {
+                padding->mem->UnlockBuf();
+            }
         }
 
         loss = loss / nonZeroNum;
@@ -148,6 +163,9 @@ DTYPE _CudaCrossEntropyFast(const XTensor * output, const XTensor * gold,
 
     delete[] dimSize;
     DelTensorBuf(lossBuf);
+    if (output->mem != NULL) {
+        output->mem->UnlockBuf();
+    }
 
     return loss;
 }

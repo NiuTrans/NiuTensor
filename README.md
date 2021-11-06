@@ -39,14 +39,14 @@ NiuTensor工具包可以在Windows、Linux以及macOS环境下进行安装，支
 
 ##### CMake方式（Visual Studio）
 
-对于WIndows平台的NiuTensor工具包安装，这里可以使用CMake工具自动生成Visual Studio项目（需要用户提前安装CMake工具以及Visual Studio集成开发环境），操作步骤如下：
+对于Windows平台的NiuTensor工具包安装，这里可以使用CMake工具自动生成Visual Studio项目（需要用户提前安装CMake工具以及Visual Studio集成开发环境），操作步骤如下：
 
 - 在工具包根目录新建目录以保存生成的Visual Studio项目文件（如建立build目录）。
 - 在项目根目录打开Windows平台的命令行工具（如PowerShell），执行`cd build`命令进入新建的build目录。
 - 执行CMake命令对Visual Studio项目进行生成（如果 visual studio 版本低于 2019，则在使用下列命令的时候需额外加上`-A x64`的CMake参数），如计划生成动态链接库，则仅需在命令中额外加上`-DGEN_DLL=ON`的CMake参数即可，否则默认生成可执行程序。
   - 如项目计划启用MKL数学运算库（需用户自行安装），则仅需在CMake命令中使用`-DUSE_MKL=ON`参数，并通过`-DINTEL_ROOT='/intel/root/path'`指定MKL库（Intel工具包）的安装路径。如`cmake -DUSE_MKL=ON -DINTEL_ROOT='C:/Program Files (x86)/IntelSWTools/compilers_and_libraries_2020.2.254/windows' ..`。
   - 如项目计划启用OpenBLAS数学运算库（需用户自行安装），则仅需在CMake命令中使用`-DUSE_OPENBLAS=ON`参数，并通过`-DOPENBLAS_ROOT='/openblas/root/path'`指定OpenBLAS库的安装路径。如`cmake -DUSE_OPENBLAS=ON -DOPENBLAS_ROOT='C:/Program Files/OpenBLAS' ..`。
-  - 如项目计划启用CUDA数学运算库（需用户自行安装），则仅需在CMake命令中使用`-DUSE_CUDA=ON`参数，并通过`-DCUDA_ROOT='/cuda/root/path'`指定CUDA库的安装路径。如`cmake -DUSE_CUDA=ON -DCUDA_ROOT='C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v9.2' ..`。如需在GPU设备上使用半精度浮点数进行运算，需在启用`-DUSE_CUDA=ON`参数的同时启用`-USE_HALF_PRECISION=ON`参数（需要注意的是半精度但需要注意的是，半精度操作仅在使用Pascal及更新架构的NVIDIA GPU中提供支持，该项可参考[NVIDIA GPU设备信息](https://developer.nvidia.com/cuda-gpus)进行查询）。
+  - 如项目计划启用CUDA数学运算库（需用户自行安装），则仅需在CMake命令中使用`-DUSE_CUDA=ON`参数，并通过`-DCUDA_TOOLKIT_ROOT='/cuda/root/path'`指定CUDA库的安装路径，通过-DGPU_ARCH=ARCH指定所在GPU设备的架构（K：Kepler架构；M：Maxwell架构；P：Pascal架构；V：Volta架构；T：Turing架构；A：Ampere架构）。如`cmake -DUSE_CUDA=ON -DCUDA_TOOLKIT_ROOT='C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v9.2' -DGPU_ARCH=P ..`。如需在GPU设备上使用半精度浮点数进行运算，需在启用`-DUSE_CUDA=ON`参数的同时启用`-USE_HALF_PRECISION=ON`参数（需要注意的是半精度但需要注意的是，半精度操作仅在使用Pascal及更新架构的NVIDIA GPU中提供支持，该项可参考[NVIDIA GPU设备信息](https://developer.nvidia.com/cuda-gpus)进行查询）。
 - 执行成功将显示`Build files have been written to:...`。
 - 打开build目录中的NiuTensor.sln文件即可通过Visual Studio打开NiuTensor项目。
 - 打开后在解决方案管理器中选中NiuTensor，右键将其设为启动项目即可开始使用。
@@ -67,7 +67,7 @@ NiuTensor工具包可以在Windows、Linux以及macOS环境下进行安装，支
 - 打开CLion首选项，点击“构建，执行，部署”选项卡中的CMake，在“CMake选项”中进行设置，设置完成后CLion将自动使用CMake对项目进行构建，如计划生成动态链接库，则仅需在在“CMake选项”中额外加上`-DGEN_DLL=ON`的CMake参数即可，否则默认生成可执行程序。
   - 如项目计划启用MKL数学运算库（需用户自行安装），则仅需在“CMake选项”中填入`-DUSE_MKL=ON`，并通过`-DINTEL_ROOT='/intel/root/path'`指定MKL库（Intel工具包）的安装路径。如`-DUSE_MKL=ON -DINTEL_ROOT='/opt/intel/compilers_and_libraries_2020.2.254/linux'`。
   - 如项目计划启用OpenBLAS数学运算库（需用户自行安装），则仅需在“CMake选项”中填入`-DUSE_OPENBLAS=ON`，并通过`-DOPENBLAS_ROOT='/openblas/root/path'`指定OpenBLAS库的安装路径。如`-DUSE_OPENBLAS=ON -DOPENBLAS_ROOT='/opt/OpenBLAS'`。
-  - 如项目计划启用CUDA数学运算库（需用户自行安装），则仅需在“CMake选项”中填入`-DUSE_CUDA=ON`，并通过`-DCUDA_ROOT='/cuda/root/path'`指定CUDA库的安装路径。如`-DUSE_CUDA=ON -DCUDA_ROOT='/usr/local/cuda-9.2'`。如需在GPU设备上使用半精度浮点数进行运算，需在启用`-DUSE_CUDA=ON`参数的同时启用`-USE_HALF_PRECISION=ON`参数（需要注意的是半精度但需要注意的是，半精度操作仅在使用Pascal及更新架构的NVIDIA GPU中提供支持，该项可参考[NVIDIA GPU设备信息](https://developer.nvidia.com/cuda-gpus)进行查询）。
+  - 如项目计划启用CUDA数学运算库（需用户自行安装），则仅需在“CMake选项”中填入`-DUSE_CUDA=ON`，并通过`-DCUDA_TOOLKIT_ROOT='/cuda/root/path'`指定CUDA库的安装路径，通过-DGPU_ARCH=ARCH指定所在GPU设备的架构（K：Kepler架构；M：Maxwell架构；P：Pascal架构；V：Volta架构；T：Turing架构；A：Ampere架构）。如`-DUSE_CUDA=ON -DCUDA_TOOLKIT_ROOT='/usr/local/cuda-9.2' -DGPU_ARCH=P `。如需在GPU设备上使用半精度浮点数进行运算，需在启用`-DUSE_CUDA=ON`参数的同时启用`-USE_HALF_PRECISION=ON`参数（需要注意的是半精度但需要注意的是，半精度操作仅在使用Pascal及更新架构的NVIDIA GPU中提供支持，该项可参考[NVIDIA GPU设备信息](https://developer.nvidia.com/cuda-gpus)进行查询）。
 
 ##### CMake方式（命令行）
 
@@ -78,7 +78,7 @@ NiuTensor工具包可以在Windows、Linux以及macOS环境下进行安装，支
 - 执行CMake命令对项目进行生成，如计划生成动态链接库，则仅需在命令中额外加上`-DGEN_DLL=ON`的CMake参数即可，否则默认生成可执行程序。
   - 如项目计划启用MKL数学运算库（需用户自行安装），则仅需在CMake命令中使用`-DUSE_MKL=ON`参数，并通过`-DINTEL_ROOT='/intel/root/path'`指定MKL库（Intel工具包）的安装路径。如`cmake -DUSE_MKL=ON -DINTEL_ROOT='/opt/intel/compilers_and_libraries_2020.2.254/linux' ..`。
   - 如项目计划启用OpenBLAS数学运算库（需用户自行安装），则仅需在CMake命令中使用`-DUSE_OPENBLAS=ON`参数，并通过`-DOPENBLAS_ROOT='/openblas/root/path'`指定OpenBLAS库的安装路径。如`cmake -DUSE_OPENBLAS=ON -DOPENBLAS_ROOT='/opt/OpenBLAS' ..`。
-  - 如项目计划启用CUDA数学运算库（需用户自行安装），则仅需在CMake命令中使用`-DUSE_CUDA=ON`参数，并通过`-DCUDA_ROOT='/cuda/root/path'`指定CUDA库的安装路径。如`cmake -DUSE_CUDA=ON -DCUDA_ROOT='/usr/local/cuda-9.2' ..`。如需在GPU设备上使用半精度浮点数进行运算，需在启用`-DUSE_CUDA=ON`参数的同时启用`-USE_HALF_PRECISION=ON`参数（需要注意的是半精度但需要注意的是，半精度操作仅在使用Pascal及更新架构的NVIDIA GPU中提供支持，该项可参考[NVIDIA GPU设备信息](https://developer.nvidia.com/cuda-gpus)进行查询）。
+  - 如项目计划启用CUDA数学运算库（需用户自行安装），则仅需在CMake命令中使用`-DUSE_CUDA=ON`参数，并通过`-DCUDA_TOOLKIT_ROOT='/cuda/root/path'`指定CUDA库的安装路径，通过-DGPU_ARCH=ARCH指定所在GPU设备的架构（K：Kepler架构；M：Maxwell架构；P：Pascal架构；V：Volta架构；T：Turing架构；A：Ampere架构）。如`cmake -DUSE_CUDA=ON -DCUDA_TOOLKIT_ROOT='/usr/local/cuda-9.2' -DGPU_ARCH=P ..`。如需在GPU设备上使用半精度浮点数进行运算，需在启用`-DUSE_CUDA=ON`参数的同时启用`-USE_HALF_PRECISION=ON`参数（需要注意的是半精度但需要注意的是，半精度操作仅在使用Pascal及更新架构的NVIDIA GPU中提供支持，该项可参考[NVIDIA GPU设备信息](https://developer.nvidia.com/cuda-gpus)进行查询）。
 - 执行成功将显示`Build files have been written to:...`并在该目录下生成Makefile文件。
 - 执行`make -j`命令对NiuTensor项目进行编译，执行成功将显示`Built target NiuTensor`，安装完毕。
 
@@ -138,3 +138,7 @@ NiuTensor张量计算库由东北大学自然语言处理实验室小牛开源�
 ## 更新版本
 
 NiuTensor version 0.3.3 - 2020年9月14日
+
+NiuTensor version 0.4.0 - 2021年3月13日
+
+NiuTensor version 0.4.1 - 2021年11月6日

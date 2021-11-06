@@ -87,7 +87,7 @@ bool TestMultiply1()
     /* call Multiply function */
     _Multiply(s1, s2, t, 0, 0);
     _MultiplyMe(tMe, s2, 0, 0);
-    tUser = Multiply(*s1, *s2, 0);
+    tUser = Multiply(*s1, *s2, false, 0);
 
     /* check results */
     cpuTest = _CheckData(t, answer, tUnitNum, 1e-4F) &&

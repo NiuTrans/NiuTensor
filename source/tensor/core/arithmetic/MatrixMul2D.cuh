@@ -43,7 +43,7 @@ c = trans(a) * trans(b) * alpha + c * beta
 where trans() return the transposed matrix if the flag is fired
 */
 void _CudaMatrixMul2D(const XTensor * a, MATRIX_TRANS_TYPE transposedA, const XTensor * b, MATRIX_TRANS_TYPE transposedB, XTensor * c,
-                      DTYPE alpha = (DTYPE)1.0, DTYPE beta = 0, XStream * stream = NULL);
+                      DTYPE alpha = (DTYPE)1.0, DTYPE beta = 0);
 
 #endif // USE_CUDA
 

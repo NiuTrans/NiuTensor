@@ -96,9 +96,12 @@ XTensor OnehotToIndex(const XTensor & onehot, int size)
 /* 
 convert index tensor to onehot tensor 
 
->> index - index tensor, which value is an integer num
->> onehot - onehot tensor, which value is 0 or 1
->> size - the last dimension size of the onehot tensor
+>> index - index of the output dimension (over the vocabulary)
+>> onehot - one-hot representation of the index
+>> size - vocabuary size (last dimension size of onehot)
+>> labelSmoothingP - the parameter that controls how smooth the output is.
+                     E.g., p = 0 means no smoothing
+                           p = 1 means a uniform distribution (almost)
 */
 void _IndexToOnehot(const XTensor * index, XTensor * onehot, 
                     int size, float labelSmoothingP)

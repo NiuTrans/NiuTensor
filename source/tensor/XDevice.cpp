@@ -42,7 +42,6 @@ XDevManager GDevs;
 /* constructor */
 XDevice::XDevice()
 {
-    stream = NULL;
     isInitialized = false;
     Clear();
 
@@ -141,8 +140,6 @@ void XDevice::Init(int myDevID)
         }
         else
             sprintf(name2, "GPU-%d %s", devID, name);
-
-        stream = new XStream(0, devID);
 #endif
     }
 
@@ -176,10 +173,6 @@ void XDevice::Clear()
         curandDestroyGenerator(gen);
         isGenReady = false;
     }
-    if (stream != NULL) {
-        delete stream;
-        stream = NULL;
-    }
 #endif
     isInitialized = false;
 }
@@ -189,10 +182,11 @@ void XDevice::Reset()
     XMem * mem = GMems.GetMem(devID);
     mem->Free();
 
-    int devIDReset = devID;
-    Clear();
-
 #ifdef USE_CUDA
+    int devIDReset = devID;
+    
+    Clear();
+    
     if (devIDReset >= 0) {
         int devIDBackup = -1;
         cudaGetDevice(&devIDBackup);
@@ -202,6 +196,8 @@ void XDevice::Reset()
 
         cudaSetDevice(devIDBackup);
     }
+#else
+    Clear();
 #endif
 }
 
@@ -225,17 +221,6 @@ cublasHandle_t * XDevice::GetCublasHandle()
     }
 
     return &cublasHandle;
-}
-
-/* get the stream of cuda */
-cudaStream_t * XDevice::GetCudaStream()
-{
-    if (!isInitialized)
-        Init(devID);
-
-    CheckNTErrors(stream != NULL, "the stream is not initialized!");
-
-    return &stream->stream;
 }
 
 #endif // USE_CUDA
@@ -286,6 +271,28 @@ int XDevice::GetGPUDevice()
 #endif
 }
 
+/* 
+swith to a device (CPU or GPU) 
+>> devID - device id
+*/
+void XDevice::SetDevice(int devID)
+{
+    if(devID >= 0)
+        SetGPUDevice(devID);
+}
+
+/* 
+swith to a device (CPU or GPU) with a backup of the device id 
+>> devID - device id
+>> backupDevID - backup of the device id
+*/
+void XDevice::SetDevice(int devID, int &backupDevID)
+{
+    backupDevID = GetGPUDevice();
+    if (devID >= 0)
+        SetGPUDevice(devID);
+}
+
 /* reset cuda flag for more efficient cuda execution. It should be called after "SetGPUDevice" when
    no GPU context has been established. */
 void XDevice::SetFastFlags()
@@ -310,13 +317,6 @@ void XDevice::SetFastFlagsAllDevices()
         SetFastFlags();
     }
 #endif
-}
-
-/* delete the default stream for the device */
-void XDevice::DelDeviceStream()
-{
-    if(stream != NULL)
-        delete stream;
 }
 
 /* constructor */
@@ -389,14 +389,6 @@ cublasHandle_t * XDevManager::GetCudaHandle(const int devID)
     CheckNTErrors(devID < nGPU, "index of GPU is out of range.");
 
     return GPUs[devID].GetCublasHandle();
-}
-
-/* get the stream of a given GPU */
-cudaStream_t * XDevManager::GetCudaStream(const int devID)
-{
-    CheckNTErrors(devID < nGPU, "index of GPU is out of range.");
-
-    return GPUs[devID].GetCudaStream();
 }
 
 #endif
@@ -617,17 +609,6 @@ char * XDevManager::GetDevString(int devID)
     else{
         CheckNTErrors((devID < nGPU), "Illegal GPU id.");
         return GPUs[devID].name2;
-    }
-}
-
-/* delete the streams for all devices */
-void XDevManager::DelDeviceStream()
-{
-    for(int i = 0; i < GDevs.nCPU; i++) {
-        GDevs.CPUs[i].DelDeviceStream();
-    }
-    for(int i = 0; i < GDevs.nGPU; i++) {
-        GDevs.GPUs[i].DelDeviceStream();
     }
 }
 

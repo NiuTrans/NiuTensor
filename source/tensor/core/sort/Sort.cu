@@ -234,7 +234,15 @@ void _CudaSortBig(const XTensor * a, XTensor * b, XTensor * indexA, XTensor * in
     int m = GetNextPower2(strideNum);
     int n = stride * blockNum;
 
-    void * buf = mem != NULL ? mem->AllocBuf(a->devID, n * m * a->unitSize) : XMemAlloc(a->devID, n * m * a->unitSize);
+    //void * buf = mem != NULL ? mem->AllocBuf(a->devID, n * m * a->unitSize) : XMemAlloc(a->devID, n * m * a->unitSize);
+    void * buf;
+    if (mem != NULL) {
+        mem->LockBuf();
+        buf = mem->AllocBuf(a->devID, n * m * a->unitSize);
+    }
+    else {
+        buf = XMemAlloc(a->devID, n * m * a->unitSize);
+    }
     void * bufIndex = NULL;
     if (indexA != NULL && indexB != NULL) {
         bufIndex = mem != NULL ? mem->AllocBuf(a->devID, n * m * sizeof(int)) : XMemAlloc(a->devID, n * m * sizeof(int));
@@ -289,8 +297,10 @@ void _CudaSortBig(const XTensor * a, XTensor * b, XTensor * indexA, XTensor * in
         KernelReorganizeBack<int> << <dim3(cudaGrids[1], cudaGrids[0]), dim3(cudaBlocks[1], cudaBlocks[0]) >> >
                                       (bufIndex, indexB->data, m, n, stride, k, blockNum);
 
-    if (mem != NULL)
+    if (mem != NULL) {
         mem->ReleaseBuf(a->devID, n * m * a->unitSize);
+        mem->UnlockBuf();
+    }
     else
         XMemFree(a->devID, buf);
     if (indexA != NULL && indexB != NULL)

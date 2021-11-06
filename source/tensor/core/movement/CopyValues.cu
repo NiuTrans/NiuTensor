@@ -32,10 +32,9 @@ namespace nts { // namespace nts(NiuTrans.Tensor)
 copy a range of elements from a source vector to a target vector
 >> s - source matrix
 >> t - target matrix
->> stream - the stream for creating the job pipeline
 << return - succeed or not
 */
-void _CudaCopyValues(const XTensor * s, XTensor * t, XStream * stream)
+void _CudaCopyValues(const XTensor * s, XTensor * t)
 {
     CheckNTErrors(s != NULL && t != NULL, "The input tensor and output tensor must be nonempty!");
     CheckNTErrors(s->dataType == t->dataType, "Unmatched data type!");
@@ -45,10 +44,7 @@ void _CudaCopyValues(const XTensor * s, XTensor * t, XStream * stream)
 
     /* dense -> dense */
     if (!s->isSparse && !t->isSparse) {
-        if (stream == NULL)
-            XMemCopy(t->data, t->devID, s->data, s->devID, s->unitSize * s->unitNum);
-        else
-            XMemCopyAsync(t->data, t->devID, s->data, s->devID, s->unitSize * s->unitNum, stream->stream, stream->devID);
+        XMemCopy(t->data, t->devID, s->data, s->devID, s->unitSize * s->unitNum);
     }
     /* dense -> sparse */
     else if (!s->isSparse && t->isSparse &&
@@ -72,11 +68,8 @@ void _CudaCopyValues(const XTensor * s, XTensor * t, XStream * stream)
         int num = s->unitNumNonZero;
         int size = sizeof(int) + num * (s->unitSize + sizeof(int));
 
-        if (stream == NULL)
-            XMemCopy(t->data, t->devID, s->data, s->devID, size);
-        else
-            XMemCopyAsync(t->data, t->devID, s->data, s->devID, size, stream->stream, stream->devID);
-
+        XMemCopy(t->data, t->devID, s->data, s->devID, size);
+        
         t->unitNumNonZero = num;
     }
     else {

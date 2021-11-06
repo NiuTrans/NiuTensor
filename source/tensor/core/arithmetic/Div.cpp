@@ -253,15 +253,25 @@ void Div(const XTensor & a, const XTensor & b, XTensor & c, DTYPE alpha, int lea
 
     if (b.order == 0){
         DTYPE scale = 1.0F / b.Get0D();
+        if (a.mem != NULL)
+            a.mem->LockBuf();
         XTensor * tmp1 = NewTensorBufV2(&a, a.devID, a.mem);
+        if ((c.mem != NULL) && (c.mem != a.mem)) {
+            c.mem->LockBuf();
+        }
         XTensor * tmp2 = NewTensorBufV2(&c, c.devID, c.mem);
 
         ScaleAndShift(a, *tmp1, scale, 0.0F);
         ScaleAndShift(c, *tmp2, alpha, 0.0F);
         Sum(*tmp2, *tmp1, c);
 
-        DelTensorBuf(tmp1);
         DelTensorBuf(tmp2);
+        if ((c.mem != NULL) && (c.mem != a.mem)) {
+            c.mem->UnlockBuf();
+        }
+        DelTensorBuf(tmp1);
+        if (a.mem != NULL)
+            a.mem->UnlockBuf();
     }
     else {
         int n = GetBroadcastDimIndex(a, b);

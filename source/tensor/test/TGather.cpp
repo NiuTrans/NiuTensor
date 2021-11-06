@@ -67,7 +67,6 @@ bool TestGather1()
     DTYPE answer[2][3] = { {0.0F, -1.0F, 2.0F},
                            {1.0F, 2.0F, 4.0F} };
 
-    int dim = 0;
     int indexSize = 2;
     int srcIndex[2] = {0, 2};
 

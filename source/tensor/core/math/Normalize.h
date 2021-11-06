@@ -36,6 +36,25 @@ void _Normalize(const XTensor * input, XTensor * output, int dim,
                 const XTensor * a, const XTensor * b, DTYPE epsilon);
 
 /*
+L1-normalized the data with normal distribution. 
+For an input x, y = a * (x-mean)/distance + b
+where a and b are the scalar and bias respectively, and \epsilon is the adjustment parameter.
+*/
+void _L1Normalize(const XTensor * input, XTensor * output, int dim, 
+                  const XTensor * mean, const XTensor * distance,
+                  const XTensor * a, const XTensor * b);
+
+/*
+L1-normalized the data with normal distribution (return an XTensor structure)
+make a new tensor to keep the result and return it 
+For an input x, y = a * (x-mean)/distance + b
+where a and b are the scalar and bias respectively, and \epsilon is the adjustment parameter.
+*/
+XTensor L1Normalize(const XTensor &input, int dim, 
+                    const XTensor &mean, const XTensor & distance,
+                    const XTensor &a, const XTensor &b);
+
+/*
 normalized the data with normal distribution (do it on site)
 keep the result in the input tenosr and return nothing
 For an input x, x = a * (x-mean)/sqrt(variance+\epsilon) + b

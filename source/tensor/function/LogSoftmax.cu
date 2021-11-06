@@ -94,7 +94,7 @@ void KernelLogSoftmaxComputeByRow(T * x, T * max, T * sum, T * y, int rowNum, in
         }
         else if (dataType == X_FLOAT16) {
 #if __CUDA_ARCH__ >= 600
-            half r = hlog((half)hexp(x[key] - inputMax[threadIdx.y]) / (half)inputSum[threadIdx.y]);
+            half r = hlog(hexp((half)x[key] - (half)inputMax[threadIdx.y]) / (half)inputSum[threadIdx.y]);
             y[key] = r;
 #endif
         }
@@ -155,7 +155,7 @@ void KernelLogSoftmaxComputeByCol(T * x, T * max, T * sum, T * y, int rowNum, in
         }
         else if (dataType == X_FLOAT16) {
 #if __CUDA_ARCH__ >= 600
-            half r = hlog((half)hexp(x[key] - inputMax[threadIdx.y]) / (half)inputSum[threadIdx.y]);
+            half r = hlog(hexp((half)x[key] - (half)inputMax[threadIdx.y]) / (half)inputSum[threadIdx.y]);
             y[key] = r;
 #endif
         }

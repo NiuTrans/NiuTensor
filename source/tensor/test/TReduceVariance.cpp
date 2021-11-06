@@ -79,8 +79,8 @@ bool TestReduceVariance1()
     t->SetZeroAll();
 
     /* call ReduceVariance function */
-    _ReduceVariance(s, t, 0, mean);
-    tUser = ReduceVariance(*s, 0, *mean);
+    _ReduceVariance(s, t, 0, mean, false);
+    tUser = ReduceVariance(*s, 0, *mean, false);
 
     /* check results */
     cpuTest = _CheckData(t, answer, tUnitNum, 1e-4F) &&
@@ -102,8 +102,8 @@ bool TestReduceVariance1()
     tGPU->SetZeroAll();
 
     /* call ReduceVariance function */
-    _ReduceVariance(sGPU, tGPU, 0, meanGPU);
-    tUserGPU = ReduceVariance(*sGPU, 0, *meanGPU);
+    _ReduceVariance(sGPU, tGPU, 0, meanGPU, false);
+    tUserGPU = ReduceVariance(*sGPU, 0, *meanGPU, false);
 
     /* check results */
     gpuTest = _CheckData(tGPU, answer, tUnitNum, 1e-4F) &&
@@ -179,8 +179,8 @@ bool TestReduceVariance2()
     t->SetZeroAll();
 
     /* call ReduceVariance function */
-    _ReduceVariance(s, t, 0, mean);
-    tUser = ReduceVariance(*s, 0, *mean);
+    _ReduceVariance(s, t, 0, mean, false);
+    tUser = ReduceVariance(*s, 0, *mean, false);
 
     /* check results */
     cpuTest = _CheckData(t, answer, tUnitNum, 1e-4F) &&
@@ -202,8 +202,8 @@ bool TestReduceVariance2()
     tGPU->SetZeroAll();
 
     /* call ReduceVariance function */
-    _ReduceVariance(sGPU, tGPU, 0, meanGPU);
-    tUserGPU = ReduceVariance(*sGPU, 0, *meanGPU);
+    _ReduceVariance(sGPU, tGPU, 0, meanGPU, false);
+    tUserGPU = ReduceVariance(*sGPU, 0, *meanGPU, false);
 
     /* check results */
     gpuTest = _CheckData(tGPU, answer, tUnitNum, 1e-4F) &&

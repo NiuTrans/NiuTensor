@@ -96,25 +96,11 @@ void _Split(const XTensor * s, XTensor * t, int whereToSplit, int splitNum)
             }
         }
         else{
-#ifdef USE_CUDA
-#ifdef STREAMED_MEMCPOPY
-            XStream * stream = GDevs.GPUs[t->devID].stream;
-            for (int k = 0; k < splitNum; k++) {
-                XMemCopy2DAsync((char*)t->data + k * tStep, tPitch, t->devID,
-                                (char*)s->data + k * sStep, sPitch, s->devID,
-                                 mSize, n, stream);
-            }
-            stream->StreamSynchronize();
-#else
             for (int k = 0; k < splitNum; k++) {
                 XMemCopy2D((char*)t->data + k * tStep, tPitch, t->devID,
                            (char*)s->data + k * sStep, sPitch, s->devID,
                             mSize, n);
             }
-#endif
-#else
-            ShowNTErrors("Please specify USE_CUDA and recompile the code!");
-#endif
         }
     }
     else {
@@ -124,22 +110,44 @@ void _Split(const XTensor * s, XTensor * t, int whereToSplit, int splitNum)
 
         void * dataTMP = t->data;
 
-        if (!isOnSameDevice)
-            dataTMP = mem != NULL ? mem->AllocBuf(mem->devID, size) : XMemAlloc(s->devID, size);
+        if (!isOnSameDevice) {
+            //dataTMP = mem != NULL ? mem->AllocBuf(mem->devID, size) : XMemAlloc(s->devID, size);
+            if (mem != NULL) {
+                mem->LockBuf();
+                dataTMP = mem->AllocBuf(mem->devID, size);
+            }
+            else {
+                dataTMP = XMemAlloc(s->devID, size);
+            }
+        }
 
         int realBlockSize = blockSize * t->unitSize;
         int blockSplitSize = blockNum / splitNum;
 
-        int * blockIndex = (int*)(mem != NULL ?
+        /*int * blockIndex = (int*)(mem != NULL ?
                                   mem->AllocBuf(mem->devID, blockNum * sizeof(int)) :
-                                  XMemAlloc(s->devID, blockNum * sizeof(int)));
+                                  XMemAlloc(s->devID, blockNum * sizeof(int)));*/
+        int * blockIndex;
+        if (mem != NULL) {
+            if (isOnSameDevice) {
+                mem->LockBuf();
+            }
+            blockIndex = (int*)mem->AllocBuf(mem->devID, blockNum * sizeof(int));
+        }
+        else {
+            blockIndex = (int*)XMemAlloc(s->devID, blockNum * sizeof(int));
+        }
 
         _MakeSplitBlockIndex(blockIndex, splitNum, blockSplitSize, blockNum, s->devID);
 
         _CopyBlocksOnSite(s->data, s->unitSize, realBlockSize, blockNum, dataTMP, blockIndex, s->devID);
 
-        if (mem != NULL)
+        if (mem != NULL) {
             mem->ReleaseBuf(mem->devID, blockNum * sizeof(int));
+            if (isOnSameDevice) {
+                mem->UnlockBuf();
+            }
+        }
         else
             XMemFree(s->devID, blockIndex);
 
@@ -147,8 +155,10 @@ void _Split(const XTensor * s, XTensor * t, int whereToSplit, int splitNum)
         if (!isOnSameDevice) {
             XMemCopy(t->data, t->devID, dataTMP, s->devID, size);
 
-            if (mem != NULL)
+            if (mem != NULL) {
                 mem->ReleaseBuf(mem->devID, size);
+                mem->UnlockBuf();
+            }
             else
                 XMemFree(s->devID, dataTMP);
         }
@@ -321,27 +331,12 @@ void _Split(const XTensor * big, TensorList * smalls, int whereToSplit, int spli
             }
         }
         else{
-#ifdef USE_CUDA
-#ifdef STREAMED_MEMCPOPY
-            XStream * stream = GDevs.GPUs[big->devID].stream;
-            for (int k = 0; k < splitNum; k++) {
-                XTensor * t = (XTensor*)smalls->GetItem(k);
-                XMemCopy2DAsync((char*)t->data + k * tStep, tPitch, t->devID,
-                                (char*)big->data + k * sStep, sPitch, big->devID,
-                                 mSize, n, stream);
-            }
-            stream->StreamSynchronize();
-#else
             for (int k = 0; k < splitNum; k++) {
                 XTensor * t = (XTensor*)smalls->GetItem(k);
                 XMemCopy2D((char*)t->data + k * tStep, tPitch, t->devID,
                            (char*)big->data + k * sStep, sPitch, big->devID,
                             mSize, n);
             }
-#endif
-#else
-            ShowNTErrors("Please specify USE_CUDA and recompile the code!");
-#endif
         }
     }
     /* splitting with fewer kernel/api calls??? (i'm not sure about it!! may remove this later) */
@@ -362,7 +357,14 @@ void _Split(const XTensor * big, TensorList * smalls, int whereToSplit, int spli
             dataTMP = first->data;
         }
         else {
-            dataTMP = mem != NULL ? mem->AllocBuf(mem->devID, size) : XMemAlloc(big->devID, size);
+            //dataTMP = mem != NULL ? mem->AllocBuf(mem->devID, size) : XMemAlloc(big->devID, size);
+            if (mem != NULL) {
+                mem->LockBuf();
+                dataTMP = mem->AllocBuf(mem->devID, size);
+            }
+            else {
+                dataTMP = XMemAlloc(big->devID, size);
+            }
         }
 
         tensorTMP->data = dataTMP;
@@ -383,8 +385,10 @@ void _Split(const XTensor * big, TensorList * smalls, int whereToSplit, int spli
         tensorTMP->data = NULL;
         delete tensorTMP;
 
-        if ((!uniform) && (mem != NULL))
+        if ((!uniform) && (mem != NULL)) {
             mem->ReleaseBuf(mem->devID, size);
+            mem->UnlockBuf();
+        }
         else
             XMemFree(big->devID, dataTMP);
     }

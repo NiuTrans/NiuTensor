@@ -89,10 +89,6 @@ XTensor::XTensor()
     Init();
 
     id = MakeTensorID();
-    isDefaultDType = true;
-    isInGlobalMem = false;
-    isInit = false;
-    isTmp = false;
     reserved = 0;
 }
 
@@ -277,6 +273,7 @@ void XTensor::Init()
     isTmp = false;
     isGrad = false;
     isVar = false;
+    isGradFinished = false;
     enableGrad = X_ENABLE_GRAD;
     visitMark = 0;
     grad = NULL;
@@ -772,10 +769,9 @@ MTYPE XTensor::GetOffset3D(int d0, int d1, int d2) const
 }
 
 /* 
-a vector with all entries of 0 
->> stream - stream for the job pipeline
+a tensor with all entries of 0 
 */
-void XTensor::SetZeroAll(XStream* stream)
+void XTensor::SetZeroAll()
 {
     if(data == NULL)
         return;
@@ -788,12 +784,7 @@ void XTensor::SetZeroAll(XStream* stream)
             int devIDBackup = 0;
             cudaGetDevice(&devIDBackup);
             cudaSetDevice(devID);
-
-            if(stream == NULL)
-                cudaMemset(data, 0, size);
-            else
-                cudaMemsetAsync(data, 0, size, stream->stream);
-            
+            cudaMemset(data, 0, size);
             cudaSetDevice(devIDBackup);
 #endif
         }
@@ -807,13 +798,8 @@ void XTensor::SetZeroAll(XStream* stream)
 #ifdef USE_CUDA
             int devIDBackup = 0;
             cudaGetDevice(&devIDBackup);
-            cudaSetDevice(devID);
-            
-            if(stream == NULL)
-                cudaMemset(data, 0, unitNum * unitSize);
-            else
-                cudaMemsetAsync(data, 0, unitNum * unitSize, stream->stream);
-            
+            cudaSetDevice(devID);     
+            cudaMemset(data, 0, unitNum * unitSize);
             cudaSetDevice(devIDBackup);
 #endif
         }
@@ -845,11 +831,11 @@ void XTensor::Rand(int rNum, int cNum)
 }
 
 /* generate data items with a range by start, end and the step
->> start - the begin of the array
->> end - the end of the array (not included self)
->> step - the step of two items
+>> start - the beginning of the array
+>> end - the end of the array (it does not includes itself)
+>> step - the step we take along the array
 */
-void XTensor::Range(DTYPE lower, DTYPE upper, DTYPE step)
+void XTensor::Range(int lower, int upper, int step)
 {
     _SetDataRange(this, lower, upper, step);
 }
@@ -1997,6 +1983,19 @@ void XTensor::FlushToMem(XMem* targetMem)
             devID = mem->devID;
         }
     }
+}
+
+/* 
+flush the data to the target device (with id) 
+>> myDevID - id of the target device
+*/
+void XTensor::FlushToDevice(int myDevID)
+{
+    if (myDevID == devID)
+        return;
+
+    XMem * myMem = GMems.GetMem(myDevID);
+    FlushToMem(myMem);
 }
 
 /*

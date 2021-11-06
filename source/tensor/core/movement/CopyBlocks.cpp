@@ -45,15 +45,25 @@ void _CopyBlocks(void * source, int unitSize, int blockSize, int blockNum, void 
     if (devID >= 0) {
 #ifdef USE_CUDA
         /* copy the index from host to device */
-        int * targetBlocksTMP = myMem != NULL ?
+        /*int * targetBlocksTMP = myMem != NULL ?
                                (int*)myMem->AllocBuf(devID, blockNum * sizeof(int)):
-                               (int*)XMemAlloc(devID, blockNum * sizeof(int));
+                               (int*)XMemAlloc(devID, blockNum * sizeof(int));*/
+        int * targetBlocksTMP;
+        if (myMem != NULL) {
+            myMem->LockBuf();
+            targetBlocksTMP = (int*)myMem->AllocBuf(devID, blockNum * sizeof(int));
+        }
+        else {
+            targetBlocksTMP = (int*)XMemAlloc(devID, blockNum * sizeof(int));
+        }
         XMemCopy(targetBlocksTMP, devID, targetBlocks, -1, blockNum * sizeof(int));
 
         _CopyBlocksOnSite(source, unitSize, blockSize, blockNum, target, targetBlocksTMP, devID);
 
-        if(myMem != NULL)
+        if (myMem != NULL) {
             myMem->ReleaseBuf(myMem->devID, blockNum * sizeof(int));
+            myMem->UnlockBuf();
+        }
         else
             XMemFree(devID, targetBlocksTMP);
 #else

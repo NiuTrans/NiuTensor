@@ -89,6 +89,7 @@ void XLossGrad::MakeGrad(XTensor * node, bool isEfficient)
     }
 
     node->visitMark = NODE_FINISHED;
+    node->isGradFinished = true;
 }
 
 /* indicates whether the node is for a loss computation */

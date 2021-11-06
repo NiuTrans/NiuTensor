@@ -24,6 +24,7 @@
 #ifndef __XMEM_H__
 #define __XMEM_H__
 
+#include "XGlobal.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -249,6 +250,13 @@ public:
     /* indicates whether we merge free memory pieces on the fly */
     bool mergeFreeOTF;
 
+private:
+    /* a mutex for memory allocation and release */
+    MUTEX_HANDLE allocMutex;
+
+    /* a mutex for buffer memory allocation and release */
+    MUTEX_HANDLE bufMutex;
+
 public:
 
     /* constructor */
@@ -336,6 +344,12 @@ public:
 
     /* allocate a piece of memory as "malloc" */
     void * AllocStandard(int myDevID, MTYPE mySize, bool myIsRebuiltIndex = false);
+
+    /* lock the buffer mutex */
+    void LockBuf();
+
+    /* unlock the buffer mutex */
+    void UnlockBuf();
 
     /* find the highest set bit (or most significant set bit) in an integer-64 */
     int GetMSB(MTYPE mySize);

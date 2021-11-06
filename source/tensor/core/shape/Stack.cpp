@@ -43,13 +43,11 @@ void _Stack(const TensorList * smalls, XTensor * t, int dim)
 
     int blockSize = 1;
     int blockNum = 1;
-    int gridSize = 1;
     int gridNum = 1;
 
     XTensor * smallsItem0 = smalls->GetItem(0);
-    int unitNum = smallsItem0->unitNum;
+    //int unitNum = smallsItem0->unitNum;
     int unitSize = smallsItem0->unitSize;
-    int itemSize = unitNum * unitSize;
 
     for (int i = 0; i < smallsItem0->order; i++) {
         if (i >= dim)
@@ -129,7 +127,7 @@ bool CheckStackShape(const TensorList &smalls, XTensor &t, int dim)
     XTensor * tensor = (XTensor*)smalls.GetItem(0);
     int order = tensor->order;
 
-    for (int i = 0; i < tensor->order; i++) {
+    for (int i = 0; i < order; i++) {
         if (i < dim) {
             if (t.GetDim(i) != tensor->GetDim(i)) 
                 return false;

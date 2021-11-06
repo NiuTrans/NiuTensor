@@ -106,7 +106,7 @@ public:
     void KillThreads();
 
     /* run a set of jobs in parallel */
-    void Run(TensorList * jobFunctions, TensorList * jobArgs, float sleepTime = 0);
+    void Run(XList * jobFunctions, XList * jobArgs, float sleepTime = 0);
 
     /* get the number of parallel jobs to run */
     int GetJobNum(int size);

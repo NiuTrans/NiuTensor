@@ -125,6 +125,9 @@ void XMathGrad::MakeGrad(XTensor * node, bool isEfficient)
     else{
         ShowNTErrors("Unsupported backward computation! TODO!");
     }
+
+    node->visitMark = NODE_FINISHED;
+    node->isGradFinished = true;
 }
 
 /* indicates whether the node is for a math operation */
@@ -156,14 +159,16 @@ void XMathGrad::GradAbsolute(XTensor * node, bool isEfficient)
     if (!isEfficient || a->isGrad) {
         XNoder::MakeGrad(a);
 
+        if (a->mem != NULL)
+            a->mem->LockBuf();
         XTensor * tmp = NewTensorBufV2(a, a->devID, a->mem);
         _Sign(a, tmp);
         _Multiply(node->grad, tmp, a->grad, 1.0F);
 
         DelTensorBuf(tmp);
+        if (a->mem != NULL)
+            a->mem->UnlockBuf();
     }
-
-    node->visitMark = NODE_FINISHED;
 }
 
 /*
@@ -187,15 +192,17 @@ void XMathGrad::GradCos(XTensor * node, bool isEfficient)
     if (!isEfficient || a->isGrad) {
         XNoder::MakeGrad(a);
 
+        if (a->mem != NULL)
+            a->mem->LockBuf();
         XTensor * tmp = NewTensorBufV2(a, a->devID, a->mem);
         _Sin(a, tmp);
         _NegateMe(tmp);
         _Multiply(node->grad, tmp, a->grad, 1.0F);
 
         DelTensorBuf(tmp);
+        if (a->mem != NULL)
+            a->mem->UnlockBuf();
     }
-
-    node->visitMark = NODE_FINISHED;
 }
 
 /*
@@ -219,14 +226,16 @@ void XMathGrad::GradExp(XTensor * node, bool isEfficient)
     if (!isEfficient || a->isGrad) {
         XNoder::MakeGrad(a);
 
+        if (a->mem != NULL)
+            a->mem->LockBuf();
         XTensor * tmp = NewTensorBufV2(a, a->devID, a->mem);
         _Exp(a, tmp);
         _Multiply(node->grad, tmp, a->grad, 1.0F);
 
         DelTensorBuf(tmp);
+        if (a->mem != NULL)
+            a->mem->UnlockBuf();
     }
-
-    node->visitMark = NODE_FINISHED;
 }
 
 /*
@@ -251,8 +260,6 @@ void XMathGrad::GradLog(XTensor * node, bool isEfficient)
         XNoder::MakeGrad(a);
         _Div(node->grad, a, a->grad, 1.0F);
     }
-
-    node->visitMark = NODE_FINISHED;
 }
 
 /*
@@ -276,8 +283,6 @@ void XMathGrad::GradRound(XTensor * node, bool isEfficient)
     if (!isEfficient || a->isGrad) {
         XNoder::MakeGrad(a);
     }
-
-    node->visitMark = NODE_FINISHED;
 }
 
 /*
@@ -301,8 +306,6 @@ void XMathGrad::GradSign(XTensor * node, bool isEfficient)
     if (!isEfficient || a->isGrad) {
         XNoder::MakeGrad(a);
     }
-
-    node->visitMark = NODE_FINISHED;
 }
 
 /*
@@ -326,14 +329,16 @@ void XMathGrad::GradSin(XTensor * node, bool isEfficient)
     if (!isEfficient || a->isGrad) {
         XNoder::MakeGrad(a);
 
+        if (a->mem != NULL)
+            a->mem->LockBuf();
         XTensor * tmp = NewTensorBufV2(a, a->devID, a->mem);
         _Cos(a, tmp);
         _Multiply(node->grad, tmp, a->grad, 1.0F);
 
         DelTensorBuf(tmp);
+        if (a->mem != NULL)
+            a->mem->UnlockBuf();
     }
-
-    node->visitMark = NODE_FINISHED;
 }
 
 /*
@@ -352,20 +357,23 @@ void XMathGrad::GradTan(XTensor * node, bool isEfficient)
     CheckNTErrors(income.tailNum == 1, "Wrong input tensor number for TAN!");
 
     XTensor * a = income.tails[0];
-    XTensor * tmp = NewTensorBufV2(a, a->devID, a->mem);
 
     /* dE/da = dE/dc * 1/(cos(a))^2
              = dE/dc * (cos(a))^-2 */
     if (!isEfficient || a->isGrad) {
         XNoder::MakeGrad(a);
+
+        if (a->mem != NULL)
+            a->mem->LockBuf();
+        XTensor * tmp = NewTensorBufV2(a, a->devID, a->mem);
         _Cos(a, tmp);
         _PowerMe(tmp, -2.0F);
         _Multiply(node->grad, tmp, a->grad, 1.0F);
 
         DelTensorBuf(tmp);
+        if (a->mem != NULL)
+            a->mem->UnlockBuf();
     }
-
-    node->visitMark = NODE_FINISHED;
 }
 
 /*
@@ -392,14 +400,16 @@ void XMathGrad::GradClip(XTensor * node, bool isEfficient)
     if (!isEfficient || a->isGrad) {
         XNoder::MakeGrad(a);
 
+        if (a->mem != NULL)
+            a->mem->LockBuf();
         XTensor * tmp = NewTensorBufV2(a, a->devID, a->mem);
         _ClipBackward(node, a, node->grad, tmp, lower, upper);
         _SumMe(a->grad, tmp);
 
         DelTensorBuf(tmp);
+        if (a->mem != NULL)
+            a->mem->UnlockBuf();
     }
-
-    node->visitMark = NODE_FINISHED;
 }
 
 /*
@@ -432,6 +442,8 @@ void XMathGrad::GradDiv(XTensor * node, bool isEfficient)
              = dE/dc * a * (-b^-2) */
     if (!isEfficient || b->isGrad) {
         XNoder::MakeGrad(b);
+        if (a->mem != NULL)
+            a->mem->LockBuf();
         XTensor * tmp = NewTensorBufV2(a, a->devID, a->mem);
         _Power(b, tmp, -2.0F);
         _NegateMe(tmp);
@@ -439,9 +451,9 @@ void XMathGrad::GradDiv(XTensor * node, bool isEfficient)
         _Multiply(node->grad, tmp, b->grad, 1.0F);
 
         DelTensorBuf(tmp);
+        if (a->mem != NULL)
+            a->mem->UnlockBuf();
     }
-
-    node->visitMark = NODE_FINISHED;
 }
 
 /* 
@@ -478,9 +490,17 @@ void XMathGrad::GradDivDim(XTensor * node, bool isEfficient)
         int dimSize[MAX_TENSOR_DIM_NUM];
         memcpy(dimSize, a->dimSize, sizeof(int) * a->order);
 
+        if (a->mem != NULL)
+            a->mem->LockBuf();
         XTensor * aTMP1 = NewTensorBufV2(a, a->devID, a->mem);
         XTensor * aTMP2 = NewTensorBufV2(a, a->devID, a->mem);
+        if ((b->mem != NULL) && (b->mem != a->mem)) {
+            b->mem->LockBuf();
+        }
         XTensor * bTMP = NewTensorBufV2(b, b->devID, b->mem);
+        if ((node->mem != NULL) && (node->mem != a->mem) && (node->mem != b->mem)) {
+            node->mem->LockBuf();
+        }
         XTensor * interGradTMP = NewTensorBufV2(node->grad, node->devID, node->mem);
 
         _Negate(a, aTMP1);
@@ -522,6 +542,7 @@ void XMathGrad::GradDivDim(XTensor * node, bool isEfficient)
                Then reduce along with z and x to obtain dE/db. */
             interGradTMP->Reshape(3, reshapedSize);
 
+            // b->mem->LockBuf();
             XTensor * interGrad = NewTensorBufV2(2, reshapedSize, b->dataType, b->denseRatio, b->devID, b->mem);
             _ReduceSum(interGradTMP, interGrad, 2);
 
@@ -532,15 +553,22 @@ void XMathGrad::GradDivDim(XTensor * node, bool isEfficient)
 
             DelTensorBuf(bGradTMP2);
             DelTensorBuf(interGrad);
+            // b->mem->UnlockBuf();
         }
 
         DelTensorBuf(interGradTMP);
+        if ((node->mem != NULL) && (node->mem != a->mem) && (node->mem != b->mem)) {
+            node->mem->UnlockBuf();
+        }
         DelTensorBuf(bTMP);
+        if ((b->mem != NULL) && (b->mem != a->mem)) {
+            b->mem->UnlockBuf();
+        }
         DelTensorBuf(aTMP2);
         DelTensorBuf(aTMP1);
+        if (a->mem != NULL)
+            a->mem->UnlockBuf();
     }
-
-    node->visitMark = NODE_FINISHED;
 }
 
 /* 
@@ -602,8 +630,6 @@ void XMathGrad::GradMatrixMul(XTensor * node, bool isEfficient)
     else{
         ShowNTErrors("TODO!");
     }
-
-    node->visitMark = NODE_FINISHED;
 }
     
 /*
@@ -757,8 +783,6 @@ void XMathGrad::GradMatrixMulBatched(XTensor * node, bool isEfficient)
         if (!isEfficient || b->isGrad)
             _MatrixMulBatched(dedc, X_TRANS, a, X_TRANS, dedb, alpha, 1.0F);
     }
-
-    node->visitMark = NODE_FINISHED;
 }
 
 /* 
@@ -793,8 +817,6 @@ void XMathGrad::GradMultiply(XTensor * node, bool isEfficient)
         XNoder::MakeGrad(b);
         _Multiply(node->grad, a, b->grad, 1.0F);
     }
-
-    node->visitMark = NODE_FINISHED;
 }
 
 /*
@@ -830,6 +852,8 @@ void XMathGrad::GradMultiplyDim(XTensor * node, bool isEfficient)
         int dimSize[MAX_TENSOR_DIM_NUM];
         memcpy(dimSize, a->dimSize, sizeof(int) * a->order);
 
+        if (node->mem != NULL)
+            node->mem->LockBuf();
         XTensor * bGradTMP = NewTensorBufV2(node->grad, node->devID, node->mem);
         _Multiply(node->grad, a, bGradTMP);
 
@@ -842,12 +866,18 @@ void XMathGrad::GradMultiplyDim(XTensor * node, bool isEfficient)
                size of b. Then we can reduce the matrix into a row vector. */
             bGradTMP->Reshape(2, reshapedSize);
 
+            if ((b->mem != NULL) && (b->mem != node->mem)) {
+                b->mem->LockBuf();
+            }
             XTensor * bGradTMP2 = NewTensorBufV2(b->grad, b->devID, b->mem);
             _ReduceSum(bGradTMP, bGradTMP2, 0);
 
             _Sum(b->grad, bGradTMP2, b->grad);
 
             DelTensorBuf(bGradTMP2);
+            if ((b->mem != NULL) && (b->mem != node->mem)) {
+                b->mem->UnlockBuf();
+            }
         }
         else {
             int reshapedSize[MAX_TENSOR_DIM_NUM];
@@ -866,6 +896,9 @@ void XMathGrad::GradMultiplyDim(XTensor * node, bool isEfficient)
                Then reduce along with z and x to obtain dE/db. */
             bGradTMP->Reshape(3, reshapedSize);
 
+            if ((b->mem != NULL) && (b->mem != node->mem)) {
+                b->mem->LockBuf();
+            }
             XTensor * interGrad = NewTensorBufV2(2, reshapedSize, b->dataType, b->denseRatio, b->devID, b->mem);
             _ReduceSum(bGradTMP, interGrad, 2);
 
@@ -876,11 +909,14 @@ void XMathGrad::GradMultiplyDim(XTensor * node, bool isEfficient)
 
             DelTensorBuf(bGradTMP2);
             DelTensorBuf(interGrad);
+            if ((b->mem != NULL) && (b->mem != node->mem)) {
+                b->mem->UnlockBuf();
+            }
         }
         DelTensorBuf(bGradTMP);
+        if (node->mem != NULL)
+            node->mem->UnlockBuf();
     }
-
-    node->visitMark = NODE_FINISHED;
 }
 
 /*
@@ -916,8 +952,6 @@ void XMathGrad::GradMultiplyBroadcast(XTensor * node, bool isEfficient)
         if (b->isVar || b->income.tailNum > 0)
             ShowNTErrors("TODO");
     }
-
-    node->visitMark = NODE_FINISHED;
 }
 
 /*
@@ -942,8 +976,6 @@ void XMathGrad::GradNegate(XTensor * node, bool isEfficient)
         XNoder::MakeGrad(a);        
         _Sum(a->grad, node->grad, a->grad, -1.0F);
     }
-
-    node->visitMark = NODE_FINISHED;
 }
 
 /*
@@ -980,15 +1012,17 @@ void XMathGrad::GradPower(XTensor * node, bool isEfficient)
     if (!isEfficient || a->isGrad) {
         XNoder::MakeGrad(a);
 
+        if (a->mem != NULL)
+            a->mem->LockBuf();
         XTensor * tmp = NewTensorBufV2(a, a->devID, a->mem);
         _Power(a, tmp, p - 1.0F);
         _ScaleAndShiftMe(tmp, p);
         _Multiply(node->grad, tmp, a->grad, 1.0F);
 
         DelTensorBuf(tmp);
+        if (a->mem != NULL)
+            a->mem->UnlockBuf();
     }
-
-    node->visitMark = NODE_FINISHED;
 }
 
 
@@ -1012,15 +1046,17 @@ void XMathGrad::GradReciprocal(XTensor* node, bool isEfficient)
     if (!isEfficient || a->isGrad) {
         XNoder::MakeGrad(a);
 
+        if (a->mem != NULL)
+            a->mem->LockBuf();
         XTensor* tmp = NewTensorBufV2(a, a->devID, a->mem);
         _Power(a, tmp, -2.0F);
         _NegateMe(tmp);
         _Multiply(node->grad, tmp, a->grad, 1.0F);
 
         DelTensorBuf(tmp);
+        if (a->mem != NULL)
+            a->mem->UnlockBuf();
     }
-
-    node->visitMark = NODE_FINISHED;
 }
 
 /*
@@ -1043,14 +1079,16 @@ void XMathGrad::GradSqrt(XTensor * node, bool isEfficient)
     if (!isEfficient || a->isGrad) {
         XNoder::MakeGrad(a);
 
+        if (a->mem != NULL)
+            a->mem->LockBuf();
         XTensor* tmp = NewTensorBufV2(a, a->devID, a->mem);
         _ScaleMe(tmp, 2.0F);
         _Multiply(node->grad, tmp, a->grad, 1.0F);
 
         DelTensorBuf(tmp);
+        if (a->mem != NULL)
+            a->mem->UnlockBuf();
     }
-
-    node->visitMark = NODE_FINISHED;
 }
 
 /*
@@ -1073,15 +1111,17 @@ void XMathGrad::GradSquare(XTensor * node, bool isEfficient)
     if (!isEfficient || a->isGrad) {
         XNoder::MakeGrad(a);
 
+        if (a->mem != NULL)
+            a->mem->LockBuf();
         XTensor* tmp = NewTensorBufV2(a, a->devID, a->mem);
         _Power(a, tmp, -0.5F);
         _ScaleMe(tmp, 0.5);
         _Multiply(node->grad, tmp, a->grad, 1.0F);
 
         DelTensorBuf(tmp);
+        if (a->mem != NULL)
+            a->mem->UnlockBuf();
     }
-
-    node->visitMark = NODE_FINISHED;
 }
 
 /*
@@ -1109,8 +1149,6 @@ void XMathGrad::GradScaleAndShift(XTensor * node, bool isEfficient)
 
         _Sum(a->grad, node->grad, a->grad, scale);
     }
-
-    node->visitMark = NODE_FINISHED;
 }
 
 /*
@@ -1138,8 +1176,6 @@ void XMathGrad::GradScale(XTensor * node, bool isEfficient)
 
         _Sum(a->grad, node->grad, a->grad, scale);
     }
-
-    node->visitMark = NODE_FINISHED;
 }
 
 /*
@@ -1166,9 +1202,7 @@ void XMathGrad::GradDescale(XTensor * node, bool isEfficient)
         XNoder::MakeGrad(a);
 
         _Sum(a->grad, node->grad, a->grad, 1 / descale);
-    } 
-
-    node->visitMark = NODE_FINISHED;
+    }
 }
 
 /*
@@ -1194,8 +1228,6 @@ void XMathGrad::GradShift(XTensor * node, bool isEfficient)
 
         _Sum(a->grad, node->grad, a->grad);
     }
-
-    node->visitMark = NODE_FINISHED;
 }
 
 /*
@@ -1229,8 +1261,6 @@ void XMathGrad::GradSub(XTensor * node, bool isEfficient)
         XNoder::MakeGrad(b);
         _Sum(b->grad, node->grad, b->grad, -beta);
     }
-
-    node->visitMark = NODE_FINISHED;
 }
 
 /*
@@ -1275,12 +1305,16 @@ void XMathGrad::GradSubDim(XTensor * node, bool isEfficient)
                size of b. Then we can reduce the matrix into a row vector. */
             node->grad->Reshape(2, reshapedSize);
 
+            if (b->mem != NULL)
+                b->mem->LockBuf();
             XTensor * bGradTMP = NewTensorBufV2(b->grad, b->devID, b->mem);
             _ReduceSum(node->grad, bGradTMP, 0);
             if (beta != 1.0F)
                 _ScaleAndShiftMe(bGradTMP, beta);
             _Sub(b->grad, bGradTMP, b->grad);
             DelTensorBuf(bGradTMP);
+            if (b->mem != NULL)
+                b->mem->UnlockBuf();
 
             node->grad->Reshape(order, dimSize);
         }
@@ -1301,6 +1335,8 @@ void XMathGrad::GradSubDim(XTensor * node, bool isEfficient)
                Then reduce along with z and x to obtain dE/db. */
             node->grad->Reshape(3, reshapedSize);
 
+            if (b->mem != NULL)
+                b->mem->LockBuf();
             XTensor * interGrad = NewTensorBufV2(2, reshapedSize, b->dataType, b->denseRatio, b->devID, b->mem);
 
             _ReduceSum(node->grad, interGrad, 2);
@@ -1315,10 +1351,10 @@ void XMathGrad::GradSubDim(XTensor * node, bool isEfficient)
             node->grad->Reshape(order, dimSize);
 
             DelTensorBuf(interGrad);
+            if (b->mem != NULL)
+                b->mem->UnlockBuf();
         }
     }
-
-    node->visitMark = NODE_FINISHED;
 }
 
 /* 
@@ -1352,8 +1388,6 @@ void XMathGrad::GradSum(XTensor * node, bool isEfficient)
         XNoder::MakeGrad(b);
         _Sum(b->grad, node->grad, b->grad, beta);
     }
-
-    node->visitMark = NODE_FINISHED;
 }
 
 /* 
@@ -1399,12 +1433,16 @@ void XMathGrad::GradSumDim(XTensor * node, bool isEfficient)
                size of b. Then we can reduce the matrix into a row vector. */
             node->grad->Reshape(2, reshapedSize);
 
+            if (b->mem != NULL)
+                b->mem->LockBuf();
             XTensor * bGradTMP = NewTensorBufV2(b->grad, b->devID, b->mem);
             _ReduceSum(node->grad, bGradTMP, 0);
             if (beta != 1.0F)
                 _ScaleAndShiftMe(bGradTMP, beta);
             _Sum(bGradTMP, b->grad, b->grad);
             DelTensorBuf(bGradTMP);
+            if (b->mem != NULL)
+                b->mem->UnlockBuf();
 
             node->grad->Reshape(order, dimSize);
         }
@@ -1425,6 +1463,8 @@ void XMathGrad::GradSumDim(XTensor * node, bool isEfficient)
                Then reduce along with z and x to obtain dE/db. */
             node->grad->Reshape(3, reshapedSize);
 
+            if (b->mem != NULL)
+                b->mem->LockBuf();
             XTensor * interGrad = NewTensorBufV2(2, reshapedSize, b->dataType, b->denseRatio, b->devID, b->mem);
 
             _ReduceSum(node->grad, interGrad, 2);
@@ -1439,10 +1479,10 @@ void XMathGrad::GradSumDim(XTensor * node, bool isEfficient)
             node->grad->Reshape(order, dimSize);
 
             DelTensorBuf(interGrad);
+            if (b->mem != NULL)
+                b->mem->UnlockBuf();
         }
     }
-
-    node->visitMark = NODE_FINISHED;
 }
 
 /* 
@@ -1480,8 +1520,6 @@ void XMathGrad::GradSumBroadcast(XTensor * node, bool isEfficient)
             ShowNTErrors("TODO");
         }
     }
-
-    node->visitMark = NODE_FINISHED;
 }
 
 /*
@@ -1509,15 +1547,17 @@ void XMathGrad::GradReduceMean(XTensor * node, bool isEfficient)
     if (!isEfficient || a->isGrad) {
         XNoder::MakeGrad(a);
 
+        if (a->mem != NULL)
+            a->mem->LockBuf();
         XTensor * tmp = NewTensorBufV2(a, a->devID, a->mem);
         _Unsqueeze(node->grad, tmp, dim, n);
         _ScaleAndShiftMe(tmp, 1.0F / n);
         _Sum(a->grad, tmp, a->grad);
 
         DelTensorBuf(tmp);
+        if (a->mem != NULL)
+            a->mem->UnlockBuf();
     }
-
-    node->visitMark = NODE_FINISHED;
 }
 
 /*
@@ -1545,13 +1585,15 @@ void XMathGrad::GradReduceSum(XTensor * node, bool isEfficient)
     if (!isEfficient || a->isGrad) {
         XNoder::MakeGrad(a);
 
+        if (a->mem != NULL)
+            a->mem->LockBuf();
         XTensor * tmp = NewTensorBufV2(a, a->devID, a->mem);
         _Unsqueeze(node->grad, tmp, dim, n);
         _Sum(a->grad, tmp, a->grad);
         DelTensorBuf(tmp);
+        if (a->mem != NULL)
+            a->mem->UnlockBuf();
     }
-
-    node->visitMark = NODE_FINISHED;
 }
 
 /*
@@ -1576,14 +1618,16 @@ void XMathGrad::GradReduceSumAll(XTensor * node, bool isEfficient)
     if (!isEfficient || a->isGrad) {
         XNoder::MakeGrad(a);
 
+        if (a->mem != NULL)
+            a->mem->LockBuf();
         XTensor * tmp = NewTensorBufV2(a, a->devID, a->mem);
         DTYPE value = node->grad->Get0D();
         tmp->SetDataFixed(value);
         _Sum(a->grad, tmp, a->grad);
         DelTensorBuf(tmp);
+        if (a->mem != NULL)
+            a->mem->UnlockBuf();
     }
-
-    node->visitMark = NODE_FINISHED;
 }
 
 /*
@@ -1605,9 +1649,14 @@ void XMathGrad::GradReduceSumSquared(XTensor * node, bool isEfficient)
 
     XTensor * a = income.tails[0];
     XTensor * b = income.tails[1];
+    if (a->mem != NULL)
+        a->mem->LockBuf();
     XTensor * c = NewTensorBufV2(a, a->devID, a->mem);
     XTensor * d = NewTensorBufV2(a, a->devID, a->mem);
     XTensor * e = NewTensorBufV2(a, a->devID, a->mem);
+    if ((b->mem != NULL) && (b->mem != a->mem)) {
+        b->mem->LockBuf();
+    }
     XTensor * f = NewTensorBufV2(b, b->devID, b->mem);
 
     int dim = income.GetParamInt(0);
@@ -1636,11 +1685,14 @@ void XMathGrad::GradReduceSumSquared(XTensor * node, bool isEfficient)
     }
 
     DelTensorBuf(f);
+    if ((b->mem != NULL) && (b->mem != a->mem)) {
+        b->mem->UnlockBuf();
+    }
     DelTensorBuf(e);
     DelTensorBuf(d);
     DelTensorBuf(c);
-
-    node->visitMark = NODE_FINISHED;
+    if (a->mem != NULL)
+        a->mem->UnlockBuf();
 }
 
 /*
@@ -1663,9 +1715,14 @@ void XMathGrad::GradReduceVariance(XTensor * node, bool isEfficient)
 
     XTensor * a = income.tails[0];
     XTensor * b = income.tails[1];
+    if (a->mem != NULL)
+        a->mem->LockBuf();
     XTensor * c = NewTensorBufV2(a, a->devID, a->mem);
     XTensor * d = NewTensorBufV2(a, a->devID, a->mem);
     XTensor * e = NewTensorBufV2(a, a->devID, a->mem);
+    if ((b->mem != NULL) && (b->mem != a->mem)) {
+        b->mem->LockBuf();
+    }
     XTensor * f = NewTensorBufV2(b, b->devID, b->mem);
 
     int dim = income.GetParamInt(0);
@@ -1693,11 +1750,14 @@ void XMathGrad::GradReduceVariance(XTensor * node, bool isEfficient)
     }
 
     DelTensorBuf(f);
+    if ((b->mem != NULL) && (b->mem != a->mem)) {
+        b->mem->UnlockBuf();
+    }
     DelTensorBuf(e);
     DelTensorBuf(d);
     DelTensorBuf(c);
-
-    node->visitMark = NODE_FINISHED;
+    if (a->mem != NULL)
+        a->mem->UnlockBuf();
 }
 
 /*
@@ -1742,10 +1802,14 @@ void XMathGrad::GradMulAndShift(XTensor * node, bool isEfficient)
             size of b. Then we can reduce the matrix into a row vector. */
             node->grad->Reshape(2, reshapedSize);
 
+            if (b->mem != NULL)
+                b->mem->LockBuf();
             XTensor * bGradTMP = NewTensorBufV2(b->grad, b->devID, b->mem);
             _ReduceSum(node->grad, bGradTMP, 0);
             _Sum(bGradTMP, b->grad, b->grad);
             DelTensorBuf(bGradTMP);
+            if (b->mem != NULL)
+                b->mem->UnlockBuf();
 
             node->grad->Reshape(order, dimSize);
         }
@@ -1766,6 +1830,8 @@ void XMathGrad::GradMulAndShift(XTensor * node, bool isEfficient)
             Then reduce along with z and x to obtain dE/db. */
             node->grad->Reshape(3, reshapedSize);
 
+            if (b->mem != NULL)
+                b->mem->LockBuf();
             XTensor * interGrad = NewTensorBufV2(2, reshapedSize, b->dataType, b->denseRatio, b->devID, b->mem);
             _ReduceSum(node->grad, interGrad, 2);
 
@@ -1777,6 +1843,8 @@ void XMathGrad::GradMulAndShift(XTensor * node, bool isEfficient)
             node->grad->Reshape(order, dimSize);
 
             DelTensorBuf(interGrad);
+            if (b->mem != NULL)
+                b->mem->UnlockBuf();
         }
     }
 
@@ -1815,9 +1883,6 @@ void XMathGrad::GradMulAndShift(XTensor * node, bool isEfficient)
             dedx->Reshape(orderBackupX, dimsBackupX);
         dedc->Reshape(orderBackupC, dimsBackupC);
     }
-
-    node->visitMark = NODE_FINISHED;
-
 }
 
 /*
@@ -1884,6 +1949,8 @@ void XMathGrad::GradMLP(XTensor* node, bool isEfficient)
             Then reduce along with z and x to obtain dE/db. */
             node->grad->Reshape(3, reshapedSize);
 
+            if (b->mem != NULL)
+                b->mem->LockBuf();
             XTensor* interGrad = NewTensorBufV2(2, reshapedSize, b->dataType, b->denseRatio, b->devID, b->mem);
             _ReduceSum(node->grad, interGrad, 2);
 
@@ -1895,6 +1962,8 @@ void XMathGrad::GradMLP(XTensor* node, bool isEfficient)
             node->grad->Reshape(order, dimSize);
 
             DelTensorBuf(interGrad);
+            if (b->mem != NULL)
+                b->mem->UnlockBuf();
         }
     }
 
@@ -1933,9 +2002,6 @@ void XMathGrad::GradMLP(XTensor* node, bool isEfficient)
             dedx->Reshape(orderBackupX, dimsBackupX);
         dedc->Reshape(orderBackupC, dimsBackupC);
     }
-
-    node->visitMark = NODE_FINISHED;
-
 }
 
 }

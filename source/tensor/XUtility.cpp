@@ -155,13 +155,13 @@ void XMemSet(int devID, void * p, int value, size_t size)
 cudaMemcpyKind GetMemcpyKind(int devIDFrom, int devIDTo)
 {
     if(devIDFrom < 0 && devIDTo < 0)
-        return cudaMemcpyHostToHost;
+        return cudaMemcpyKind::cudaMemcpyHostToHost;
     else if(devIDFrom < 0 && devIDTo >= 0)
-        return cudaMemcpyHostToDevice;
+        return cudaMemcpyKind::cudaMemcpyHostToDevice;
     else if(devIDFrom >= 0 && devIDTo < 0)
-        return cudaMemcpyDeviceToHost;
+        return cudaMemcpyKind::cudaMemcpyDeviceToHost;
     else
-        return cudaMemcpyDeviceToDevice;
+        return cudaMemcpyKind::cudaMemcpyDeviceToDevice;
 }
 #endif
 
@@ -305,44 +305,6 @@ void XMemCopy2D(void * t, size_t tPitch, int devIDT, const void * s, size_t sPit
         }
 
         cudaSetDevice(devIDBackup);
-    }
-#else
-    ShowNTErrors("Please specify USE_CUDA and recompile the code!");
-#endif
-}
-
-void XMemCopy2DAsync(void * t, size_t tPitch, int devIDT, const void * s, size_t sPitch, int devIDS, size_t mSize, int n, XStream * stream)
-{
-    if (t == s)
-        return;
-
-    if (devIDT < 0 && devIDS < 0) {
-        for(int i = 0; i < n; i++)
-            memcpy((char*)t + tPitch * i, (char*)s + sPitch * i, mSize);
-        return;
-    }
-#ifdef USE_CUDA
-    else{
-        CheckNTErrors(stream != NULL, "No stream found!");
-        cudaStream_t &cstream = stream->stream;
-        if (devIDT >= 0 && devIDS < 0) {
-            cudaError_t error = cudaMemcpy2DAsync(t, tPitch, s, sPitch, mSize, n, cudaMemcpyHostToDevice, cstream);
-            if(error != cudaSuccess){
-                ShowNTErrors("cudaMemcpy2D error (cudaMemcpyHostToDevice)");
-            }
-        }
-        else if (devIDT < 0 && devIDS >= 0) {
-            cudaError_t error = cudaMemcpy2DAsync(t, tPitch, s, sPitch, mSize, n, cudaMemcpyDeviceToHost, cstream);
-            if(error != cudaSuccess){
-                ShowNTErrors("cudaMemcpy error (cudaMemcpyDeviceToHost)");
-            }
-        }
-        else {
-            cudaError_t error = cudaMemcpy2DAsync(t, tPitch, s, sPitch, mSize, n, cudaMemcpyDeviceToDevice, cstream);
-            if (error != cudaSuccess) {
-                ShowNTErrors("cudaMemcpy error (cudaMemcpyDeviceToDevice)");
-            }
-        }
     }
 #else
     ShowNTErrors("Please specify USE_CUDA and recompile the code!");
@@ -523,6 +485,9 @@ unsigned int GetNextPower2(unsigned int n)
 /* sleep for a while */
 void XSleep(int sleepTime)
 {
+    if (sleepTime <= 0)
+        return;
+
 #ifdef  _WIN32
     Sleep((DWORD)sleepTime);
 #else
@@ -591,9 +556,9 @@ void XQSort(void * data, void * index, int num, int width, int stride, int (*com
     stackptr = 0;
 
     lo = (char*)data;
-    hi = (char*)data + realStride * (num - 1);
+    hi = (char*)data + (long)realStride * (num - 1);
     indexlo = (int*)index;
-    indexhi = index != NULL ? (int*)index + stride * (num - 1) : NULL;
+    indexhi = index != NULL ? (int*)index + (long)stride * (num - 1) : NULL;
 
 recurse:
 
@@ -603,8 +568,8 @@ recurse:
     if(size <= MIN_QSORT_NUM)
         XShortSort(lo, hi, indexlo, indexhi, width, stride, comp);
     else {
-        mid = lo + (size/2) * realStride;
-        indexmid = indexlo + (size/2) * stride;
+        mid = lo + (long)(size/2) * realStride;
+        indexmid = indexlo + (long)(size/2) * stride;
         
         /* sort the first, last and middle elements into order */
         if(comp(lo, mid) > 0)
@@ -872,8 +837,7 @@ int SplitALine(char* inputString, const char* seperator, StrList* items)
         return 0;
 
     if (sepLen == 0) {
-
-        char* item = new char[inputLen + 1];
+        char* item = new char[(long)inputLen + 1];
         strcpy(item, inputString);
         items->Add(item);
     }

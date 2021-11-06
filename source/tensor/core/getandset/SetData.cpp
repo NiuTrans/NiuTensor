@@ -57,13 +57,17 @@ Also known as Glorot initialization.
 void _SetDataXavierNormal(XTensor * tensor, DTYPE gain)
 {
     CheckNTErrors(tensor->dataType == X_FLOAT, "the tensor must be in X_FLOAT!");
-    CheckNTErrors(tensor->order >= 2, "the tensor dimension must be no less than 2!");
+    CheckNTErrors(tensor->order >= 1, "the tensor dimension must be no less than 1!");
 
     int fanIn = 1;
     int fanOut = 1;
 
     int order = tensor->order;
-    if (order == 2) {
+    if (order == 1) {
+        fanIn = 1;
+        fanOut = tensor->dimSize[0];
+    }
+    else if (order == 2) {
         fanIn = tensor->dimSize[1];
         fanOut = tensor->dimSize[0];
     }
@@ -78,7 +82,7 @@ void _SetDataXavierNormal(XTensor * tensor, DTYPE gain)
     }
 
     DTYPE std = gain * (float)sqrt(2.0 / (float)(fanIn + fanOut));
-    
+
     tensor->SetDataRandn(0, std);
 }
 /*
@@ -483,7 +487,7 @@ void _SetDataRand(XTensor * tensor, DTYPE lower, DTYPE upper)
         else if (tensor->dataType == X_FLOAT16) {
             unsigned short* d = (unsigned short*)tensor->data;
             for (int i = 0; i < tensor->unitNum; i++) {
-                d[i] = variance * ((unsigned short)rand() / RAND_MAX) + lower;
+                d[i] = (unsigned short)(variance * ((unsigned short)rand() / RAND_MAX) + lower);
             }
         }
         else if(tensor->dataType == X_DOUBLE){
@@ -538,17 +542,17 @@ void _SetDataRand(XTensor * tensor, DTYPE lower, DTYPE upper)
 /* generate data items with a range by start, end and the step
 
 >> tensor - the tensor whose data array would be initialized
->> start - the begin of the array
->> end - the end of the array (not included self)
->> step - the step of two items
+>> beg - the beginning of the array
+>> end - the end of the array (it does not include itself)
+>> step - the step we take along the array
 */
-void _SetDataRange(XTensor * tensor, DTYPE lower, DTYPE upper, DTYPE step)
+void _SetDataRange(XTensor * tensor, int beg, int end, int step)
 {
     CheckNTErrors((tensor->order == 1), "Tensor must be 1 dimension!");
 
     /* compute the true length according to the (start, end, step) */
-    DTYPE size = (DTYPE)fabs(upper - lower);
-    int num = ceil(size / fabs(step));
+    DTYPE size = (DTYPE)fabs(end - beg);
+    int num = (int)ceil(size / fabs(step));
     CheckNTErrors((tensor->unitNum == num), "Unit number of the tensor is not matched.");
 
     /* init a integer array to store the sequence */
@@ -556,12 +560,13 @@ void _SetDataRange(XTensor * tensor, DTYPE lower, DTYPE upper, DTYPE step)
     if (tensor->dataType == X_INT) {
         data = new int[num];
         for (int i = 0; i < num; i++)
-            *((int*)data + i) = lower + i * step;
+            *((int*)data + i) = beg + i * step;
     }
     else if (tensor->dataType == X_FLOAT) {
-        data = new float[num];
-        for (int i = 0; i < num; i++)
-            *((float*)data + i) = lower + i * step;
+        ShowNTErrors("TODO! Unsupported datatype!")
+        //data = new float[num];
+        //for (int i = 0; i < num; i++)
+        //    *((float*)data + i) = beg + i * step;
     }
     else {
         ShowNTErrors("TODO! Unsupported datatype!")
@@ -695,13 +700,23 @@ void _SetDataWithOffset(XTensor * tensor, MTYPE * offsets, DTYPE value, MTYPE nu
 #ifdef USE_CUDA
         XMem * mem = tensor->mem;
         MTYPE size = num * sizeof(MTYPE);
-        MTYPE * offsetsCuda = mem != NULL ? (MTYPE*)mem->AllocBuf(mem->devID, size) : (MTYPE*)XMemAlloc(tensor->devID, size);
+        //MTYPE * offsetsCuda = mem != NULL ? (MTYPE*)mem->AllocBuf(mem->devID, size) : (MTYPE*)XMemAlloc(tensor->devID, size);
+        MTYPE * offsetsCuda;
+        if (mem != NULL) {
+            mem->LockBuf();
+            offsetsCuda = (MTYPE*)mem->AllocBuf(mem->devID, size);
+        }
+        else {
+            offsetsCuda = (MTYPE*)XMemAlloc(tensor->devID, size);
+        }
         XMemCopy(offsetsCuda, tensor->devID, offsets, -1, num * sizeof(MTYPE));
 
         _CudaSetDataWithOffset(tensor, offsetsCuda, value, num);
         
-        if (mem != NULL)
+        if (mem != NULL) {
             mem->ReleaseBuf(mem->devID, size);
+            mem->UnlockBuf();
+        }
         else
             XMemFree(tensor->devID, offsetsCuda);
 #else

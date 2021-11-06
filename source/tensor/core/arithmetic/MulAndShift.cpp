@@ -61,6 +61,8 @@ XTensor MulAndShift(const XTensor &x, const XTensor &w, const XTensor &b,
 
     float dr = (!x.isSparse || !w.isSparse) ? 1.0F : MAX(x.denseRatio, w.denseRatio);
 
+    if (x.mem != NULL)
+        x.mem->LockBuf();
     XTensor * tmp = NewTensorBufV2(order, dimSize, x.dataType, dr, x.devID, x.mem);
 
     /* call _MatrixMul function */
@@ -101,6 +103,8 @@ XTensor MulAndShift(const XTensor &x, const XTensor &w, const XTensor &b,
     /* destroy variables */
     delete[] dimSize;
     DelTensorBuf(tmp);
+    if (x.mem != NULL)
+        x.mem->UnlockBuf();
 
     return c;
 }
@@ -121,8 +125,8 @@ XTensor MulAndShift(const XTensor& x, MATRIX_TRANS_TYPE transposedX,
     CheckNTErrors(x.order >= 2 && w.order >= 2, "Input tensors must have a order >= 2!");
 
     int xn = transposedX == X_TRANS ? x.dimSize[x.order - 1] : x.dimSize[x.order - 2];
-    int xm = transposedX == X_TRANS ? x.dimSize[x.order - 2] : x.dimSize[x.order - 1];
-    int wn = transposedW == X_TRANS ? w.dimSize[w.order - 1] : w.dimSize[w.order - 2];
+    //int xm = transposedX == X_TRANS ? x.dimSize[x.order - 2] : x.dimSize[x.order - 1];
+    //int wn = transposedW == X_TRANS ? w.dimSize[w.order - 1] : w.dimSize[w.order - 2];
     int wm = transposedW == X_TRANS ? w.dimSize[w.order - 2] : w.dimSize[w.order - 1];
 
     int order = x.order + w.order - 2;
@@ -137,6 +141,8 @@ XTensor MulAndShift(const XTensor& x, MATRIX_TRANS_TYPE transposedX,
 
     float dr = (!x.isSparse || !w.isSparse) ? 1.0F : MAX(x.denseRatio, w.denseRatio);
 
+    if (x.mem != NULL)
+        x.mem->LockBuf();
     XTensor * tmp = NewTensorBufV2(order, dimSize, x.dataType, dr, x.devID, x.mem);
 
     /* call _MatrixMul function */
@@ -175,6 +181,8 @@ XTensor MulAndShift(const XTensor& x, MATRIX_TRANS_TYPE transposedX,
     /* destroy variables */
     delete[] dimSize;
     DelTensorBuf(tmp);
+    if (x.mem != NULL)
+        x.mem->UnlockBuf();
 
     return c;
 }

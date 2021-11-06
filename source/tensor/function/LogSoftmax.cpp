@@ -79,6 +79,8 @@ void _LogSoftmax(const XTensor * x, XTensor * y, int leadDim)
         blockSize = stride * dimensionSize;
         blockNum = y->unitNum / blockSize;
 
+        if (mem != NULL)
+            mem->LockBuf();
         max = NewTensorBufV2(x->order - 1, dimSize, x->dataType, x->denseRatio, x->devID, mem);
         sum = NewTensorBufV2(x->order - 1, dimSize, x->dataType, x->denseRatio, x->devID, mem);
 
@@ -153,6 +155,8 @@ void _LogSoftmax(const XTensor * x, XTensor * y, int leadDim)
 
         DelTensorBuf(max);
         DelTensorBuf(sum);
+        if (mem != NULL)
+            mem->UnlockBuf();
 
         if (x->devID >= 0) {
             delete blockx;

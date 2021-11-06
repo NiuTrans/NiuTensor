@@ -131,9 +131,16 @@ void _CudaGather(const XTensor * s, XTensor * t, XTensor * srcIndex)
             CheckNTErrors(srcIndexValue < s->unitNum, "Wrong index!");
         }
 
-        sIndex = mem != NULL ? 
+        /*sIndex = mem != NULL ? 
                   (int*)mem->AllocBuf(mem->devID, sizeof(int) * indexSize) : 
-                  (int*)XMemAlloc(mem->devID, sizeof(int) * indexSize);
+                  (int*)XMemAlloc(mem->devID, sizeof(int) * indexSize);*/
+        if (mem != NULL) {
+            mem->LockBuf();
+            sIndex = (int*)mem->AllocBuf(mem->devID, sizeof(int) * indexSize);
+        }
+        else {
+            sIndex = (int*)XMemAlloc(mem->devID, sizeof(int) * indexSize);
+        }
         XMemCopy(sIndex, devID, srcIndex, -1, sizeof(int) * indexSize);
     }
     else {
@@ -169,8 +176,10 @@ void _CudaGather(const XTensor * s, XTensor * t, XTensor * srcIndex)
     }
 
     if (srcIndex->devID < 0) {
-        if(mem != NULL)
+        if (mem != NULL) {
             mem->ReleaseBuf(mem->devID, sizeof(int) * indexSize);
+            mem->UnlockBuf();
+        }
         else
             XMemFree(mem->devID, sIndex);
     }
@@ -209,9 +218,16 @@ void _CudaGather(const XTensor * s, XTensor * t, XTensor * srcIndex, int dim)
             CheckNTErrors(srcIndexValue < s->unitNum, "Wrong index!");
         }
 
-        sIndex = mem != NULL ?
-                  (int*)mem->AllocBuf(mem->devID, sizeof(int) * indexSize) :
-                  (int*)XMemAlloc(mem->devID, sizeof(int) * indexSize);
+        /*sIndex = mem != NULL ?
+        (int*)mem->AllocBuf(mem->devID, sizeof(int) * indexSize) :
+        (int*)XMemAlloc(mem->devID, sizeof(int) * indexSize);*/
+        if (mem != NULL) {
+            mem->LockBuf();
+            sIndex = (int*)mem->AllocBuf(mem->devID, sizeof(int) * indexSize);
+        }
+        else {
+            sIndex = (int*)XMemAlloc(mem->devID, sizeof(int) * indexSize);
+        }
         XMemCopy(sIndex, devID, srcIndex, -1, sizeof(int) * indexSize);
     }
     else {
@@ -237,6 +253,15 @@ void _CudaGather(const XTensor * s, XTensor * t, XTensor * srcIndex, int dim)
     }
     else {
         ShowNTErrors("Unsupported dataType!");
+    }
+
+    if (srcIndex->devID < 0) {
+        if (mem != NULL) {
+            mem->ReleaseBuf(mem->devID, sizeof(int) * indexSize);
+            mem->UnlockBuf();
+        }
+        else
+            XMemFree(mem->devID, sIndex);
     }
 }
 #endif // USE_CUDA

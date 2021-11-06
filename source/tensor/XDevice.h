@@ -25,7 +25,6 @@
 #define __XDEVICE_H__
 
 #include "XThread.h"
-#include "XStream.h"
 
 #ifdef USE_CUDA
 
@@ -97,9 +96,6 @@ public:
     /* specify whether Unified Virtual Address Space (UVA) is supported */
     bool isUVASupported;
 
-    /* default stream for the device */
-    XStream * stream;
-
     /* seed for random number generation */
     int seed;
     
@@ -140,12 +136,9 @@ public:
 #ifdef USE_CUDA
     /* get cublas handle */
     cublasHandle_t * GetCublasHandle();
-
-    /* get the stream of cuda */
-    cudaStream_t * GetCudaStream();
 #endif
 
-    /* switch to a device */
+    /* switch to a GPU device */
     static
     void SetGPUDevice(int devID);
 
@@ -153,9 +146,17 @@ public:
     static
     void SetGPUDeviceFast(int devID);
 
-    /* switch to a get current dev */
+    /* get current dev */
     static
     int GetGPUDevice();
+
+    /* swith to a device (CPU or GPU) */
+    static
+    void SetDevice(int devID);
+
+    /* swith to a device (CPU or GPU) with a backup of the device id */
+    static
+    void SetDevice(int devID, int &backupDevID);
 
     /* reset cuda flag for more efficient cuda execution */
     static
@@ -164,9 +165,6 @@ public:
     /* reset cuda flag for more efficient cuda execution (all devices) */
     static
     void SetFastFlagsAllDevices();
-
-    /* delete the default stream for the device (call it before deleting the XDevice) */
-    void DelDeviceStream();
 };
 
 /*
@@ -206,9 +204,6 @@ public:
 #ifdef USE_CUDA
     /* get the handle of GPU */
     cublasHandle_t * GetCudaHandle(const int devID);
-
-    /* get the stream of cuda */
-    cudaStream_t * GetCudaStream(const int devID);
 #endif
 
     /* get grid and block sizes that max potential */
@@ -228,10 +223,6 @@ public:
 
     /* get the device information in string */
     char * GetDevString(int devID);
-
-    /* delete the streams for all devices */
-    static
-    void DelDeviceStream();
 };
 
 /* managing the devices */
@@ -256,11 +247,11 @@ extern XDevManager GDevs;
 { \
     if((a < 0 && b >= 0) || (a >= 0 && b < 0)){ \
         fprintf(stderr, "[ERROR] (%s line %d): we must run the code on the same device (%d vs %d)\n", __FILENAME__, __LINE__, a, b); \
-        exit(1); \
+        throw; \
     } \
     else if (a >= 0 && b >= 0 && a != b) { \
         fprintf(stderr, "[ERROR] (%s line %d): we must run the code on the same device (%d vs %d)\n", __FILENAME__, __LINE__, a, b); \
-        exit(1); \
+        throw; \
     } \
 } \
 

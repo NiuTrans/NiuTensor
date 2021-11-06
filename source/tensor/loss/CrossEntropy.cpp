@@ -354,8 +354,10 @@ DTYPE _CrossEntropy(const XTensor * output, const XTensor * gold,
             dimSize[i - 1] = output->dimSize[i];
     }
 
+    if (output->mem != NULL)
+        output->mem->LockBuf();
     XTensor * lossBuf = NewTensorBufV2(output->order - 1, dimSize, output->dataType, output->denseRatio, 
-                                     output->devID, output->mem);
+                                       output->devID, output->mem);
 
     _CrossEntropy(output, gold, lossBuf, weight, padding, leadingDim);
 
@@ -367,10 +369,16 @@ DTYPE _CrossEntropy(const XTensor * output, const XTensor * gold,
             nonZeroNum = (DTYPE)lossBuf->unitNum;
         }
         else {
+            if ((padding->mem != NULL) && (padding->mem != output->mem)) {
+                padding->mem->LockBuf();
+            }
             XTensor * tmp = NewTensorBufV2(padding, padding->devID, padding->mem);
             _IsNonZero(padding, tmp);
             _ReduceSumAll(tmp, &nonZeroNum);
             DelTensorBuf(tmp);
+            if ((padding->mem != NULL) && (padding->mem != output->mem)) {
+                padding->mem->UnlockBuf();
+            }
         }
 
         loss = loss / nonZeroNum;
@@ -384,6 +392,8 @@ DTYPE _CrossEntropy(const XTensor * output, const XTensor * gold,
 
     delete[] dimSize;
     DelTensorBuf(lossBuf);
+    if (output->mem != NULL)
+        output->mem->UnlockBuf();
 
     return loss;
 }

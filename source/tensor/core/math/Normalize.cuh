@@ -33,10 +33,14 @@ normalized the data with normal distribution (Kernel code). For an input x,
 y = a * (x-mean)/sqrt(variance+\epsilon) + b
 where a and b are the scalar and bias respectively, and \epsilon is the adjustment parameter
 */
-__global__
-void KernelNormalize(DTYPE * input, DTYPE * output, DTYPE * mean, DTYPE * var,
-                     DTYPE * a, DTYPE * b, DTYPE epsilon,
-                     int stride, int strideNum, int blockNum);
+template<class T> __global__
+void KernelNormalizeFloat(T * input, T* output, T* mean, T* var,
+                          T* a, T* b, T epsilon,
+                          int stride, int strideNum, int blockNum);
+
+template<class T> __global__
+void KernelNormalizeHalf(T* input, T* output, T* mean, T* var,
+                         T* a, T* b, int stride, int strideNum, int blockNum);
 
 /* 
 normalized the data with normal distribution. For an input x,
@@ -46,6 +50,28 @@ where a and b are the scalar and bias respectively, and \epsilon is the adjustme
 void _CudaNormalize(const XTensor * input, XTensor * output, int dim,
                     const XTensor * mean, const XTensor * var,
                     const XTensor * a, const XTensor * b, DTYPE epsilon);
+
+/* 
+L1-normalized the data with normal distribution (Kernel code). For an input x,
+y = a * (x-mean)/distance + b
+where a and b are the scalar and bias respectively, and \epsilon is the adjustment parameter
+*/
+template<class T> __global__
+void KernelL1NormalizeFloat(T * input, T* output, T* mean, T* distance,
+                            T* a, T* b, int stride, int strideNum, int blockNum);
+
+template<class T> __global__
+void KernelL1NormalizeHalf(T* input, T* output, T* mean, T* distance,
+                           T* a, T* b, int stride, int strideNum, int blockNum);
+
+/* 
+L1-normalized the data with normal distribution. For an input x,
+y = a * (x-mean)/distance + b
+where a and b are the scalar and bias respectively, and \epsilon is the adjustment parameter
+*/
+void _CudaL1Normalize(const XTensor * input, XTensor * output, int dim,
+                      const XTensor * mean, const XTensor * distance,
+                      const XTensor * a, const XTensor * b);
 
 #endif // USE_CUDA
 

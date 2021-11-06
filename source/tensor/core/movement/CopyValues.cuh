@@ -29,7 +29,7 @@ namespace nts { // namespace nts(NiuTrans.Tensor)
 #ifdef USE_CUDA
 
 /* copy all elements from a source matrix to a target matrix */
-void _CudaCopyValues(const XTensor * s, XTensor * t, XStream * stream = NULL);
+void _CudaCopyValues(const XTensor * s, XTensor * t);
 
 #endif // USE_CUDA
 

@@ -33,7 +33,6 @@
 
 #include "XGlobal.h"
 #include "XThread.h"
-#include "XStream.h"
 #include "XDevice.h"
 #include "XList.h"
 
@@ -52,7 +51,7 @@ public:
     void * job;
 
     /* arguments of the job */
-    TensorList * args;
+    XList * args;
 
 public:
     /* constructor */
@@ -102,18 +101,13 @@ private:
     XThread jobDequeuer;
 
     /* argument list of jobDequeuer */
-    TensorList * jobDequeuerArgs;
+    XList * jobDequeuerArgs;
 
     /* indicates whether jobDequeuer stops */
     bool jobDequeuerBreak;
 
     /* running job count */
     int runningJobCount;
-
-    /* job streams (we think that three streams is enough :)) */
-    XStream * jobStream;
-    XStream * jobStream1;
-    XStream * jobStream2;
 
 public:
     /* constuctor */
@@ -135,26 +129,30 @@ public:
     void WaitForEmptyJobQueue();
 
     /* run the job consumer */
-    void RunJobConsumer(int jobDevID = 0);
+    void RunJobConsumer(int jobDevID = -1);
 
     /* stop the job consumer */
     void StopJobConsumer();
 
     /* add a job item to process */
-    void EnqueueJob(void * job, TensorList * jobArgs);
+    void EnqueueJob(void * job, XList * jobArgs);
 
     /* job item consumer */
     static
-    void DequeueJobs(TensorList * args);
+    void DequeueJobs(XList * args);
 
     /* get the break flag */
     bool GetJobBreak();
 
-    /* get job stream */
-    XStream * GetJobStream(int n = 0);
-
-    /* make job streams */
-    void MakeJobStreams(int devID = INVALID_DEVICE_ID, int devID1 = INVALID_DEVICE_ID, int devID2 = INVALID_DEVICE_ID);
+    /* get the number of running jobs */
+    int GetJobNum();
+    
+    /* get the number of items in the queue. Note that
+       this function is not the same as GetJobNum() because
+       "items" are the real elements we put into the queue.
+       "jobs" only make sense when the queue is running as a
+       job queue. */
+    int GetItemNum();
 };
 
 } /* end of the nts (NiuTrans.Tensor) namespace */

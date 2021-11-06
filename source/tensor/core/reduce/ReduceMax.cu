@@ -512,8 +512,8 @@ void funName(DTYPE * input, DTYPE * output,int stride, int strideNum,           
 KERNELREDUCEFUN1(KernelReduceMaxOp, MAX, shflDownReduceMax, FLOAT_MIN)
 KERNELREDUCEFUN1(KernelReduceMinOp, MIN, shflDownReduceMin, MAX_FLOAT)
 
-/* 
-get the max-valued items along a dimension of the tensor (cuda version). 
+/*
+get the max-valued items along a dimension of the tensor (cuda version).
 For a 1-dimensional data array a,
 sum_i = max_{0<=j<strideNum} input_{i,j}
 >> input - the input tensor
@@ -574,7 +574,14 @@ void _funcName(const XTensor * input, XTensor * output, int dim)                
         XMem * mem = input->mem;                                                                                                              \
         GDevs.GetCudaThread2D(devID, strideNum, stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);                                     \
         int bufSize = input->unitSize * cudaGridSize[0] * stride * blockNum * 2;                                                              \
-        DTYPE * buf  = mem != NULL ? (DTYPE*)mem->AllocBuf(mem->devID, bufSize) : (DTYPE*)XMemAlloc(devID, bufSize);                          \
+        DTYPE * buf;                                                                                                                          \
+        if (mem != NULL) {                                                                                                                    \
+            mem->LockBuf();                                                                                                                   \
+            buf = (DTYPE*)mem->AllocBuf(mem->devID, bufSize);                                                                                 \
+        }                                                                                                                                     \
+        else {                                                                                                                                \
+            buf = (DTYPE*)XMemAlloc(devID, bufSize);                                                                                          \
+        }                                                                                                                                     \
         DTYPE * buf1 = buf;                                                                                                                   \
         DTYPE * buf2 = buf + cudaGridSize[0] * stride * blockNum;                                                                             \
         do {                                                                                                                                  \
@@ -706,8 +713,10 @@ void _funcName(const XTensor * input, XTensor * output, int dim)                
                                                                                                                                               \
         } while (strideNum > 1);                                                                                                              \
                                                                                                                                               \
-        if (mem != NULL)                                                                                                                      \
+        if (mem != NULL) {                                                                                                                    \
             mem->ReleaseBuf(mem->devID, bufSize);                                                                                             \
+            mem->UnlockBuf();                                                                                                                 \
+        }                                                                                                                                     \
         else                                                                                                                                  \
             XMemFree(input->devID, buf);                                                                                                      \
     }                                                                                                                                         \

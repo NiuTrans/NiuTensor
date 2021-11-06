@@ -63,9 +63,9 @@ void _Clip(const XTensor * a, XTensor * b, DTYPE lower, DTYPE upper)
         int* db = (int*)b->data;
         for (int i = 0; i < a->unitNum; i++) {
             if (d[i] > upper)
-                db[i] = upper;
+                db[i] = (int)upper;
             else if (d[i] < lower)
-                db[i] = lower;
+                db[i] = (int)lower;
             else
                 db[i] = d[i];
         }

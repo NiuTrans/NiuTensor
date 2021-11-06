@@ -29,6 +29,108 @@
 namespace nts { // namespace nts(NiuTrans.Tensor)
 
 /*
+L1-normalized the data with normal distribution (return an XTensor structure)
+make a new tensor to keep the result and return it 
+
+For an input x, y = a * (x-mean)/distance + b
+where a and b are the scalar and bias respectively, and \epsilon is the adjustment parameter.
+
+>> input - the input tensor
+>> dim - dimension alone which we generate the mean and variance
+>> mean - the mean of the input
+>> distance - the distance of the input
+>> a - the scale
+>> b - the bias
+<< return - the result of normalized the data with normal distribution
+*/
+XTensor L1Normalize(const XTensor &input, int dim, 
+                    const XTensor &mean, const XTensor &distance, 
+                    const XTensor &a, const XTensor &b)
+{
+    XTensor output(&input);
+    output.SetTMPFlag();
+
+    /* call _Normalize function */
+    _L1Normalize(&input, &output, dim, &mean, &distance, &a, &b);
+
+    /* tensor connections */
+    TensorList list(5);
+    list.Add((XTensor*)&input);
+    list.Add((XTensor*)&mean);
+    list.Add((XTensor*)&distance);
+    list.Add((XTensor*)&a);
+    list.Add((XTensor*)&b);
+    if (input.enableGrad) {
+        XLink::MakeLink(&list, &output, MATH_NORMALIZE);
+        XLink::AddParamToHeadInt(&output, dim);
+        XLink::AddParamToHead(&output, 0.0F);
+    }
+
+    return output;
+}
+
+/*
+normalized the data with normal distribution
+
+For an input x, y = a * (x-mean)/sqrt(variance+\epsilon) + b
+where a and b are the scalar and bias respectively, and \epsilon is the adjustment parameter.
+
+>> input - the input tensor
+>> output - the output tensor
+>> dim - dimension alone which we generate the mean and variance
+>> mean - the mean of the input
+>> var - the variance of the input
+>> a - the scale
+>> b - the bias
+>> epsilon - a parameter
+*/
+void _L1Normalize(const XTensor * input, XTensor * output, int dim, 
+                  const XTensor * mean, const XTensor * distance, 
+                  const XTensor * a, const XTensor * b)
+{
+    int stride = 1;
+    int strideNum = input->dimSize[dim];
+    int blockSize = 1;
+    int blockNum = 1;
+    for (int i = 0; i < input->order; i++) {
+        if (i < dim) {
+            CheckNTErrors((input->dimSize[i] == mean->dimSize[i]), "Wrong size!");
+            blockNum *= input->dimSize[i];
+        }
+        else if (i > dim) {
+            CheckNTErrors((input->dimSize[i] == mean->dimSize[i - 1]), "Wrong size!");
+            stride *= input->dimSize[i];
+        }
+    }
+    blockSize = stride * strideNum;
+
+    if (input->devID >= 0 || output->devID >= 0) {
+#ifdef USE_CUDA
+        _CudaL1Normalize(input, output, dim, mean, distance, a, b);
+#else
+        ShowNTErrors("Please specify USE_CUDA and recompile the code!");
+#endif
+    }
+    else {
+        CheckNTErrors((input->dataType == DEFAULT_DTYPE), "TODO!");
+        for (int k = 0; k < blockNum; k++) {
+            DTYPE * ip = (DTYPE*)input->data + k * blockSize;
+            DTYPE * op = (DTYPE*)output->data + k * blockSize;
+            DTYPE * mp = (DTYPE*)mean->data + k * stride;
+            DTYPE * vp = (DTYPE*)distance->data + k * stride;
+            DTYPE * ap = (DTYPE*)a->data;
+            DTYPE * bp = (DTYPE*)b->data;
+            for (int i = 0; i < strideNum; i++) {
+                for (int j = 0; j < stride; j++) {
+                    int offset = i * stride + j;
+                    op[offset] = ap[offset] * (ip[offset] - mp[j]) / vp[j] + bp[offset];
+                }
+            }
+        }
+    }
+}
+
+/*
 normalized the data with normal distribution
 
 For an input x, y = a * (x-mean)/sqrt(variance+\epsilon) + b

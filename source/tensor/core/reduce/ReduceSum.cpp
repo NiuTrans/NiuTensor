@@ -178,6 +178,12 @@ void _ReduceSum(const XTensor * input, XTensor * output, int dim, const XTensor 
                                     sum += (DTYPE)exp(sqrt(value));
                                 }
                             }
+                            else if (power == (DTYPE)-1.0F) {
+                                for (DTYPE* ipb = ip + i; ipb < ipe; ipb += stride) {
+                                    DTYPE value = (*ipb);
+                                    sum += (DTYPE)exp(abs(value));
+                                }
+                            }
                             else{
                                 for(DTYPE * ipb = ip + i; ipb < ipe; ipb += stride){
                                     DTYPE value = (*ipb);
@@ -200,6 +206,12 @@ void _ReduceSum(const XTensor * input, XTensor * output, int dim, const XTensor 
                                 for(DTYPE * ipb = ip + i; ipb < ipe; ipb += stride){
                                     DTYPE value = (*ipb) - bias;
                                     sum += (DTYPE)exp(sqrt(value));
+                                }
+                            }
+                            else if (power == (DTYPE)-1.0F) {
+                                for (DTYPE* ipb = ip + i; ipb < ipe; ipb += stride) {
+                                    DTYPE value = (*ipb) - bias;
+                                    sum += (DTYPE)exp(abs(value));
                                 }
                             }
                             else{
@@ -228,6 +240,12 @@ void _ReduceSum(const XTensor * input, XTensor * output, int dim, const XTensor 
                                     sum += (DTYPE)sqrt(value);
                                 }
                             }
+                            else if (power == (DTYPE)-1.0F) {
+                                for (DTYPE* ipb = ip + i; ipb < ipe; ipb += stride) {
+                                    DTYPE value = (*ipb);
+                                    sum += (DTYPE)abs(value);
+                                }
+                            }
                             else{
                                 for(DTYPE * ipb = ip + i; ipb < ipe; ipb += stride){
                                     DTYPE value = (*ipb);
@@ -251,6 +269,12 @@ void _ReduceSum(const XTensor * input, XTensor * output, int dim, const XTensor 
                                 for(DTYPE * ipb = ip + i; ipb < ipe; ipb += stride){
                                     DTYPE value = (*ipb) - bias;
                                     sum += (DTYPE)sqrt(value);
+                                }
+                            }
+                            else if (power == (DTYPE)-1.0F) {
+                                for (DTYPE* ipb = ip + i; ipb < ipe; ipb += stride) {
+                                    DTYPE value = (*ipb) - bias;
+                                    sum += (DTYPE)abs(value);
                                 }
                             }
                             else{

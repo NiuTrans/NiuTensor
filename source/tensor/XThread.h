@@ -54,38 +54,7 @@ namespace nts{
                    (unsigned)(flag), (unsigned *)(id))
 #endif
 
-//////////////////////////////////////////////////
-// mutex
-#ifdef WIN32
-#define      THREAD_HANDLE            HANDLE
-#define      MUTEX_HANDLE             CRITICAL_SECTION
-#define      COND_HANDLE              HANDLE
-#define      MUTEX_INIT( x )          InitializeCriticalSection( &(x) )
-#define      MUTEX_DELE( x )          DeleteCriticalSection( &(x) )
-#define      MUTEX_LOCK( x )          EnterCriticalSection( &(x) )
-#define      MUTEX_UNLOCK( x )        LeaveCriticalSection( &(x) )
-#define      COND_INIT( x )           ( x = CreateEvent( NULL, false, false, NULL ) )
-#define      COND_DELE( x )           CloseHandle( (x) )
-#define      COND_WAIT( x, y )        WaitForSingleObject( (x), INFINITE )
-#define      COND_SIGNAL( x )         SetEvent( (x) )
-#define      COND_RESET( x)           ResetEvent( (x) )
-#else
-#define      THREAD_HANDLE            pthread_t
-#define      MUTEX_HANDLE             pthread_mutex_t
-#define      COND_HANDLE              pthread_cond_t
-#define      MUTEX_INIT( x )          pthread_mutex_init( &(x), NULL )
-#define      MUTEX_DELE( x )          pthread_mutex_destroy( &(x) )
-#define      MUTEX_LOCK( x )          pthread_mutex_lock( &(x) )
-#define      MUTEX_UNLOCK( x )        pthread_mutex_unlock( &(x) )
-#define      COND_INIT( x )           pthread_cond_init( &(x), NULL )
-#define      COND_DELE( x )           pthread_cond_destroy( &(x) )
-#define      COND_WAIT( x, y )        pthread_cond_wait( &(x), &(y) )
-#define      COND_SIGNAL( x )         pthread_cond_signal( &(x) )
-#define      COND_BROADCAST( x )      pthread_cond_broadcast( &(x) )
-
-#endif
-
-typedef void (*TFunction) (volatile TensorList*);
+typedef void (*TFunction) (volatile XList*);
 
 /*
 This is a class that wraps the standard implementation of threading
@@ -128,12 +97,10 @@ public:
 
 public:
     /* function to run */
-    volatile
     TFunction function;
 
     /* arguments (for the function to run) */
-    volatile
-    TensorList * argv;
+    XList argv;
 
     /* a flag to break */
     volatile
@@ -154,6 +121,9 @@ public:
     /* a wrapper for the start-routine parameter in pthread_create */
     static void * Wrapper(void * ptr);
 
+    /* initialize the thread with the function and its parameters */
+    void SetFunc(TFunction myFunc, XList * myArgv);
+
     /* 
     Core of the thread. It is very very native impelementation.
     We loop and wait for a singnal to activate the job processing.
@@ -172,6 +142,10 @@ public:
 
     /* let the thread process a job */
     void LetItGo();
+    
+    /* create the thread and run it immediately (a combination of
+       Start() and LetItGo() */
+    bool StartNow();
 
     /* waith for a singal */
     static

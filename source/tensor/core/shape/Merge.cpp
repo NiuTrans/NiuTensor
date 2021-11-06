@@ -32,14 +32,14 @@ namespace nts { // namespace nts(NiuTrans.Tensor)
 /*
 transform a tensor by merging it along with a dimension.
 
-e.g., (N/3, M, 3) -> (N, M)
+e.g., (3, M, N/3) -> (M, N)
 
 >> s - the source tensor
 >> t - the target tensor (for return)
 >> whereToMerge - the merging operation is along with which dimension
->> leadingDim - the leading dimension of merging, take (N/3, M, 3) -> (N, M) 
-   for example, whereToMerge = 0 (i.e., the dimension for "N/3")
-   leadingDim = 2 (i.e., the dimension for "3")
+>> leadingDim - the leading dimension of merging, take (3, M, N/3) -> (M, N)
+                for example, whereToMerge = 2 (i.e., the dimension for "N/3")
+                leadingDim = 0 (i.e., the dimension for "3")
 */
 void _Merge(const XTensor * s, XTensor * t, int whereToMerge, int leadingDim)
 {
@@ -118,30 +118,54 @@ void _Merge(const XTensor * s, XTensor * t, int whereToMerge, int leadingDim)
 
         void * dataTMP = t->data;
 
-        if (!isOnSameDevice)
-            dataTMP = mem != NULL ? mem->AllocBuf(mem->devID, size) : XMemAlloc(mem->devID, size);
+        if (!isOnSameDevice) {
+            /*dataTMP = mem != NULL ? mem->AllocBuf(mem->devID, size) : XMemAlloc(mem->devID, size);*/
+            if (mem != NULL) {
+                mem->LockBuf();
+                dataTMP = mem->AllocBuf(mem->devID, size);
+            }
+            else {
+                dataTMP = XMemAlloc(mem->devID, size);
+            }
+        }
 
         int blockNumInMerge = s->dimSize[leadingDim];
         int splitSizeInGrid = gridSize / blockNumInMerge;
         int realBlockSize = blockSize * t->unitSize;
 
-        int * blockIndex = (int*)(mem != NULL ?
+        /*int * blockIndex = (int*)(mem != NULL ?
                                   mem->AllocBuf(mem->devID, blockNum * gridNum * sizeof(int)) :
-                                  XMemAlloc(s->devID, blockNum * gridNum * sizeof(int)));
+                                  XMemAlloc(s->devID, blockNum * gridNum * sizeof(int)));*/
+        int * blockIndex;
+        if (mem != NULL) {
+            if (isOnSameDevice) {
+                mem->LockBuf();
+            }
+            blockIndex = (int*)mem->AllocBuf(mem->devID, blockNum * gridNum * sizeof(int));
+        }
+        else {
+            blockIndex = (int*)XMemAlloc(s->devID, blockNum * gridNum * sizeof(int));
+        }
 
         _MakeMergeBlockIndex(blockIndex, blockNum, blockNumInMerge, splitSizeInGrid, gridSize, gridNum, s->devID);
 
         _CopyBlocksOnSite(s->data, s->unitSize, realBlockSize, blockNum * gridNum, dataTMP, blockIndex, s->devID);
 
-        if (mem != NULL)
+        if (mem != NULL) {
             mem->ReleaseBuf(mem->devID, blockNum * gridNum * sizeof(int));
+            if (isOnSameDevice) {
+                mem->UnlockBuf();
+            }
+        }
         else
             XMemFree(s->devID, blockIndex);
 
         if (!isOnSameDevice) {
             XMemCopy(t->data, t->devID, dataTMP, s->devID, size);
-            if (mem != NULL)
+            if (mem != NULL) {
                 mem->ReleaseBuf(mem->devID, size);
+                mem->UnlockBuf();
+            }
             else
                 XMemFree(s->devID, dataTMP);
         }
@@ -185,13 +209,13 @@ bool CheckMergeSize(const XTensor * s, const XTensor * t, int whereToMerge, int 
 transform a tensor by merging it along with a dimension (return an XTensor structure)
 make a new tensor to keep the result and  return it
 
-e.g., (N/3, M, 3) -> (N, M)
+e.g., (3, M, N/3) -> (M, N)
 
 >> s - the source tensor
 >> whereToMerge - the merging operation is along with which dimension
->> leadingDim - the leading dimension of merging, take (N/3, M, 3) -> (N, M) 
-   for example, whereToMerge = 0 (i.e., the dimension for "N/3")
-   leadingDim = 2 (i.e., the dimension for "3")
+>> leadingDim - the leading dimension of merging, take (3, M, N/3) -> (M, N) 
+   for example, whereToMerge = 2 (i.e., the dimension for "N/3")
+   leadingDim = 0 (i.e., the dimension for "3")
 << return - the transformed tensor by merging along with a dimension
 */
 XTensor Merge(const XTensor &s, int whereToMerge, int leadingDim)
@@ -358,8 +382,16 @@ void _Merge(const TensorList * smalls, XTensor * t, int whereToMerge)
         void * dataTMP = NULL;
         if (uniform)
             dataTMP = smallsItem0->data;
-        else
-            dataTMP = mem != NULL ? mem->AllocBuf(mem->devID, size) : XMemAlloc(t->devID, size);
+        else {
+            //dataTMP = mem != NULL ? mem->AllocBuf(mem->devID, size) : XMemAlloc(t->devID, size);
+            if (mem != NULL) {
+                mem->LockBuf();
+                dataTMP = mem->AllocBuf(mem->devID, size);
+            }
+            else {
+                dataTMP = XMemAlloc(t->devID, size);
+            }
+        }
 
         tensorTMP->data = dataTMP;
 
@@ -378,8 +410,10 @@ void _Merge(const TensorList * smalls, XTensor * t, int whereToMerge)
         tensorTMP->data = NULL;
         delete tensorTMP;
 
-        if ((!uniform) && (mem != NULL))
+        if ((!uniform) && (mem != NULL)) {
             mem->ReleaseBuf(mem->devID, size);
+            mem->UnlockBuf();
+        }
         else
             XMemFree(t->devID, dataTMP);
     }

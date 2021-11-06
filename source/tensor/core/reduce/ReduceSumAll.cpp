@@ -56,12 +56,12 @@ void _ReduceSumAll(const XTensor * source, XTensor * target)
 
     int dims[1] = {source->unitNum};
 
-    XTensor * all = NewTensorBufV2(1, dims, source->dataType, source->denseRatio, source->devID, source->mem);
+    XTensor * all = NewTensorV2(1, dims, source->dataType, source->denseRatio, source->devID, source->mem);
 
     _CopyValues(source, all);
     _ReduceSum(all, target, 0);
 
-    DelTensorBuf(all);
+    DelTensor(all);
 }
 
 /*
@@ -72,8 +72,8 @@ sum all the items of the tensor (It should be optimized!)
 void _ReduceSumAll(const XTensor * source, DTYPE * value)
 {
     int * dimSize = new int[MAX_TENSOR_DIM_NUM];
-    float dr = (!source->isSparse) ? 1.0F : source->denseRatio;
-    XTensor * target = NewTensorBufV2(0, dimSize, source->dataType, source->denseRatio, source->devID, source->mem);
+
+    XTensor * target = NewTensorV2(0, dimSize, source->dataType, source->denseRatio, source->devID, source->mem);
     target->SetTMPFlag();
 
     /* call _ReduceSum function */
@@ -81,7 +81,7 @@ void _ReduceSumAll(const XTensor * source, DTYPE * value)
     *value = target->Get0D();
 
     delete[] dimSize;
-    DelTensorBuf(target);
+    DelTensor(target);
 }
 
 /*

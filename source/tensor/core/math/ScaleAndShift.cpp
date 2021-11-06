@@ -86,7 +86,7 @@ void _ScaleAndShift(const XTensor * a, XTensor * b, DTYPE scale, DTYPE shift)
             for(int i = 0; i < num; i++){
                 int * v = (int*)f;
                 int * vb = (int*)fb;
-                *vb = *v * scale + shift;
+                *vb = (int)(*v * scale + shift);
                 f += sizeof(int) + sizeof(int);
                 fb += sizeof(int) + sizeof(int);
             }
@@ -96,7 +96,7 @@ void _ScaleAndShift(const XTensor * a, XTensor * b, DTYPE scale, DTYPE shift)
             int * va = (int*)a->data;
             int * vb = (int*)b->data;
             for(int i = 0; i < b->unitNum; i++){
-                *vb = *va * scale + shift;
+                *vb = (int)(*va * scale + shift);
                 va++;
                 vb++;
             }

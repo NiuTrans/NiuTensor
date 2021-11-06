@@ -54,6 +54,8 @@ void _Softmax(const XTensor * x, XTensor * y, int leadDim)
         XTensor * max = NULL;
         XTensor * sum = NULL;
 
+        if (mem != NULL)
+            mem->LockBuf();
         max = NewTensorBufV2(x->order - 1, dimSize, x->dataType, x->denseRatio, x->devID, mem);
         sum = NewTensorBufV2(x->order - 1, dimSize, x->dataType, x->denseRatio, x->devID, mem);
 
@@ -113,6 +115,8 @@ void _Softmax(const XTensor * x, XTensor * y, int leadDim)
 
         DelTensorBuf(sum);
         DelTensorBuf(max);
+        if (mem != NULL)
+            mem->UnlockBuf();
 
         delete[] dimSize;
     }

@@ -30,20 +30,20 @@ namespace nts{ // namespace nts(NiuTrans.Tensor)
 variance of the items along a dimension of the tensor
 For a 1-dimensional data array a, variance = 1/n * \sum_i (a_i - mean)^2
 */
-void _ReduceVariance(const XTensor * input, XTensor * output, int dim, const XTensor * mean);
+void _ReduceVariance(const XTensor * input, XTensor * output, int dim, const XTensor * mean, bool L1Normed);
 
 /* 
 variance of the items along a dimension of the tensor (return an XTensor structure)
 make a new tensor to keep the result and return it
 For a 1-dimensional data array a, variance = 1/n * \sum_i (a_i - mean)^2
 */
-XTensor ReduceVariance(const XTensor &input, int dim, const XTensor &mean);
+XTensor ReduceVariance(const XTensor &input, int dim, const XTensor &mean, bool L1Normed);
 
 /* 
 variance of the items along a dimension of the tensor
 For a 1-dimensional data array a, variance = 1/n * \sum_i (a_i - mean)^2
 */
-void ReduceVariance(const XTensor &input, XTensor &output, int dim, const XTensor &mean);
+void ReduceVariance(const XTensor &input, XTensor &output, int dim, const XTensor &mean, bool L1Normed);
 
 } // namespace nts(NiuTrans.Tensor)
 

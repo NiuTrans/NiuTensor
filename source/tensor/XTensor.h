@@ -31,7 +31,6 @@
 #include <math.h>
 #include "XGlobal.h"
 #include "XPRunner.h"
-#include "XStream.h"
 #include "XHeap.h"
 #include "XList.h"
 #include "XDataType.h"
@@ -156,6 +155,11 @@ public:
 
     /* mark for traversing the gragh */
     unsigned int visitMark;
+
+    /* indicates whether the gradient of the tensor has been computed (in the backward process) 
+       Note that the indicator could be modified by XNet (in back propagation) and be accessed
+       in XTrainer (and related classes). */
+    bool isGradFinished;
 
     /* gradient (for back-propagation) */
     XTensor * grad;
@@ -303,7 +307,7 @@ public:
     MTYPE GetOffset3D(int d0, int d1, int d2) const;
 
     /* a tensor with all entries of 0 */
-    void SetZeroAll(XStream * stream = NULL);
+    void SetZeroAll();
 
     /* set the tensor with an data array */
     void SetData(const void * d, int num, int beg = 0);
@@ -311,8 +315,8 @@ public:
     /* generate data items with a uniform distribution in [0, 1] */
     void Rand(int rNum, int cNum);
 
-    /* generate data items with a range by start, end and the step */
-    void Range(DTYPE lower, DTYPE upper, DTYPE step);
+    /* generate data items with a range by start, end and step */
+    void Range(int lower, int upper, int step);
 
     /* generate data items with a fixed value */
     template<class T>
@@ -452,6 +456,9 @@ public:
 
     /* flush the data to the target device */
     void FlushToMem(XMem * targetMem);
+
+    /* flush the data to the target device (with id) */
+    void FlushToDevice(int myDevID);
 
     /* allocate the memory space of the tensor (in the global memory) */
     static

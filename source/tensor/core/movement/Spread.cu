@@ -177,9 +177,17 @@ void _CudaSpread(XTensor * source, XTensor * collection, int dim,
         DTYPE * c = (DTYPE*)collection->data;
 
         XMem * mem = source->mem;
-        int * si = mem != NULL ? 
+        /*int * si = mem != NULL ? 
                    (int*)mem->AllocBuf(mem->devID, sizeof(int) * indexSize * 2) : 
-                   (int*)XMemAlloc(mem->devID, sizeof(int) * indexSize * 2);
+                   (int*)XMemAlloc(mem->devID, sizeof(int) * indexSize * 2);*/
+        int * si;
+        if (mem != NULL) {
+            mem->LockBuf();
+            si = (int*)mem->AllocBuf(mem->devID, sizeof(int) * indexSize * 2);
+        }
+        else {
+            si = (int*)XMemAlloc(mem->devID, sizeof(int) * indexSize * 2);
+        }
         int * ci = si + indexSize;
 
         XMemCopy(si, mem->devID, srcIndex, -1, sizeof(int) * indexSize);
@@ -188,8 +196,10 @@ void _CudaSpread(XTensor * source, XTensor * collection, int dim,
         KernelSpreadFuzed<<<blocks, threads >>>(s, c, blockNum, blockSizeSrc, blockSizeColl,
                                                 stride, indexSize, si, ci);
 
-        if(mem != NULL)
+        if (mem != NULL) {
             mem->ReleaseBuf(mem->devID, sizeof(int) * indexSize * 2);
+            mem->UnlockBuf();
+        }
         else
             XMemFree(mem->devID, si);
     }
@@ -393,9 +403,16 @@ void _CudaSpreadForGather(XTensor * source, XTensor * collection, XTensor * srcI
     dim3 threads(cudaBlocks[0], cudaBlocks[1]);
 
     if (srcIndex->devID < 0) {
-        sIndex = mem != NULL ? 
+        /*sIndex = mem != NULL ? 
                 (int*)mem->AllocBuf(mem->devID, sizeof(int) * indexSize) : 
-                (int*)XMemAlloc(devID, sizeof(int) * indexSize);
+                (int*)XMemAlloc(devID, sizeof(int) * indexSize);*/
+        if (mem != NULL) {
+            mem->LockBuf();
+            sIndex = (int*)mem->AllocBuf(mem->devID, sizeof(int) * indexSize);
+        }
+        else {
+            sIndex = (int*)XMemAlloc(devID, sizeof(int) * indexSize);
+        }
         XMemCopy(sIndex, devID, srcIndex->data, -1, sizeof(int) * indexSize);
     }
     else
@@ -422,8 +439,10 @@ void _CudaSpreadForGather(XTensor * source, XTensor * collection, XTensor * srcI
     }
 
     if (srcIndex->devID < 0) {
-        if(mem != NULL)
+        if (mem != NULL) {
             mem->ReleaseBuf(mem->devID, sizeof(int) * indexSize);
+            mem->UnlockBuf();
+        }
         else
             XMemFree(devID, sIndex);
     }

@@ -218,6 +218,8 @@ add a tail
 */
 void XLink::AddTail(XTensor * t)
 {
+    if (!X_ENABLE_GRAD)
+        return;
     XTensor ** ts = tails;
     tails = new XTensor*[tailNum + 1];
     memcpy(tails, ts, sizeof(XTensor*) * tailNum);
@@ -232,6 +234,8 @@ add two tails in one time
 */
 void XLink::AddTwoTails(XTensor * t1, XTensor * t2)
 {
+    if (!X_ENABLE_GRAD)
+        return;
     XTensor ** ts = tails;
     tails = new XTensor*[tailNum + 2];
     memcpy(tails, ts, sizeof(XTensor*) * tailNum);
@@ -246,6 +250,8 @@ add a parameter
 */
 void XLink::AddParam(DTYPE param)
 {
+    if (!X_ENABLE_GRAD)
+        return;
     void * ps = params;
     params = new char[(paramNum + 1) * paramSize];
     memcpy(params, ps, paramNum * paramSize);
@@ -262,6 +268,8 @@ add a parameter
 */
 void XLink::AddParam(void * param, int size)
 {
+    if (!X_ENABLE_GRAD)
+        return;
     void * ps = params;
     params = new char[(paramNum + 1) * paramSize];
     memcpy(params, ps, paramNum * paramSize);
@@ -388,8 +396,9 @@ void XLink::MakeLink(const TensorList * list, XTensor * h, int id)
             continue;
         income.AddTail(t);
         if (unusedOPsList.Contains(id) && t->reserved != 1) {
-            /* it's data will be released when calling the de-constructor */
-            t->reserved = -1;
+                /* t's data will be released when calling the de-constructor */
+                    t->reserved = -1;
+            
         }
         else {
             /* otherwise it will be reserved for backward */
@@ -399,10 +408,10 @@ void XLink::MakeLink(const TensorList * list, XTensor * h, int id)
     
     /* in these cases we only mark partial nodes as unused */
     if (unusedFirstOPsList.Contains(id) && list->GetItem(0)->reserved != 1)
-        list->GetItem(0)->reserved = -1;
+                list->GetItem(0)->reserved = -1;
 
     if (usedOPsList.Contains(id))
-        h->reserved = 1;
+            h->reserved = 1;
     else if (h->reserved != 1)
         h->reserved = -1;
 
@@ -461,6 +470,8 @@ add parameters
 */
 void XLink::AddParamToHead(XTensor * h, DTYPE param)
 {
+    if (!X_ENABLE_GRAD)
+        return;
     CheckNTErrors(h != NULL, "head tensor cannot be empty!");
     h->income.AddParam(param);
 }
@@ -472,6 +483,8 @@ add an integer parameter
 */
 void XLink::AddParamToHeadInt(XTensor * h, int param)
 {
+    if (!X_ENABLE_GRAD)
+        return;
     CheckNTErrors(h != NULL, "head tensor cannot be empty!");
     h->income.AddParam(&param, sizeof(int));
 }
@@ -483,6 +496,8 @@ add a MATRIX_TRANS_TYPE parameter
 */
 void XLink::AddParamToHeadTrans(XTensor * h, MATRIX_TRANS_TYPE param)
 {
+    if (!X_ENABLE_GRAD)
+        return;
     CheckNTErrors(h != NULL, "head tensor cannot be empty!");
     h->income.AddParam(&param, sizeof(MATRIX_TRANS_TYPE));
 }
@@ -494,6 +509,8 @@ add a boolean parameter
 */
 void XLink::AddParamToHeadBool(XTensor * h, bool param)
 {
+    if (!X_ENABLE_GRAD)
+        return;
     CheckNTErrors(h != NULL, "head tensor cannot be empty!");
     h->income.AddParam(&param, sizeof(bool));
 }
@@ -505,6 +522,8 @@ add a pointer parameter
 */
 void XLink::AddParamToHeadPointer(XTensor * h, void * param)
 {
+    if (!X_ENABLE_GRAD)
+        return;
     CheckNTErrors(h != NULL, "head tensor cannot be empty!");
     h->income.AddParam(&param, sizeof(param));
 }
@@ -517,6 +536,8 @@ replace a node with another, i.e., we redirect the links to the new node
 */
 void XLink::Replace(const XTensor * oldOne, XTensor * newOne)
 {
+    if (!X_ENABLE_GRAD)
+        return;
     if(oldOne == NULL || newOne == NULL)
         return;
     
@@ -598,6 +619,8 @@ copy a node with another, i.e., we add the links to the new node
 */
 void XLink::Copy(const XTensor * reference, XTensor * target)
 {
+    if (!X_ENABLE_GRAD)
+        return;
     if (reference == NULL || target == NULL)
         return;
 
@@ -679,6 +702,8 @@ copy incoming edges of a given node
 */
 void XLink::CopyIncoming(const XTensor * reference, XTensor * target)
 {
+    if (!X_ENABLE_GRAD)
+        return;
     CheckNTErrors(reference && target, "Empty input tensors!");
 
     ClearIncoming(target);

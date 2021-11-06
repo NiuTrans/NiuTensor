@@ -54,6 +54,8 @@ XMem::XMem()
     signature = 0;
     mergeFreeOTF = true;
     isInitialized = false;
+    MUTEX_INIT(allocMutex);
+    MUTEX_INIT(bufMutex);
 }
 
 /* 
@@ -77,6 +79,8 @@ XMem::XMem(int myDevID, MEMPOOL_MODE myMode, MTYPE myBlockSize, int myBlockNum, 
     strcpy(name, "xmem");
     signature = 0;
     mergeFreeOTF = true;
+    MUTEX_INIT(allocMutex);
+    MUTEX_INIT(bufMutex);
     Initialize(myDevID, myMode, myBlockSize, myBlockNum, myBufSize);
 }
 
@@ -99,6 +103,8 @@ XMem::~XMem()
     delete[] memIndex;
     delete[] memIndex2;
     delete[] minSizeIndex;
+    MUTEX_DELE(allocMutex);
+    MUTEX_DELE(bufMutex);
 }
 
 /* 
@@ -379,12 +385,18 @@ require a piece of memory
 */
 void * XMem::Alloc(int myDevID, MTYPE mySize)
 {
+    void * p = NULL;
+
+    MUTEX_LOCK(allocMutex);
     if(mode == FREE_ON_THE_FLY)
-        return AllocStandard(myDevID, mySize);
+        p = AllocStandard(myDevID, mySize);
     else if(isStatic)
-        return AllocStatic(myDevID, mySize);
+        p = AllocStatic(myDevID, mySize);
     else
-        return AllocDynamic(myDevID, mySize);
+        p = AllocDynamic(myDevID, mySize);
+    MUTEX_UNLOCK(allocMutex);
+
+    return p;
 }
 
 /* 
@@ -521,6 +533,11 @@ void * XMem::AllocBuf(int myDevID, MTYPE mySize, int pitch)
 {
     MTYPE backOffset = 0;
 
+    /* NOTE THAT this is tricky because we lock the buffer
+       but DO NOT unlock it in this function. The unlock would
+       happans when we call ReleaseBuf() */
+    //MUTEX_LOCK(bufMutex);
+
     if(pitch > 1){
         MTYPE address = (MTYPE)((char*)buf + bufUsed);
         int offset  = address % pitch;
@@ -560,8 +577,10 @@ release a piece of memory
 */
 void XMem::Release(int myDevID, void * p, MTYPE size)
 {
+    MUTEX_LOCK(allocMutex);
     if(mode == FREE_ON_THE_FLY)
         ReleaseStandard(myDevID, p, size);
+    MUTEX_UNLOCK(allocMutex);
 }
 
 /* 
@@ -583,6 +602,9 @@ void XMem::ReleaseBuf(int myDevID, MTYPE mySize, int pitch)
     }
 
     bufUsed -= (mySize + backOffset);
+
+    /* NOTE THAT this is a response to the lock in AllocBuf() */
+    //MUTEX_UNLOCK(bufMutex);
 }
 
 /* 
@@ -823,6 +845,18 @@ void * XMem::AllocStandard(int myDevID, MTYPE mySize, bool myIsRebuiltIndex)
     }*/
 
     return result;
+}
+
+/* lock the buffer mutex */
+void XMem::LockBuf()
+{
+    //MUTEX_LOCK(bufMutex);
+}
+
+/* unlock the buffer mutex */
+void XMem::UnlockBuf()
+{
+    //MUTEX_UNLOCK(bufMutex);
 }
 
 /* 
@@ -1511,9 +1545,12 @@ void XMem::ShowMemUsage(FILE * file)
     }
 
     MTYPE bufTotal = bufSize;
+    MTYPE bufUsedTotal = bufUsed;
 
     fprintf(file, "block mem:%.1fMB used:%.1fMB usage:%.3f\n",
            (DTYPE)blockTotal/MILLION, (DTYPE)blockUsed/MILLION, (DTYPE)blockUsed/blockTotal);
+    fprintf(file, "buffer mem:%.1fMB used:%.1fMB usage:%.3f\n",
+            (DTYPE)bufTotal / 1024 / 1024, (DTYPE)bufUsedTotal / 1024 / 1024, (DTYPE)bufUsed / bufTotal);
 
 }
 
@@ -1557,7 +1594,7 @@ MTYPE XMemManager::GetAvailableMemory()
     MEMORYSTATUSEX memoryStatus;
     memoryStatus.dwLength = sizeof(memoryStatus);
     if (GlobalMemoryStatusEx(&memoryStatus)){
-        freeMem = memoryStatus.ullAvailPhys;
+        freeMem = (unsigned long)memoryStatus.ullAvailPhys;
     }
 #else
     long pages = sysconf(_SC_AVPHYS_PAGES);
@@ -1587,19 +1624,22 @@ MTYPE XMemManager::GetAvailableGPUMemory(int devID)
 void XMemManager::GetBufferSize(MTYPE freeMem, MTYPE * myBufSize)
 {
     *myBufSize = 0;
-    if (freeMem >= MILLION * 128ULL){
-        *myBufSize = MILLION * 32ULL;
-        if (freeMem >= MILLION * 256ULL){
-            *myBufSize = MILLION * 64ULL;
-            if (freeMem >= MILLION * 512ULL){
-                *myBufSize = MILLION * 128ULL;
+    if (freeMem >= MILLION * 128ULL) {
+        *myBufSize = MILLION * 64ULL;
+        if (freeMem >= MILLION * 256ULL) {
+            *myBufSize = MILLION * 128ULL;
+            if (freeMem >= MILLION * 512ULL) {
+                *myBufSize = MILLION * 256ULL;
                 if (freeMem >= MILLION * 1024ULL) {
-                    *myBufSize = MILLION * 128ULL;
+                    *myBufSize = MILLION * 512ULL;
                     if (freeMem >= MILLION * 2048ULL)
-                        *myBufSize = MILLION * 128ULL;
+                        *myBufSize = MILLION * 1024ULL;
                 }
             }
         }
+    }
+    else {
+        ShowNTErrors("No enough memory for buffer allocation!");
     }
 } 
 

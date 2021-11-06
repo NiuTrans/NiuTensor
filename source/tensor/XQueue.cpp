@@ -42,7 +42,7 @@ job item used in queues
 JobQueueNode::JobQueueNode()
 {
     job  = NULL;
-    args = new TensorList(1);
+    args = new XList(1);
 }
 
 /* de-constructor */
@@ -67,12 +67,9 @@ XQueue::XQueue(int mySize)
     head = 0;
     tail = 0;
     isJobQueue = false;
-    jobDequeuerArgs = new TensorList(1);
+    jobDequeuerArgs = new XList(1);
     jobDequeuerBreak = false;
     runningJobCount = 0;
-    jobStream = NULL;
-    jobStream1 = NULL;
-    jobStream2 = NULL;
     
     MUTEX_INIT(enqueueMutex);
     MUTEX_INIT(dequeueMutex);
@@ -85,9 +82,6 @@ XQueue::~XQueue()
 {
     delete[] queue;
     delete jobDequeuerArgs;
-    delete jobStream;
-    delete jobStream1;
-    delete jobStream2;
 
     //if(isJobQueue)
     //    StopJobConsumer();
@@ -160,19 +154,6 @@ void XQueue::WaitForEmptyJobQueue()
     while(runningJobCount > 0){
         XSleep(10);
     }
-
-    if(jobStream != NULL){
-        CheckNTErrors((jobStream->IsFinished()), "None fineished jobs remain");
-        jobStream->Clear();
-    }
-    if(jobStream1 != NULL){
-        CheckNTErrors((jobStream1->IsFinished()), "None fineished jobs remain");
-        jobStream1->Clear();
-    }
-    if(jobStream2 != NULL){
-        CheckNTErrors((jobStream2->IsFinished()), "None fineished jobs remain");
-        jobStream2->Clear();
-    }
 }
 
 int devids[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
@@ -189,15 +170,15 @@ void XQueue::RunJobConsumer(int jobDevID)
     isJobQueue = true;
     jobDequeuerArgs->Clear();
 
-    // warning: this may cause unknown error
-    jobDequeuerArgs->Add((XTensor*)this);
-    jobDequeuerArgs->Add(jobDevID >= 0 ? (XTensor*)(devids + jobDevID) : (XTensor*)&cpuid);
+    /* warning: this may cause unknown errors */
+    jobDequeuerArgs->Add(this);
+    jobDequeuerArgs->Add(jobDevID >= 0 ? (devids + jobDevID) : &cpuid);
 
-    jobDequeuer.function = (TFunction)DequeueJobs;
-    jobDequeuer.argv = jobDequeuerArgs;
+    jobDequeuer.SetFunc((TFunction)DequeueJobs, jobDequeuerArgs);
 
-    jobDequeuer.Start();
-    jobDequeuer.LetItGo();
+    //jobDequeuer.Start();
+    //jobDequeuer.LetItGo();
+    jobDequeuer.StartNow();
 }
 
 /* stop the job consumer */
@@ -213,7 +194,7 @@ void XQueue::StopJobConsumer()
 }
 
 /* add a job item to process */
-void XQueue::EnqueueJob(void * job, TensorList * jobArgs)
+void XQueue::EnqueueJob(void * job, XList * jobArgs)
 {
     MUTEX_LOCK(jobQueueMutex);
     runningJobCount++;
@@ -227,17 +208,16 @@ void XQueue::EnqueueJob(void * job, TensorList * jobArgs)
 }
 
 /* job item consumer */
-void XQueue::DequeueJobs(TensorList * args)
+void XQueue::DequeueJobs(XList * args)
 {
     CheckNTErrors((args->count == 2), "Illegal arguments!");
 
     XQueue * q = (XQueue*)args->GetItem(0);
     int devID = *(int*)args->GetItem(1);
 
-    int devIDBackup = XDevice::GetGPUDevice();
-
+    int devIDBackup = -1;
     if(devID >= 0)
-        XDevice::SetGPUDevice(devID);
+        XDevice::SetDevice(devID, devIDBackup);
 
     while(1){
         JobQueueNode * node = (JobQueueNode*)q->Dequeue();
@@ -259,7 +239,7 @@ void XQueue::DequeueJobs(TensorList * args)
     }
 
     if(devID >= 0)
-        XDevice::SetGPUDevice(devIDBackup);
+        XDevice::SetDevice(devIDBackup);
 }
 
 /* get the break flag */
@@ -268,31 +248,34 @@ bool XQueue::GetJobBreak()
     return jobDequeuerBreak;
 }
 
-/* get job stream */
-XStream * XQueue::GetJobStream(int n)
+/* get the number of jobs */
+int XQueue::GetJobNum()
 {
-    if(n == 0)
-        return jobStream;
-    else if(n == 1)
-        return jobStream1;
-    else if(n == 2)
-        return jobStream2;
-    else{
-        ShowNTErrors("invalid stream id!");
-    }
+    MUTEX_LOCK(jobQueueMutex);
+    int c = runningJobCount;
+    MUTEX_UNLOCK(jobQueueMutex);
 
-    return NULL;
+    return c;
 }
-
-/* make job streams */
-void XQueue::MakeJobStreams(int devID, int devID1, int devID2)
+    
+/*
+get the number of items in the queue. Note that
+this function is not the same as GetJobNum() because
+"items" are the real elements we put into the queue.
+"jobs" only make sense when the queue is running as a
+job queue.
+*/
+int XQueue::GetItemNum()
 {
-    if(devID != INVALID_DEVICE_ID)
-        jobStream = new XStream(0, devID);
-    if(devID1 != INVALID_DEVICE_ID)
-        jobStream1 = new XStream(0, devID1);
-    if(devID2 != INVALID_DEVICE_ID)
-        jobStream2 = new XStream(0, devID2);
+    MUTEX_LOCK(enqueueMutex);
+    MUTEX_LOCK(dequeueMutex);
+    
+    int c = itemCount;
+    
+    MUTEX_UNLOCK(dequeueMutex);
+    MUTEX_UNLOCK(enqueueMutex);
+    
+    return c;
 }
 
 } /* end of the nts (NiuTrans.Tensor) namespace */

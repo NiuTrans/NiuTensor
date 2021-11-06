@@ -119,11 +119,10 @@ where trans() return the transposed matrix if the flag is fired
 >> c - where we put a*b
 >> alpha - a coefficient
 >> beta - another coefficient
->> stream - the string for creating the job pipeline
 */
 void _CudaMatrixMul2D(const XTensor * a, MATRIX_TRANS_TYPE transposedA,
                       const XTensor * b, MATRIX_TRANS_TYPE transposedB,
-                      XTensor * c, DTYPE alpha, DTYPE beta, XStream * stream)
+                      XTensor * c, DTYPE alpha, DTYPE beta)
 {
     int an = transposedA == X_TRANS ? a->dimSize[1] : a->dimSize[0];
     int am = transposedA == X_TRANS ? a->dimSize[0] : a->dimSize[1];
@@ -151,10 +150,6 @@ void _CudaMatrixMul2D(const XTensor * a, MATRIX_TRANS_TYPE transposedA,
         CheckNTErrors((!c->isSparse), "Illegal use of sparse matrix in multiplication!");
 
         cublasHandle_t * handle = a->mem == NULL ? GDevs.GetCudaHandle(a->devID) : a->mem->GetCublasHandle();
-
-        /* !!!! might have problems */
-        if (stream != NULL)
-            cublasSetStream(*handle, stream->stream);
 
         if (beta == 0)
             c->SetZeroAll();

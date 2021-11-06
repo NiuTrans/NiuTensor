@@ -51,7 +51,7 @@ void RunParallel2D(XPRunner * parallelRunner, void * job,
     CheckNTErrors(jobNum != 0, "TODO!");
 
     /* argument list of the jobs */
-    TensorList * jobArgList = new TensorList(argNum);
+    XList * jobArgList = new XList(argNum);
 
     va_list ap;
     va_start(ap, argNum);
@@ -62,8 +62,8 @@ void RunParallel2D(XPRunner * parallelRunner, void * job,
     va_end(ap);
 
     /* prepare the neccesary argument list for parallel processing */
-    TensorList * jobs = new TensorList(jobNum);
-    TensorList * args = new TensorList(jobNum);
+    XList * jobs = new XList(jobNum);
+    XList * args = new XList(jobNum);
 
     int * indexList = new int[jobNum * 4 * 4];
 
@@ -78,7 +78,7 @@ void RunParallel2D(XPRunner * parallelRunner, void * job,
     */
     for (int i = 0; i < jobNum; i++) {
         IntList* indexArgs = new IntList(4);
-        TensorList * blockArgs = new TensorList(argNum);
+        XList * blockArgs = new XList(argNum);
         int * blockIndex = indexList + i * 4;
 
         indexArgs->Add(blockIndex[0]);
@@ -89,10 +89,10 @@ void RunParallel2D(XPRunner * parallelRunner, void * job,
         for (int j = 0; j < argNum; j++)
             blockArgs->Add(jobArgList->GetItem(j));
 
-        args->Add((XTensor*)indexArgs);
-        args->Add((XTensor*)blockArgs);
+        args->Add((void*)indexArgs);
+        args->Add((void*)blockArgs);
 
-        jobs->Add((XTensor*)job);
+        jobs->Add((void*)job);
     }
 
     args->count = jobNum * 2;

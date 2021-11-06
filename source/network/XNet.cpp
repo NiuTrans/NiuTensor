@@ -101,6 +101,7 @@ void XNet::Backward(TensorList &roots)
     for(int i = 0; i < nodes.count; i++){
         XTensor * node = (XTensor*)nodes.Get(i);
         node->visitMark = NODE_UNFINISHED;
+        node->isGradFinished = false;
     }
 
     /* back-propagation from output to input */
@@ -108,7 +109,7 @@ void XNet::Backward(TensorList &roots)
         XTensor * node = (XTensor*)nodes.Get(i);
 
         if(node->mem != NULL){
-            CheckNTErrors(node->mem->bufUsed < BUF_PITCH, "Illegal access of buffer!");
+            //CheckNTErrors(node->mem->bufUsed < BUF_PITCH, "Illegal access of buffer!");
         }
 
         if(node->visitMark != NODE_FINISHED)
@@ -127,7 +128,20 @@ void XNet::Backward(TensorList &roots)
                     delete node;
                 }
             }
-            
+        }
+    }
+
+    for (int i = 0; i < nodes.count; i++) {
+        XTensor* node = (XTensor*)nodes.Get(i);
+        if (node->income.tailNum >= 100 || node->outgo.tailNum >= 100) {
+            XPRINT(1, stderr, "Are you sure that the node should connect so many (100) nodes?\n");
+        }
+
+        if (node->grad != NULL) {
+            XTensor* grad = node->grad;
+            if (grad->income.tailNum >= 100 || grad->outgo.tailNum >= 100) {
+                XPRINT(1, stderr, "Are you sure that the grad node should connect so many (100) nodes?\n");
+            }
         }
     }
 }
@@ -162,6 +176,7 @@ void XNet::BackwardNode(XTensor * node, bool isEfficent)
     }
     else{
         node->visitMark = NODE_FINISHED;
+        node->isGradFinished = true;
     }
 }
 

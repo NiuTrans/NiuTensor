@@ -128,6 +128,8 @@ void KernelReduceSum(DTYPE * input, DTYPE * output,
             value = value * value;
         else if(power == (DTYPE)0.5)
             value = sqrt(value);
+        else if (power == (DTYPE)-1.0)
+            value = abs(value);
         else
             value = pow(value, power);
     }
@@ -213,6 +215,8 @@ void KernelReduceSum(__half * input, __half * output,
             value = __hmul(value, value);
         else if(power2 == (DTYPE)0.5)
             value = hsqrt(value);
+        else if (power2 == (DTYPE)-1.0)
+            value = __habs(value);
     }
 
     if(isExp && isValid)
@@ -226,6 +230,8 @@ void KernelReduceSum(__half * input, __half * output,
             value = value * value;
         else if(power2 == (DTYPE)0.5)
             value = sqrt(value);
+        else if (power2 == (DTYPE)-1.0)
+            value = abs(value);
         else
             value = pow(value, power2);
     }
@@ -313,6 +319,10 @@ void KernelReduceSumFast(DTYPE * input, DTYPE * output,
         else if(power == (DTYPE)0.5){
             value = sqrt(value);
             value2 = sqrt(value2);
+        }
+        else if (power == (DTYPE)-1.0) {
+            value = abs(value);
+            value2 = abs(value2);
         }
         else{
             value = pow(value, power);
@@ -416,6 +426,10 @@ void KernelReduceSumFast(__half * input, __half * output,
             value = hsqrt(value);
             value2 = hsqrt(value2);
         }
+        else if (powerf == (DTYPE)-1.0) {
+            value = __habs(value);
+            value2 = __habs(value2);
+        }
     }
 
     if(isExp){
@@ -441,6 +455,10 @@ void KernelReduceSumFast(__half * input, __half * output,
         else if(powerf == (DTYPE)0.5){
             value = sqrt(value);
             value2 = sqrt(value2);
+        }
+        else if(powerf == (DTYPE)-1.0){
+            value = abs(value);
+            value2 = abs(value2);
         }
         else{
             value = pow(value, powerf);
@@ -512,6 +530,9 @@ void KernelReduceSumDiscontinuousStorage(DTYPE * input, DTYPE * output, int stri
             else if (power == (DTYPE)0.5) {
                 value = sqrt(value);
             }
+            else if (power == (DTYPE)-1.0) {
+                value = abs(value);
+            }
             else {
                 value = pow(value, power);
             }
@@ -561,6 +582,9 @@ void KernelReduceSumOp(DTYPE * input, DTYPE * output,
             else if (power == (DTYPE)0.5) {
                 value = sqrt(value);
             }
+            else if (power == (DTYPE)-1.0) {
+                value = abs(value);
+            }
             else {
                 value = pow(value, power);
             }
@@ -606,6 +630,9 @@ void KernelReduceSumOpLessBlocks(DTYPE * input, DTYPE * output,
             }
             else if (power == (DTYPE)0.5) {
                 value = sqrt(value);
+            }
+            else if (power == (DTYPE)-1.0) {
+                value = abs(value);
             }
             else {
                 value = pow(value, power);
@@ -702,7 +729,7 @@ void _CudaReduceSum(const XTensor * input, XTensor * output, int dim, const XTen
     }
 
     if(input->dataType == X_FLOAT16)
-        CheckNTErrors(power == 0 || power == 0.5 || power == 1.0 || power == 2.0, "TODO!");
+        CheckNTErrors(power == 0 || power == 0.5 || power == 1.0 || power == 2.0 || power == -1.0, "TODO!");
 
     int cudaGridSize[3];
     int cudaBlockSize[3];
@@ -757,7 +784,15 @@ void _CudaReduceSum(const XTensor * input, XTensor * output, int dim, const XTen
         GDevs.GetCudaThread2D(devID, strideNum, stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);
 
         int bufSize = input->unitSize * cudaGridSize[0] * stride * blockNum * 2;
-        DTYPE * buf  = mem != NULL ? (DTYPE*)mem->AllocBuf(mem->devID, bufSize) : (DTYPE*)XMemAlloc(devID, bufSize);
+        //DTYPE * buf  = mem != NULL ? (DTYPE*)mem->AllocBuf(mem->devID, bufSize) : (DTYPE*)XMemAlloc(devID, bufSize);
+        DTYPE * buf;
+        if (mem != NULL) {
+            mem->LockBuf();
+            buf = (DTYPE*)mem->AllocBuf(mem->devID, bufSize);
+        }
+        else {
+            buf = (DTYPE*)XMemAlloc(devID, bufSize);
+        }
         DTYPE * buf1 = buf;
         DTYPE * buf2 = buf + cudaGridSize[0] * stride * blockNum;
         do {
@@ -853,7 +888,7 @@ void _CudaReduceSum(const XTensor * input, XTensor * output, int dim, const XTen
                     if (cudaGridSize[0] == 1)
                         oData = (__half*)output->data;
                     KernelReduceSum <<<blocks, threads>>> (iData, oData, stride, strideNum, blocks.y, 
-                                                           blockSize, blockNum, spft16, powerft16p, isExp);
+                                                           blockSize, blockNum, spft16, power, isExp);
                 }
                 else if (strideNum < 128) {
                     GDevs.GetCudaThread2D(devID, MAX(strideNum / 2 + 1, 64), stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);
@@ -862,7 +897,7 @@ void _CudaReduceSum(const XTensor * input, XTensor * output, int dim, const XTen
                         oData = (__half*)output->data;
                     CheckNTErrors((cudaBlockSize[0] >= 64), "Incorrect thread number when calling the cuda kernel!");
                     KernelReduceSumFast<64> <<<blocks, threads>>> (iData, oData, stride, strideNum, blocks.y, 
-                                                                   blockSize, blockNum, spft16, powerft16p, isExp);
+                                                                   blockSize, blockNum, spft16, power, isExp);
                 }
                 else if (strideNum < 256) {
                     GDevs.GetCudaThread2D(devID, MAX(strideNum / 2 + 1, 128), stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);
@@ -871,7 +906,7 @@ void _CudaReduceSum(const XTensor * input, XTensor * output, int dim, const XTen
                         oData = (__half*)output->data;
                     CheckNTErrors((cudaBlockSize[0] >= 128), "Incorrect thread number when calling the cuda kernel!");
                     KernelReduceSumFast<128> <<<blocks, threads>>> (iData, oData, stride, strideNum, blocks.y, 
-                                                                    blockSize, blockNum, spft16, powerft16p, isExp);
+                                                                    blockSize, blockNum, spft16, power, isExp);
                 }
                 else if (strideNum < 512) {
                     GDevs.GetCudaThread2D(devID, MAX(strideNum / 2 + 1, 256), stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);
@@ -880,7 +915,7 @@ void _CudaReduceSum(const XTensor * input, XTensor * output, int dim, const XTen
                         oData = (__half*)output->data;
                     CheckNTErrors((cudaBlockSize[0] >= 256), "Incorrect thread number when calling the cuda kernel!");
                     KernelReduceSumFast<256> <<<blocks, threads>>> (iData, oData, stride, strideNum, blocks.y, 
-                                                                    blockSize, blockNum, spft16, powerft16p, isExp);
+                                                                    blockSize, blockNum, spft16, power, isExp);
                 }
                 else {
                     GDevs.GetCudaThread2D(devID, MAX(strideNum / 2 + 1, 512), stride * blockNum, MAX_INT, cudaGridSize, cudaBlockSize);
@@ -889,7 +924,7 @@ void _CudaReduceSum(const XTensor * input, XTensor * output, int dim, const XTen
                         oData = (__half*)output->data;
                     CheckNTErrors((cudaBlockSize[0] >= 512), "Incorrect thread number when calling the cuda kernel!");
                     KernelReduceSumFast<512> <<<blocks, threads>>> (iData, oData, stride, strideNum, blocks.y, 
-                                                                    blockSize, blockNum, spft16, powerft16p, isExp);
+                                                                    blockSize, blockNum, spft16, power, isExp);
                 }
             }
             else {
@@ -899,16 +934,17 @@ void _CudaReduceSum(const XTensor * input, XTensor * output, int dim, const XTen
             strideNum = cudaGridSize[0];
             blockSize = cudaGridSize[0];
             sp = NULL;
-            power = (DTYPE)1.0;
             isExp = false;
-
+            power = (DTYPE)1.0;
             iter++;
 
         } while (strideNum > 1);
         
 
-        if (mem != NULL)
+        if (mem != NULL) {
             mem->ReleaseBuf(mem->devID, bufSize);
+            mem->UnlockBuf();
+        }
         else
             XMemFree(devID, buf);
     }

@@ -75,14 +75,26 @@ public:
     /* de-constructor */
     ~TensorListBase();
 
+    /* reallocate */
+    void Reallocate(int itemNum);
+
     /* add an item into the list */
     void Add(T&& item);
 
     /* return number of elements */
-    size_t Size();
+    int Size();
 
     /* add an item into the list */
     void Add(const T& item);
+
+    /* add an item (as an integer) into the list */
+    void AddInt(const int item);
+
+    /* add an item (as a float) into the list */
+    void AddFloat(const float item);
+
+    /* add an item (as a long long) into the list */
+    void AddLLong(const long long item);
 
     /* add a number of items into the list */
     void Add(const T* inputItems, int inputItemCount);
@@ -99,11 +111,29 @@ public:
     /* get the item at position i */
     T& GetItem(int i) const;
 
+    /* get the item at position i and force it to an integer */
+    int GetItemInt(int i) const;
+
+    /* get the item at position i and force it to a float number */
+    float GetItemFloat(int i) const;
+
+    /* get the item at position i and force it to an long long number */
+    long long GetItemLLong(int i) const;
+
     /* set the item at position i */
     void SetItem(int i, const T& item);
 
     /* set the item at position i */
     void SetItem(int i, T&& item);
+
+    /* set the item (as an integer) at position i */
+    void SetItemInt(int i, const int item);
+
+    /* set the item (as a float) at position i */
+    void SetItemFloat(int i, const float item);
+
+    /* set the item (as a long long) at position i */
+    void SetItemLLong(int i, const long long item);
 
     /* find the position of the first matched item  */
     int FindFirst(const T& item);
@@ -135,13 +165,16 @@ public:
     /* short */
     T& operator[] (int i) const { return GetItem(i); };
     T& Get(int i) const { return GetItem(i); };
+    int GetInt(int i) const { return GetItemInt(i); };
+    float GetFloat(int i) const { return GetItemFloat(i); };
+    long long GetLLong(int i) const { return GetItemLLong(i); };
     void Set(int i, T item) { SetItem(i, item); };
+    void SetInt(int i, int item) { SetItemInt(i, item); };
+    void SetFloat(int i, float item) { SetItemFloat(i, item); };
+    void SetLLong(int i, long long item) { SetItemLLong(i, item); };
 };
 
 struct XTensor;
-struct Example;
-struct TrainExample;
-struct Result;
 
 typedef TensorListBase<void*> XList;
 typedef TensorListBase<int> IntList;
@@ -152,9 +185,6 @@ typedef TensorListBase<float> FloatList;
 typedef TensorListBase<short> ShortList;
 typedef TensorListBase<uint64_t> UInt64List;
 typedef TensorListBase<XTensor*> TensorList;
-typedef TensorListBase<Example*> InputBufferType;
-typedef TensorListBase<TrainExample*> TrainBufferType;
-typedef TensorListBase<Result*> OutputBufferType;
 
 } /* end of the nts (NiuTrans.Tensor) namespace */
 

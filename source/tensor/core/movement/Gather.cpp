@@ -115,7 +115,7 @@ void _Gather(const XTensor * s, XTensor * t, XTensor * srcIndex)
 
         for (int i = 0; i < indexSize; i++) {
             int sIndex = sIndexData[i] * stride;
-            CheckNTErrors(sIndex < s->unitNum, "Wrong index!");
+            CheckNTErrors(sIndex < s->unitNum && sIndex >= 0, "Wrong index!");
             for (int j = 0; j < stride; j++)
                 tData[i * stride + j] = sData[sIndex + j];
         }

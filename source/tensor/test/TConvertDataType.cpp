@@ -215,12 +215,7 @@ bool TestConvertDataType3()
                           {0.5F, -4.0F},
                           {0.0F, 6.0F} };
     
-    DTYPE data2[2][3] = { {1.0F, 2.0F, 3.0F},
-                          {0.0F, 4.0F, 5.0F} };
     
-    DTYPE answer[3][3] = { {1.0F, -6.0F, -7.0F},
-                           {0.5F, -15.0F, -18.5F}, 
-                           {0.0F, 24.0F, 30.0F} };
 
     /* CPU test */
     bool cpuTest = true;
@@ -241,6 +236,14 @@ bool TestConvertDataType3()
     cpuTest = _CheckData(a, data1, unitNum1, 1e-4F);
 
 #ifdef USE_CUDA
+
+    DTYPE data2[2][3] = { { 1.0F, 2.0F, 3.0F },
+                          { 0.0F, 4.0F, 5.0F } };
+
+    DTYPE answer[3][3] = { { 1.0F, -6.0F, -7.0F },
+                           { 0.5F, -15.0F, -18.5F },
+                           { 0.0F, 24.0F, 30.0F } };
+
     /* GPU test */
     bool gpuTest = true;
 

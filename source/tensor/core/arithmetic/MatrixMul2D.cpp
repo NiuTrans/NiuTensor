@@ -42,12 +42,11 @@ where trans() return the transposed matrix if the flag is fired
 >> alpha - a coefficient
 >> beta - another coefficient
 >> parallelRunner - parallel processing module
->> stream - the string for creating the job pipeline
 */
 void _MatrixMul2D(const XTensor * a, MATRIX_TRANS_TYPE transposedA,
                   const XTensor * b, MATRIX_TRANS_TYPE transposedB,
                   XTensor * c, DTYPE alpha, DTYPE beta,
-                  XPRunner * parallelRunner, XStream * stream)
+                  XPRunner * parallelRunner)
 {
     CheckNTErrors((a && b && c), "Empty input tensors!");
     CheckNTErrors((a->dataType == b->dataType), "Input tensors should have the same data type!");
@@ -69,7 +68,7 @@ void _MatrixMul2D(const XTensor * a, MATRIX_TRANS_TYPE transposedA,
 
 #ifdef USE_CUDA
     if (a->devID >= 0 || b->devID >= 0 || c->devID >= 0) {
-        _CudaMatrixMul2D(a, transposedA, b, transposedB, c, alpha, beta, stream);
+        _CudaMatrixMul2D(a, transposedA, b, transposedB, c, alpha, beta);
         return;
     }
 #endif

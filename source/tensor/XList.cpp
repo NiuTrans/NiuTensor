@@ -36,7 +36,7 @@ TensorListBase<T>::TensorListBase()
 {
     maxNum = 1;
     count = 0;
-    items = (T*)malloc(sizeof(T) * 1);
+    items = new T[1];
 }
 
 /* 
@@ -49,7 +49,7 @@ TensorListBase<T>::TensorListBase(int myMaxNum)
     CheckNTErrors(myMaxNum > 0, "check if the input number > 0");
     maxNum = myMaxNum;
     count = 0;
-    items = (T*)malloc(sizeof(T) * myMaxNum);
+    items = new T[myMaxNum];
 }
 
 /*
@@ -62,7 +62,7 @@ TensorListBase<T>::TensorListBase(const T* inputItems, int inputItemCount)
     CheckNTErrors(inputItemCount > 0, "check if the input number > 0");
     maxNum = inputItemCount;
     count = inputItemCount;
-    items = (T*)malloc(sizeof(T) * inputItemCount);
+    items = new T[inputItemCount];
     memcpy(items, inputItems, inputItemCount * sizeof(T));
 }
 
@@ -73,7 +73,7 @@ TensorListBase<T>::TensorListBase(const TensorListBase<T>& l)
     CheckNTErrors(l.maxNum > 0, "check if the input number > 0");
     maxNum = l.maxNum;
     count = l.count;
-    items = (T*)malloc(sizeof(T) * maxNum);
+    items = new T[maxNum];
     memcpy(items, l.items, l.count * sizeof(T));
 }
 
@@ -94,7 +94,7 @@ TensorListBase<T> TensorListBase<T>::operator=(const TensorListBase<T>& l)
 {
     maxNum = l.maxNum;
     count = l.count;
-    items = (T*)malloc(sizeof(T) * maxNum);
+    items = new T[maxNum];
     memcpy(items, l.items, l.count * sizeof(T));
     return *this;
 }
@@ -105,7 +105,7 @@ TensorListBase<T> TensorListBase<T>::operator=(TensorListBase<T>&& l)
 {
     maxNum = l.maxNum;
     count = l.count;
-    items = (T*)malloc(sizeof(T) * maxNum);
+    items = new T[maxNum];
     memcpy(items, l.items, l.count * sizeof(T));
     return *this;
 }
@@ -115,10 +115,25 @@ template <typename T>
 TensorListBase<T>::~TensorListBase()
 {
     if(items != NULL)
-        free(items);
+        delete[] items;
     items = NULL;
 }
 
+/* 
+reallocate 
+>> itemNum - the number of items
+*/
+template <typename T>
+void TensorListBase<T>::Reallocate(int itemNum)
+{
+    if (maxNum < itemNum) {
+        T * newItems = new T[itemNum];
+        memcpy(newItems, items, count * sizeof(T));
+        delete[] items;
+        items = newItems;
+        maxNum = itemNum;
+    }
+}
 
 /*
 add an item into the list
@@ -128,20 +143,10 @@ template <typename T>
 void TensorListBase<T>::Add(T&& item)
 {
     if (count == maxNum) {
-        
-        T* newItems;
-        
-        newItems = (T*)realloc(items, sizeof(T) * (count * 2 + 1));
-        if (newItems != NULL)
-            items = newItems;
-        else {
-            newItems = (T*)malloc(sizeof(T) * (count * 2 + 1));
-            memcpy(newItems, items, count * sizeof(T));
-            free(items);
-            items = newItems;
-        }
-            
-
+        T * newItems = new T[count * 2 + 1];
+        memcpy(newItems, items, count * sizeof(T));
+        delete[] items;
+        items = newItems;
         maxNum = count * 2 + 1;
     }
     items[count++] = item;
@@ -149,7 +154,7 @@ void TensorListBase<T>::Add(T&& item)
 
 /* return number of elements */
 template<typename T>
-size_t TensorListBase<T>::Size()
+int TensorListBase<T>::Size()
 {
     return count;
 }
@@ -162,22 +167,47 @@ template <typename T>
 void TensorListBase<T>::Add(const T& item)
 {
     if (count == maxNum) {
-        T* newItems;
-
-        newItems = (T*)realloc(items, sizeof(T) * (count * 2 + 1));
-        if (newItems != NULL)
-            items = newItems;
-        else {
-            newItems = (T*)malloc(sizeof(T) * (count * 2 + 1));
-            memcpy(newItems, items, count * sizeof(T));
-            free(items);
-            items = newItems;
-        }
-
+        T * newItems = new T[count * 2 + 1];
+        memcpy(newItems, items, count * sizeof(T));
+        delete[] items;
+        items = newItems;
         maxNum = count * 2 + 1;
     }
 
     items[count++] = item;
+}
+
+/* add an item (as an integer) into the list */
+template <typename T>
+void TensorListBase<T>::AddInt(const int item)
+{
+    if (count == maxNum)
+        Reallocate(count * 2 + 1);
+
+    *(int*)(items + count) = item;
+    count++;
+}
+
+/* add an item (as a float) into the list */
+template <typename T>
+void TensorListBase<T>::AddFloat(const float item)
+{
+    if (count == maxNum)
+        Reallocate(count * 2 + 1);
+
+    *(float*)(items + count) = item;
+    count++;
+}
+
+/* add an item (as a long long) into the list */
+template <typename T>
+void TensorListBase<T>::AddLLong(const long long item)
+{
+    if (count == maxNum)
+        Reallocate(count * 2 + 1);
+
+    *(long long*)(items + count) = item;
+    count++;
 }
 
 /* 
@@ -189,18 +219,10 @@ template <typename T>
 void TensorListBase<T>::Add(const T* inputItems, int inputItemCount)
 {
     if (count + inputItemCount >= maxNum) {
-        T* newItems;
-
-        newItems = (T*)realloc(items, sizeof(T) * (count + inputItemCount + 1));
-        if (newItems != NULL)
-            items = newItems;
-        else {
-            newItems = (T*)malloc(sizeof(T) * (maxNum + count + inputItemCount + 1));
-            memcpy(newItems, items, count * sizeof(T));
-            free(items);
-            items = newItems;
-        }
-
+        T* newItems = new T[maxNum + count + inputItemCount + 1];
+        memcpy(newItems, items, count * sizeof(T));
+        delete[] items;
+        items = newItems;
         maxNum += (count + inputItemCount + 1);
     }
     memcpy(items + count, inputItems, sizeof(T) * inputItemCount);
@@ -226,18 +248,10 @@ template <typename T>
 void TensorListBase<T>::Insert(int pos, const T& item)
 {
     if (count == maxNum) {
-        T* newItems;
-
-        newItems = (T*)realloc(items, sizeof(T) * (count * 2 + 1));
-        if (newItems != NULL)
-            items = newItems;
-        else {
-            newItems = (T*)malloc(sizeof(T) * (count * 2 + 1));
-            memcpy(newItems, items, count * sizeof(T));
-            free(items);
-            items = newItems;
-        }
-
+        T * newItems = new T[count * 2 + 1];
+        memcpy(newItems, items, count * sizeof(T));
+        delete[] items;
+        items = newItems;
         maxNum = count * 2 + 1;
     }
 
@@ -251,18 +265,10 @@ template<typename T>
 void TensorListBase<T>::Insert(int pos, T&& item)
 {
     if (count == maxNum) {
-        T* newItems;
-
-        newItems = (T*)realloc(items, sizeof(T) * (count * 2 + 1));
-        if (newItems != NULL)
-            items = newItems;
-        else {
-            newItems = (T*)malloc(sizeof(T) * (count * 2 + 1));
-            memcpy(newItems, items, count * sizeof(T));
-            free(items);
-            items = newItems;
-        }
-
+        T * newItems = new T[count * 2 + 1];
+        memcpy(newItems, items, count * sizeof(T));
+        delete[] items;
+        items = newItems;
         maxNum = count * 2 + 1;
     }
 
@@ -274,14 +280,62 @@ void TensorListBase<T>::Insert(int pos, T&& item)
 
 /* get the item at position i */
 template <typename T>
-T& TensorListBase<T>::GetItem(int i) const
+inline T& TensorListBase<T>::GetItem(int i) const
 {
     CheckNTErrors(i >= -count && i < count, "Index of a list item is out of scope!");
-    CheckNTErrors(count > 0, "Cannt index the item in an empty list!");
+    CheckNTErrors(count > 0, "Cannot index the item in an empty list!");
     if (i < 0)
         return items[count + i];
     else
         return items[i];
+}
+
+/* get the item at position i and force it to an integer */
+template <typename T>
+inline int TensorListBase<T>::GetItemInt(int i) const
+{
+    CheckNTErrors(i >= -count && i < count, "Index of a list item is out of scope!");
+    CheckNTErrors(count > 0, "Cannot index the item in an empty list!");
+
+    if (i < 0)
+        return 0;
+    else {
+        T r = items[i];
+        void * p = &r;
+        return *(int*)p;
+    }
+}
+
+/* get the item at position i and force it to a float number */
+template <typename T>
+inline float TensorListBase<T>::GetItemFloat(int i) const
+{
+    CheckNTErrors(i >= -count && i < count, "Index of a list item is out of scope!");
+    CheckNTErrors(count > 0, "Cannot index the item in an empty list!");
+
+    if (i < 0)
+        return 0;
+    else {
+        T r = items[i];
+        void * p = &r;
+        return *(float*)p;
+    }
+}
+
+/* get the item at position i and force it to an long long number */
+template <typename T>
+inline long long TensorListBase<T>::GetItemLLong(int i) const
+{
+    CheckNTErrors(i >= -count && i < count, "Index of a list item is out of scope!");
+    CheckNTErrors(count > 0, "Cannot index the item in an empty list!");
+
+    if (i < 0)
+        return 0;
+    else {
+        T r = items[i];
+        void * p = &r;
+        return *(long long*)p;
+    }
 }
 
 /* set the item at position i */
@@ -297,6 +351,33 @@ inline void TensorListBase<T>::SetItem(int i, T&& item)
 {
     if (i >= 0 && i < count)
         items[i] = item;
+}
+
+/* set the item (as an integer) at position i */
+template<typename T>
+inline void TensorListBase<T>::SetItemInt(int i, const int item)
+{
+    if (i >= 0 && i < count) {
+        *(int*)(items + i) = item;
+    }
+}
+
+/* set the item (as a float) at position i */
+template<typename T>
+inline void TensorListBase<T>::SetItemFloat(int i, const float item)
+{
+    if (i >= 0 && i < count) {
+        *(float*)(items + i) = item;
+    }
+}
+
+/* set the item (as a long long) at position i */
+template<typename T>
+inline void TensorListBase<T>::SetItemLLong(int i, const long long item)
+{
+    if (i >= 0 && i < count) {
+        *(long long*)(items + i) = item;
+    }
 }
 
 /* 
@@ -329,7 +410,7 @@ void TensorListBase<T>::Clear()
     count = 0;
     maxNum = 0;
     if(items != NULL)
-        free(items);
+        delete[] items;
     items = NULL;
 }
 
@@ -384,7 +465,7 @@ void TensorListBase<T>::Reserve(int n)
         return;
     }
 
-    items = (T*)malloc(sizeof(T) * n);
+    items = new T[n];
 }
 
 /* 
@@ -430,8 +511,8 @@ void TensorListBase<T>::ReadFromFile(FILE* fp, int num)
         if(!items)
             Reserve(num - maxNum);
         else {
-            free(items);
-            items = (T*)malloc(sizeof(T) * num);
+            delete[] items;
+            items = new T[num];
         }
     }
     fread(items, sizeof(T), num, fp);
@@ -449,8 +530,5 @@ template struct TensorListBase<short>;
 template struct TensorListBase<XTensor*>;
 template struct TensorListBase<uint64_t>;
 template struct TensorListBase<void*>;
-template struct TensorListBase<Example*>;
-template struct TensorListBase<TrainExample*>;
-template struct TensorListBase<Result*>;
 
 } /* end of the nts (NiuTrans.Tensor) namespace */
